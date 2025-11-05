@@ -40,3 +40,4 @@ uploads/*
 
 # Environment variables
 .env
+python/
