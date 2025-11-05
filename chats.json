@@ -1,0 +1,149 @@
+{
+  "2": {
+    "title": "테스트",
+    "participants": [
+      "테스트"
+    ],
+    "creator": "테스트",
+    "messages": [
+      {
+        "username": "테스트",
+        "message": "이건셀프인가",
+        "timestamp": "2025-10-28T14:07:14.727690"
+      }
+    ],
+    "created_at": "2025-10-28T14:07:10.433896"
+  },
+  "3": {
+    "title": "관리자와",
+    "participants": [
+      "테스트"
+    ],
+    "creator": "테스트",
+    "messages": [
+      {
+        "username": "안병민",
+        "message": "??",
+        "timestamp": "2025-10-28T14:07:51.347143"
+      },
+      {
+        "username": "테스트",
+        "message": "무여",
+        "timestamp": "2025-10-28T14:11:00.905215"
+      }
+    ],
+    "created_at": "2025-10-28T14:07:28.408452"
+  },
+  "5": {
+    "title": "홍민지",
+    "participants": [
+      "홍민지",
+      "안병민"
+    ],
+    "creator": "안병민",
+    "messages": [
+      {
+        "username": "안병민",
+        "message": "뭠마",
+        "timestamp": "2025-10-31T18:40:00.411772",
+        "read_by": [
+          "안병민",
+          "홍민지"
+        ],
+        "file_info": null
+      },
+      {
+        "username": "안병민",
+        "message": "뭠마",
+        "timestamp": "2025-10-31T18:40:50.024307",
+        "read_by": [
+          "안병민"
+        ],
+        "file_info": null
+      }
+    ],
+    "is_one_to_one": true,
+    "created_at": "2025-10-31T15:41:57.897094"
+  },
+  "4": {
+    "title": "민건희",
+    "participants": [
+      "민건희",
+      "안병민"
+    ],
+    "creator": "안병민",
+    "messages": [],
+    "is_one_to_one": true,
+    "created_at": "2025-10-31T15:42:21.335596"
+  },
+  "6": {
+    "title": "안병민",
+    "participants": [
+      "안병민",
+      "Admin"
+    ],
+    "creator": "Admin",
+    "messages": [
+      {
+        "username": "Admin",
+        "message": "여기보세요",
+        "timestamp": "2025-11-04T13:25:06.396020",
+        "read_by": [
+          "Admin",
+          "안병민"
+        ],
+        "file_info": null
+      },
+      {
+        "username": "Admin",
+        "message": "CO2510141597682 /최은영 11월 4일 14:00 예약 30분전입니다.",
+        "timestamp": "2025-11-04T13:25:55.900159",
+        "read_by": [
+          "Admin",
+          "안병민"
+        ],
+        "file_info": null
+      },
+      {
+        "username": "Admin",
+        "message": "수석님 올때 메로나",
+        "timestamp": "2025-11-04T15:06:54.356262",
+        "read_by": [
+          "Admin",
+          "안병민"
+        ],
+        "file_info": null
+      },
+      {
+        "username": "Admin",
+        "message": "수석님 올때 메로나",
+        "timestamp": "2025-11-04T15:07:05.051522",
+        "read_by": [
+          "Admin",
+          "안병민"
+        ],
+        "file_info": null
+      },
+      {
+        "username": "Admin",
+        "message": "수석님 올때 메로나",
+        "timestamp": "2025-11-04T15:07:21.410202",
+        "read_by": [
+          "Admin"
+        ],
+        "file_info": null
+      },
+      {
+        "username": "Admin",
+        "message": "수석님 올때 메로나",
+        "timestamp": "2025-11-04T15:07:29.271673",
+        "read_by": [
+          "Admin"
+        ],
+        "file_info": null
+      }
+    ],
+    "is_one_to_one": true,
+    "created_at": "2025-11-04T13:24:57.678689"
+  }
+}

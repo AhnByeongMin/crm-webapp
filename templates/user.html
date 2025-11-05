@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 할당 목록</title>
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 { color: #333; }
+        .username { font-size: 18px; color: #667eea; font-weight: bold; }
+        .logout { padding: 8px 16px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; }
+        .logout:hover { background: #c82333; }
+        .items { display: grid; gap: 20px; }
+        .item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .item h3 { color: #333; margin-bottom: 10px; }
+        .item-content { color: #666; line-height: 1.6; white-space: pre-wrap; }
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 8px;
+            color: #999;
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 20px; }
+
+        /* 토스트 알림 */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 350px; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transform: translateX(400px); animation: slideIn 0.3s forwards; border-left: 4px solid #667eea; display: flex; align-items: center; gap: 12px; }
+        .toast:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.4); transform: translateY(-2px); }
+        .toast.slide-out { animation: slideOut 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        .toast-icon { font-size: 24px; flex-shrink: 0; }
+        .toast-content { flex: 1; min-width: 0; }
+        .toast-title { font-weight: bold; color: #333; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-message { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-close { background: none; border: none; font-size: 20px; color: #999; cursor: pointer; padding: 0; width: 24px; height: 24px; flex-shrink: 0; }
+        .toast-close:hover { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>내 할당 목록</h1>
+                <div class="username">{{ username }}님</div>
+            </div>
+            <div class="nav" style="display: flex; gap: 10px;">
+                {% if is_admin %}
+                <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">할일관리</a>
+                <a href="/chats/all" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅관리</a>
+                <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">프로모션게시판</a>
+                {% endif %}
+                <a href="/" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">홈으로</a>
+                <a href="/chats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅</a>
+                <a href="/logout" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">로그아웃</a>
+            </div>
+        </div>
+
+        <div id="itemsContainer"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        const currentUsername = '{{ username }}';
+        let previousItemCount = 0;
+        let notificationPermission = false;
+        let unreadCount = 0;
+        let originalTitle = '내 할당 목록';
+        let titleBlinkInterval = null;
+
+        // 알림 권한 요청 (즉시 실행)
+        if ('Notification' in window) {
+            console.log('Notification API 지원됨. 현재 권한:', Notification.permission);
+
+            if (Notification.permission === 'default') {
+                console.log('알림 권한 요청 중...');
+                Notification.requestPermission().then(permission => {
+                    console.log('알림 권한 결과:', permission);
+                    notificationPermission = permission === 'granted';
+                    if (notificationPermission) {
+                        // 테스트 알림
+                        new Notification('알림이 활성화되었습니다!', {
+                            body: '새로운 항목과 메시지를 알려드립니다.',
+                            icon: '/favicon.ico'
+                        });
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                notificationPermission = true;
+                console.log('알림 권한이 이미 허용됨');
+            } else {
+                console.log('알림 권한이 차단됨');
+            }
+        } else {
+            console.log('이 브라우저는 Notification API를 지원하지 않습니다');
+        }
+
+        function showNotification(title, body, url) {
+            if (!notificationPermission) return;
+
+            const notification = new Notification(title, {
+                body: body,
+                icon: '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: 'crm-notification',
+                requireInteraction: false
+            });
+
+            notification.onclick = function() {
+                window.focus();
+                if (url) {
+                    window.location.href = url;
+                }
+                notification.close();
+            };
+        }
+
+        function loadItems() {
+            fetch('/api/items')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('itemsContainer');
+
+                    // 새 항목 알림
+                    if (previousItemCount > 0 && data.length > previousItemCount) {
+                        const newItemsCount = data.length - previousItemCount;
+                        showNotification(
+                            '새로운 항목이 도착했습니다',
+                            `${newItemsCount}개의 새 항목이 할당되었습니다.`,
+                            '/'
+                        );
+                    }
+                    previousItemCount = data.length;
+
+                    if (data.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty">
+                                <div class="empty-icon">📭</div>
+                                <p>할당된 항목이 없습니다.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = '<div class="items">' +
+                        data.map(item => `
+                            <div class="item">
+                                <h3>${item.title || '제목 없음'}</h3>
+                                <div class="item-content">${item.content || ''}</div>
+                            </div>
+                        `).join('') +
+                        '</div>';
+                });
+        }
+
+        // 사용자별 room에 join (전역 알림 받기 위함)
+        socket.emit('join_user_room', { username: currentUsername });
+
+        // 토스트 알림 표시
+        function showToast(chatId, title, message, sender) {
+            console.log('토스트 알림 표시:', chatId, title, message);
+            const toastContainer = document.getElementById('toastContainer');
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            // HTML 이스케이프
+            const escapeHtml = (text) => {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">💬</div>
+                <div class="toast-content">
+                    <div class="toast-title">${escapeHtml(title)}</div>
+                    <div class="toast-message">${escapeHtml(sender)}: ${escapeHtml(message)}</div>
+                </div>
+                <button class="toast-close">×</button>
+            `;
+
+            // X 버튼 클릭 이벤트
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeToastElement(toast);
+            });
+
+            // 토스트 클릭시 채팅방으로 이동
+            toast.addEventListener('click', () => {
+                location.href = `/chat/${chatId}`;
+            });
+
+            toastContainer.appendChild(toast);
+            console.log('토스트 추가됨:', toast);
+
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                closeToastElement(toast);
+            }, 5000);
+        }
+
+        function closeToastElement(toast) {
+            if (!toast || !toast.classList) return;
+            toast.classList.add('slide-out');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }
+
+        // 전역 새 메시지 알림 수신
+        socket.on('global_new_message', (data) => {
+            console.log('전역 새 메시지 수신:', data);
+
+            // 1:1 채팅인 경우 상대방 이름, 그룹 채팅인 경우 채팅방 제목 표시
+            let displayTitle = data.chat_title;
+            if (data.is_one_to_one) {
+                const otherUser = data.participants.find(p => p !== currentUsername);
+                displayTitle = otherUser || data.chat_title;
+            }
+
+            // 토스트 알림 표시
+            showToast(data.chat_id, displayTitle, data.message, data.sender);
+
+            // 탭이 포커스되어 있지 않으면 제목 깜빡임
+            if (!document.hasFocus()) {
+                unreadCount++;
+                console.log('읽지 않은 메시지:', unreadCount);
+                startTitleBlink();
+            }
+        });
+
+        // 페이지 포커스시 리셋
+        window.addEventListener('focus', () => {
+            unreadCount = 0;
+            stopTitleBlink();
+            document.title = originalTitle;
+        });
+
+        function startTitleBlink() {
+            if (titleBlinkInterval) return;
+
+            console.log('제목 깜빡임 시작:', unreadCount);
+            let isOriginal = true;
+            titleBlinkInterval = setInterval(() => {
+                document.title = isOriginal ? `🔴 (${unreadCount}) 새 메시지` : originalTitle;
+                isOriginal = !isOriginal;
+            }, 1000);
+        }
+
+        function stopTitleBlink() {
+            if (titleBlinkInterval) {
+                clearInterval(titleBlinkInterval);
+                titleBlinkInterval = null;
+            }
+        }
+
+        // 초기 로드 (알림 없이)
+        fetch('/api/items')
+            .then(res => res.json())
+            .then(data => {
+                previousItemCount = data.length;
+                loadItems();
+            });
+
+        setInterval(loadItems, 3000);
+    
+        // PWA 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker 등록 성공:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Service Worker 등록 실패:', error);
+                });
+        }
+</script>
+</body>
+</html>

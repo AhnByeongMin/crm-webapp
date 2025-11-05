@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채팅 관리</title>
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { margin-bottom: 20px; color: #333; }
+        .nav { margin-bottom: 30px; display: flex; gap: 10px; }
+        .nav a {
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .nav a:hover { background: #5a6268; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; }
+        button:hover { background: #0056b3; }
+        button.delete { background: #dc3545; }
+        button.delete:hover { background: #c82333; }
+        #createForm { background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
+        .chat-list { display: grid; gap: 15px; margin-top: 20px; }
+        .chat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #28a745;
+        }
+        .chat-info h3 { margin-bottom: 5px; color: #333; }
+        .chat-info p { color: #666; font-size: 14px; }
+        .user-select-container { margin-top: 10px; }
+        .user-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            margin: 5px 5px 5px 0;
+            font-size: 13px;
+        }
+        .user-tag button {
+            background: none;
+            border: none;
+            color: white;
+            margin-left: 5px;
+            cursor: pointer;
+            padding: 0;
+            font-size: 16px;
+        }
+        .search-box {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        .search-results.show { display: block; }
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .search-result-item:hover {
+            background: #f8f9fa;
+        }
+        .hidden { display: none; }
+
+        /* 토스트 알림 */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 350px; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transform: translateX(400px); animation: slideIn 0.3s forwards; border-left: 4px solid #667eea; display: flex; align-items: center; gap: 12px; }
+        .toast:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.4); transform: translateY(-2px); }
+        .toast.slide-out { animation: slideOut 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        .toast-icon { font-size: 24px; flex-shrink: 0; }
+        .toast-content { flex: 1; min-width: 0; }
+        .toast-title { font-weight: bold; color: #333; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-message { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-close { background: none; border: none; font-size: 20px; color: #999; cursor: pointer; padding: 0; width: 24px; height: 24px; flex-shrink: 0; }
+        .toast-close:hover { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h1 style="margin-bottom: 5px;">채팅 관리 (관리자)</h1>
+                <p style="color: #667eea; font-weight: bold; font-size: 16px;">{{ username }}</p>
+            </div>
+            <a href="/logout" style="padding: 8px 16px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px;">로그아웃</a>
+        </div>
+
+        <div class="nav">
+            <a href="/admin">항목 관리</a>
+            <a href="/chats">채팅 목록</a>
+        </div>
+
+        <div id="createForm">
+            <h2 style="margin-bottom: 20px;">새 채팅방 만들기</h2>
+            <div class="form-group">
+                <label>참여자 검색:</label>
+                <div class="search-box">
+                    <input type="text" id="userSearch" placeholder="사용자 이름 검색...">
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+            </div>
+            <div class="user-select-container">
+                <label>선택된 참여자:</label>
+                <div id="selectedUsers"></div>
+            </div>
+            <div class="form-group hidden" id="titleGroup">
+                <label>채팅방 제목:</label>
+                <input type="text" id="chatTitle" placeholder="그룹 채팅방 제목 입력">
+            </div>
+            <button onclick="createChat()">채팅방 생성</button>
+            <button onclick="clearForm()" style="background: #6c757d;">초기화</button>
+        </div>
+
+        <h2 style="margin-bottom: 15px;">내 채팅방</h2>
+        <div id="myChatList" class="chat-list" style="margin-bottom: 40px;"></div>
+
+        <h2 style="margin-bottom: 15px; border-top: 2px solid #ddd; padding-top: 30px;">전체 채팅방 관리 (삭제만 가능)</h2>
+        <div id="allChatList" class="chat-list"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        const currentUsername = '{{ username }}';
+        let selectedUsers = [];
+        let unreadCount = 0;
+        let originalTitle = '채팅 관리';
+        let titleBlinkInterval = null;
+
+        // 사용자 검색
+        const userSearch = document.getElementById('userSearch');
+        const searchResults = document.getElementById('searchResults');
+
+        userSearch.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+
+            if (query.length < 1) {
+                searchResults.classList.remove('show');
+                return;
+            }
+
+            fetch(`/api/search_users?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(users => {
+                    if (users.length === 0) {
+                        searchResults.innerHTML = '<div class="search-result-item">검색 결과 없음</div>';
+                    } else {
+                        searchResults.innerHTML = users
+                            .filter(u => !selectedUsers.includes(u))
+                            .map(user => `<div class="search-result-item" onclick="addUser('${user}')">${user}</div>`)
+                            .join('');
+                    }
+                    searchResults.classList.add('show');
+                });
+        });
+
+        // 검색창 외부 클릭시 닫기
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-box')) {
+                searchResults.classList.remove('show');
+            }
+        });
+
+        function addUser(username) {
+            if (!selectedUsers.includes(username)) {
+                selectedUsers.push(username);
+                updateSelectedUsers();
+            }
+            userSearch.value = '';
+            searchResults.classList.remove('show');
+        }
+
+        function removeUser(username) {
+            selectedUsers = selectedUsers.filter(u => u !== username);
+            updateSelectedUsers();
+        }
+
+        function updateSelectedUsers() {
+            const container = document.getElementById('selectedUsers');
+            const titleGroup = document.getElementById('titleGroup');
+
+            if (selectedUsers.length === 0) {
+                container.innerHTML = '<p style="color: #999;">선택된 참여자가 없습니다.</p>';
+                titleGroup.classList.remove('hidden');
+            } else {
+                container.innerHTML = selectedUsers
+                    .map(user => `<span class="user-tag">${user}<button onclick="removeUser('${user}')">×</button></span>`)
+                    .join('');
+
+                // 1:1 채팅인 경우 제목 입력란 숨기기
+                if (selectedUsers.length === 1) {
+                    titleGroup.classList.add('hidden');
+                } else {
+                    titleGroup.classList.remove('hidden');
+                }
+            }
+        }
+
+        function createChat() {
+            if (selectedUsers.length === 0) {
+                alert('최소 1명의 참여자를 선택하세요.');
+                return;
+            }
+
+            const title = document.getElementById('chatTitle').value.trim();
+
+            // 다중 채팅인 경우만 제목 확인
+            if (selectedUsers.length > 1 && !title) {
+                alert('채팅방 제목을 입력하세요.');
+                return;
+            }
+
+            fetch('/api/chats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    participants: selectedUsers
+                })
+            })
+            .then(res => res.json())
+            .then(() => {
+                clearForm();
+                loadChats();
+                alert('채팅방이 생성되었습니다.');
+            });
+        }
+
+        function clearForm() {
+            document.getElementById('chatTitle').value = '';
+            selectedUsers = [];
+            updateSelectedUsers();
+        }
+
+        function deleteChat(chatId) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+
+            fetch(`/api/chats/${chatId}`, { method: 'DELETE' })
+                .then(() => {
+                    loadChats();
+                    alert('삭제되었습니다.');
+                });
+        }
+
+        function loadMyChats() {
+            // 내 채팅방 로드
+            fetch('/api/chats')
+                .then(res => res.json())
+                .then(chats => {
+                    const container = document.getElementById('myChatList');
+                    const chatArray = Object.entries(chats);
+
+                    if (chatArray.length === 0) {
+                        container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">참여 중인 채팅방이 없습니다.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = chatArray
+                        .map(([chatId, chat]) => {
+                            const chatType = chat.is_one_to_one ? '(1:1)' : '(그룹)';
+                            return `
+                            <div class="chat-item">
+                                <div class="chat-info">
+                                    <h3>${chat.title} ${chatType}</h3>
+                                    <p>참여자: ${chat.participants.join(', ')}</p>
+                                    <p style="font-size: 12px; color: #999;">메시지: ${chat.messages?.length || 0}개</p>
+                                </div>
+                                <div>
+                                    <button onclick="location.href='/chat/${chatId}'" style="background: #28a745;">입장</button>
+                                    <button class="delete" onclick="deleteChat('${chatId}')">삭제</button>
+                                </div>
+                            </div>
+                        `;
+                        })
+                        .join('');
+                });
+        }
+
+        function loadAllChats() {
+            // 전체 채팅방 로드 (삭제 관리용)
+            fetch('/api/chats/all')
+                .then(res => res.json())
+                .then(chats => {
+                    const container = document.getElementById('allChatList');
+                    const chatArray = Object.entries(chats);
+
+                    if (chatArray.length === 0) {
+                        container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">생성된 채팅방이 없습니다.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = chatArray
+                        .map(([chatId, chat]) => {
+                            const chatType = chat.is_one_to_one ? '(1:1)' : '(그룹)';
+                            return `
+                            <div class="chat-item" style="border-left-color: #6c757d;">
+                                <div class="chat-info">
+                                    <h3>${chat.title} ${chatType}</h3>
+                                    <p>참여자: ${chat.participants.join(', ')}</p>
+                                    <p style="font-size: 12px; color: #999;">메시지: ${chat.messages?.length || 0}개 | 생성자: ${chat.creator}</p>
+                                </div>
+                                <div>
+                                    <button class="delete" onclick="deleteChat('${chatId}')">삭제</button>
+                                </div>
+                            </div>
+                        `;
+                        })
+                        .join('');
+                });
+        }
+
+        function loadChats() {
+            loadMyChats();
+            loadAllChats();
+        }
+
+        // 사용자별 room에 join (전역 알림 받기 위함)
+        socket.emit('join_user_room', { username: currentUsername });
+
+        // 토스트 알림 표시
+        function showToast(chatId, title, message, sender) {
+            console.log('토스트 알림 표시:', chatId, title, message);
+            const toastContainer = document.getElementById('toastContainer');
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            // HTML 이스케이프
+            const escapeHtml = (text) => {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">💬</div>
+                <div class="toast-content">
+                    <div class="toast-title">${escapeHtml(title)}</div>
+                    <div class="toast-message">${escapeHtml(sender)}: ${escapeHtml(message)}</div>
+                </div>
+                <button class="toast-close">×</button>
+            `;
+
+            // X 버튼 클릭 이벤트
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeToastElement(toast);
+            });
+
+            // 토스트 클릭시 채팅방으로 이동
+            toast.addEventListener('click', () => {
+                location.href = `/chat/${chatId}`;
+            });
+
+            toastContainer.appendChild(toast);
+            console.log('토스트 추가됨:', toast);
+
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                closeToastElement(toast);
+            }, 5000);
+        }
+
+        function closeToastElement(toast) {
+            if (!toast || !toast.classList) return;
+            toast.classList.add('slide-out');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }
+
+        // 전역 새 메시지 알림 수신
+        socket.on('global_new_message', (data) => {
+            console.log('전역 새 메시지 수신:', data);
+
+            // 1:1 채팅인 경우 상대방 이름, 그룹 채팅인 경우 채팅방 제목 표시
+            let displayTitle = data.chat_title;
+            if (data.is_one_to_one) {
+                const otherUser = data.participants.find(p => p !== currentUsername);
+                displayTitle = otherUser || data.chat_title;
+            }
+
+            // 토스트 알림 표시
+            showToast(data.chat_id, displayTitle, data.message, data.sender);
+
+            // 탭이 포커스되어 있지 않으면 제목 깜빡임
+            if (!document.hasFocus()) {
+                unreadCount++;
+                startTitleBlink();
+            }
+            // 채팅 목록 새로고침
+            loadChats();
+        });
+
+        window.addEventListener('focus', () => {
+            unreadCount = 0;
+            stopTitleBlink();
+            document.title = originalTitle;
+        });
+
+        function startTitleBlink() {
+            if (titleBlinkInterval) return;
+            let isOriginal = true;
+            titleBlinkInterval = setInterval(() => {
+                document.title = isOriginal ? `🔴 (${unreadCount}) 새 메시지` : originalTitle;
+                isOriginal = !isOriginal;
+            }, 1000);
+        }
+
+        function stopTitleBlink() {
+            if (titleBlinkInterval) {
+                clearInterval(titleBlinkInterval);
+                titleBlinkInterval = null;
+            }
+        }
+
+        updateSelectedUsers();
+        loadChats();
+        setInterval(loadChats, 5000);
+    
+        // PWA 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker 등록 성공:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Service Worker 등록 실패:', error);
+                });
+        }
+</script>
+</body>
+</html>

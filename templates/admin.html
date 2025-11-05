@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지</title>
+
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { margin-bottom: 30px; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        textarea { min-height: 80px; resize: vertical; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; }
+        button:hover { background: #0056b3; }
+        button.delete { background: #dc3545; }
+        button.delete:hover { background: #c82333; }
+        button.edit { background: #28a745; }
+        button.edit:hover { background: #218838; }
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; color: #333; }
+        tr:hover { background: #f8f9fa; }
+        .actions { white-space: nowrap; }
+        #addForm { background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
+
+        /* 토스트 알림 */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 350px; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transform: translateX(400px); animation: slideIn 0.3s forwards; border-left: 4px solid #667eea; display: flex; align-items: center; gap: 12px; }
+        .toast:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.4); transform: translateY(-2px); }
+        .toast.slide-out { animation: slideOut 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        .toast-icon { font-size: 24px; flex-shrink: 0; }
+        .toast-content { flex: 1; min-width: 0; }
+        .toast-title { font-weight: bold; color: #333; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-message { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .toast-close { background: none; border: none; font-size: 20px; color: #999; cursor: pointer; padding: 0; width: 24px; height: 24px; flex-shrink: 0; }
+        .toast-close:hover { color: #333; }
+
+        /* PWA 설치 버튼 */
+        .install-btn { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; display: none; font-size: 14px; }
+        .install-btn:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h1 style="margin-bottom: 5px;">관리자 페이지</h1>
+                <p style="color: #667eea; font-weight: bold; font-size: 16px;">{{ username }}</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">할일관리</a>
+                <a href="/chats/all" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">채팅관리</a>
+                <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">프로모션게시판</a>
+                <a href="/" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">홈으로</a>
+                <a href="/chats" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">채팅</a>
+                <button id="installBtn" class="install-btn">📱 앱 설치</button>
+                <a href="/logout" style="padding: 8px 16px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px;">로그아웃</a>
+            </div>
+        </div>
+
+        <div id="addForm">
+            <h2 style="margin-bottom: 20px;">새 항목 추가</h2>
+            <div class="form-group">
+                <label>대상자 이름:</label>
+                <input type="text" id="assignedTo" placeholder="이름 입력">
+            </div>
+            <div class="form-group">
+                <label>제목:</label>
+                <input type="text" id="title" placeholder="제목 입력">
+            </div>
+            <div class="form-group">
+                <label>내용:</label>
+                <textarea id="content" placeholder="내용 입력"></textarea>
+            </div>
+            <button onclick="addItem()">추가</button>
+            <button onclick="clearForm()" style="background: #6c757d;">초기화</button>
+        </div>
+
+        <h2 style="margin-bottom: 15px;">전체 항목 목록</h2>
+        <table id="itemsTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>대상자</th>
+                    <th>제목</th>
+                    <th>내용</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody id="itemsList"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const socket = io();
+        const currentUsername = '{{ username }}';
+        let editingId = null;
+        let unreadCount = 0;
+        let originalTitle = '관리자 페이지';
+        let titleBlinkInterval = null;
+
+        function loadItems() {
+            fetch('/api/items')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('itemsList');
+                    tbody.innerHTML = '';
+
+                    data.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${item.id}</td>
+                            <td>${item.assigned_to || ''}</td>
+                            <td>${item.title || ''}</td>
+                            <td>${item.content || ''}</td>
+                            <td class="actions">
+                                <button class="edit" onclick="editItem(${item.id})">수정</button>
+                                <button class="delete" onclick="deleteItem(${item.id})">삭제</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
+        function addItem() {
+            const assignedTo = document.getElementById('assignedTo').value.trim();
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+
+            if (!assignedTo) {
+                alert('대상자 이름을 입력하세요.');
+                return;
+            }
+
+            const item = { assigned_to: assignedTo, title, content };
+
+            if (editingId) {
+                fetch(`/api/items/${editingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                })
+                .then(res => res.json())
+                .then(() => {
+                    editingId = null;
+                    clearForm();
+                    loadItems();
+                    alert('수정되었습니다.');
+                });
+            } else {
+                fetch('/api/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                })
+                .then(res => res.json())
+                .then(() => {
+                    clearForm();
+                    loadItems();
+                    alert('추가되었습니다.');
+                });
+            }
+        }
+
+        function editItem(id) {
+            fetch('/api/items')
+                .then(res => res.json())
+                .then(data => {
+                    const item = data.find(i => i.id === id);
+                    if (item) {
+                        document.getElementById('assignedTo').value = item.assigned_to || '';
+                        document.getElementById('title').value = item.title || '';
+                        document.getElementById('content').value = item.content || '';
+                        editingId = id;
+                        window.scrollTo(0, 0);
+                    }
+                });
+        }
+
+        function deleteItem(id) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+
+            fetch(`/api/items/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    loadItems();
+                    alert('삭제되었습니다.');
+                });
+        }
+
+        function clearForm() {
+            document.getElementById('assignedTo').value = '';
+            document.getElementById('title').value = '';
+            document.getElementById('content').value = '';
+            editingId = null;
+        }
+
+        // 사용자별 room에 join (전역 알림 받기 위함)
+        socket.emit('join_user_room', { username: currentUsername });
+
+        // 토스트 알림 표시
+        function showToast(chatId, title, message, sender) {
+            console.log('토스트 알림 표시:', chatId, title, message);
+            const toastContainer = document.getElementById('toastContainer');
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            // HTML 이스케이프
+            const escapeHtml = (text) => {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">💬</div>
+                <div class="toast-content">
+                    <div class="toast-title">${escapeHtml(title)}</div>
+                    <div class="toast-message">${escapeHtml(sender)}: ${escapeHtml(message)}</div>
+                </div>
+                <button class="toast-close">×</button>
+            `;
+
+            // X 버튼 클릭 이벤트
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeToastElement(toast);
+            });
+
+            // 토스트 클릭시 채팅방으로 이동
+            toast.addEventListener('click', () => {
+                location.href = `/chat/${chatId}`;
+            });
+
+            toastContainer.appendChild(toast);
+            console.log('토스트 추가됨:', toast);
+
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                closeToastElement(toast);
+            }, 5000);
+        }
+
+        function closeToastElement(toast) {
+            if (!toast || !toast.classList) return;
+            toast.classList.add('slide-out');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }
+
+        // 전역 새 메시지 알림 수신
+        socket.on('global_new_message', (data) => {
+            console.log('전역 새 메시지 수신:', data);
+
+            // 1:1 채팅인 경우 상대방 이름, 그룹 채팅인 경우 채팅방 제목 표시
+            let displayTitle = data.chat_title;
+            if (data.is_one_to_one) {
+                const otherUser = data.participants.find(p => p !== currentUsername);
+                displayTitle = otherUser || data.chat_title;
+            }
+
+            // 토스트 알림 표시
+            showToast(data.chat_id, displayTitle, data.message, data.sender);
+
+            // 탭이 포커스되어 있지 않으면 제목 깜빡임
+            if (!document.hasFocus()) {
+                unreadCount++;
+                startTitleBlink();
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            unreadCount = 0;
+            stopTitleBlink();
+            document.title = originalTitle;
+        });
+
+        function startTitleBlink() {
+            if (titleBlinkInterval) return;
+            let isOriginal = true;
+            titleBlinkInterval = setInterval(() => {
+                document.title = isOriginal ? `🔴 (${unreadCount}) 새 메시지` : originalTitle;
+                isOriginal = !isOriginal;
+            }, 1000);
+        }
+
+        function stopTitleBlink() {
+            if (titleBlinkInterval) {
+                clearInterval(titleBlinkInterval);
+                titleBlinkInterval = null;
+            }
+        }
+
+        loadItems();
+        setInterval(loadItems, 5000);
+
+        // PWA 설치 프롬프트
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('PWA 설치 가능!');
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`사용자 선택: ${outcome}`);
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            } else {
+                // beforeinstallprompt가 없는 경우 (HTTP 환경)
+                alert('이 앱을 설치하려면:\n\n1. Chrome 주소창 오른쪽 메뉴(⋮) 클릭\n2. "앱 설치" 또는 "바로가기 만들기" 선택\n\n또는 브라우저 설정에서 바로가기를 만들어주세요.');
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA 설치 완료!');
+            installBtn.style.display = 'none';
+            deferredPrompt = null;
+        });
+
+        // HTTP 환경에서도 설치 버튼 표시 (3초 후)
+        setTimeout(() => {
+            if (!deferredPrompt) {
+                installBtn.style.display = 'block';
+                console.log('HTTP 환경: 수동 설치 버튼 표시');
+            }
+        }, 3000);
+
+        // PWA 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker 등록 성공:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Service Worker 등록 실패:', error);
+                });
+        }
+    </script>
+</body>
+</html>

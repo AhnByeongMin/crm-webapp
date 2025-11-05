@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채팅 목록</title>
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 20px; color: #333; }
+        .nav { display: flex; gap: 10px; }
+        .nav a {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .nav a:hover { background: #5568d3; }
+        .nav a.secondary { background: #6c757d; }
+        .nav a.secondary:hover { background: #5a6268; }
+        .container { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
+        .chat-list { display: grid; gap: 15px; }
+        .chat-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 4px solid #667eea;
+        }
+        .chat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .chat-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .unread-badge {
+            background: #ff4444;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .chat-participants {
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .chat-participants::before { content: '👥'; }
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 8px;
+            color: #999;
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 20px; }
+
+        /* 토스트 알림 */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+        .toast {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transform: translateX(400px);
+            animation: slideIn 0.3s forwards;
+            border-left: 4px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toast:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            transform: translateY(-2px);
+        }
+        .toast.slide-out {
+            animation: slideOut 0.3s forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        .toast-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .toast-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toast-message {
+            font-size: 13px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .toast-close:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="header">
+        <h1>채팅 목록 - {{ username }}</h1>
+        <div class="nav">
+            {% if is_admin %}
+            <a href="/admin">할일관리</a>
+            <a href="/chats/all">채팅관리</a>
+            <a href="/promotions">프로모션게시판</a>
+            {% endif %}
+            <a href="/">홈으로</a>
+            <a href="/chats">채팅</a>
+            <a href="/logout" class="secondary">로그아웃</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <button onclick="location.href='/chat/create'" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-size: 14px; font-weight: bold;">새 채팅방 만들기</button>
+        <div id="chatList"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        let previousChatCount = 0;
+        let notificationPermission = false;
+        const currentUsername = '{{ username }}';
+        let unreadCount = 0;
+        let originalTitle = '채팅 목록';
+        let titleBlinkInterval = null;
+
+        // localStorage에서 읽지 않은 메시지 카운트 가져오기
+        function getUnreadCounts() {
+            const stored = localStorage.getItem('unreadCounts');
+            return stored ? JSON.parse(stored) : {};
+        }
+
+        function setUnreadCount(chatId, count) {
+            const unreadCounts = getUnreadCounts();
+            if (count > 0) {
+                unreadCounts[chatId] = count;
+            } else {
+                delete unreadCounts[chatId];
+            }
+            localStorage.setItem('unreadCounts', JSON.stringify(unreadCounts));
+        }
+
+        function incrementUnreadCount(chatId) {
+            const unreadCounts = getUnreadCounts();
+            unreadCounts[chatId] = (unreadCounts[chatId] || 0) + 1;
+            localStorage.setItem('unreadCounts', JSON.stringify(unreadCounts));
+            return unreadCounts[chatId];
+        }
+
+        function getTotalUnreadCount() {
+            const unreadCounts = getUnreadCounts();
+            return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+        }
+
+        // 알림 권한 요청
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                notificationPermission = permission === 'granted';
+            });
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+            notificationPermission = true;
+        }
+
+        function showNotification(title, body, url) {
+            if (!notificationPermission) return;
+
+            const notification = new Notification(title, {
+                body: body,
+                icon: '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: 'chat-list-notification',
+                requireInteraction: false
+            });
+
+            notification.onclick = function() {
+                window.focus();
+                if (url) {
+                    window.location.href = url;
+                }
+                notification.close();
+            };
+        }
+
+        function getChatDisplayTitle(chat) {
+            // 1:1 채팅인 경우 상대방 이름 표시
+            if (chat.is_one_to_one && chat.participants.length === 2) {
+                const otherUser = chat.participants.find(p => p !== currentUsername);
+                return otherUser || chat.title;
+            }
+            return chat.title;
+        }
+
+        function loadChats() {
+            fetch('/api/chats')
+                .then(res => res.json())
+                .then(chats => {
+                    const container = document.getElementById('chatList');
+                    const chatArray = Object.entries(chats);
+
+                    // 새 채팅방 알림
+                    if (previousChatCount > 0 && chatArray.length > previousChatCount) {
+                        const newChatsCount = chatArray.length - previousChatCount;
+                        const latestChat = chatArray[chatArray.length - 1];
+                        const displayTitle = getChatDisplayTitle(latestChat[1]);
+                        showNotification(
+                            '새로운 채팅방',
+                            `"${displayTitle}" 채팅방에 초대되었습니다.`,
+                            `/chat/${latestChat[0]}`
+                        );
+                    }
+                    previousChatCount = chatArray.length;
+
+                    if (chatArray.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty">
+                                <div class="empty-icon">💬</div>
+                                <p>참여 중인 채팅방이 없습니다.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = '<div class="chat-list">' +
+                        chatArray.map(([chatId, chat]) => {
+                            const displayTitle = getChatDisplayTitle(chat);
+                            // 서버에서 계산된 unread_count 사용
+                            const unreadCount = chat.unread_count || 0;
+                            const unreadBadge = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
+
+                            return `
+                            <div class="chat-item" onclick="enterChat('${chatId}')">
+                                <div class="chat-title">
+                                    <span>${displayTitle}</span>
+                                    ${unreadBadge}
+                                </div>
+                                <div class="chat-participants">${chat.participants.join(', ')}</div>
+                            </div>
+                        `;
+                        }).join('') +
+                        '</div>';
+                });
+        }
+
+        function enterChat(chatId) {
+            // 채팅방 입장하면 chat_room.html에서 자동으로 mark_as_read 처리됨
+            location.href = `/chat/${chatId}`;
+        }
+
+        // 사용자별 room에 join (전역 알림 받기 위함)
+        socket.emit('join_user_room', { username: currentUsername });
+
+        // 토스트 알림 표시
+        function showToast(chatId, title, message, sender) {
+            console.log('토스트 알림 표시:', chatId, title, message);
+            const toastContainer = document.getElementById('toastContainer');
+
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            // HTML 이스케이프
+            const escapeHtml = (text) => {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">💬</div>
+                <div class="toast-content">
+                    <div class="toast-title">${escapeHtml(title)}</div>
+                    <div class="toast-message">${escapeHtml(sender)}: ${escapeHtml(message)}</div>
+                </div>
+                <button class="toast-close">×</button>
+            `;
+
+            // X 버튼 클릭 이벤트
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeToastElement(toast);
+            });
+
+            // 토스트 클릭시 채팅방으로 이동
+            toast.addEventListener('click', () => {
+                setUnreadCount(chatId, 0); // 읽음 처리
+                location.href = `/chat/${chatId}`;
+            });
+
+            toastContainer.appendChild(toast);
+            console.log('토스트 추가됨:', toast);
+
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                closeToastElement(toast);
+            }, 5000);
+        }
+
+        function closeToastElement(toast) {
+            if (!toast || !toast.classList) return;
+            toast.classList.add('slide-out');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }
+
+        // 전역 새 메시지 알림 수신
+        socket.on('global_new_message', (data) => {
+            console.log('전역 새 메시지 수신:', data);
+
+            // 1:1 채팅인 경우 상대방 이름, 그룹 채팅인 경우 채팅방 제목 표시
+            let displayTitle = data.chat_title;
+            if (data.is_one_to_one) {
+                // 1:1 채팅이면 상대방 이름 찾기
+                const otherUser = data.participants.find(p => p !== currentUsername);
+                displayTitle = otherUser || data.chat_title;
+            }
+
+            // 토스트 알림 표시
+            showToast(data.chat_id, displayTitle, data.message, data.sender);
+
+            // 채팅 목록 새로고침 (배지 업데이트) - 서버에서 unread_count 계산됨
+            fetch('/api/chats')
+                .then(res => res.json())
+                .then(chats => {
+                    // 전체 읽지 않은 메시지 개수 계산
+                    const totalUnread = Object.values(chats).reduce((sum, chat) => sum + (chat.unread_count || 0), 0);
+
+                    // 탭이 포커스되어 있지 않으면 제목 깜빡임
+                    if (!document.hasFocus() && totalUnread > 0) {
+                        unreadCount = totalUnread;
+                        console.log('전체 읽지 않은 메시지:', unreadCount);
+                        startTitleBlink();
+                    }
+
+                    // 채팅 목록 UI 업데이트
+                    const container = document.getElementById('chatList');
+                    const chatArray = Object.entries(chats);
+
+                    if (chatArray.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty">
+                                <div class="empty-icon">💬</div>
+                                <p>참여 중인 채팅방이 없습니다.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = '<div class="chat-list">' +
+                        chatArray.map(([chatId, chat]) => {
+                            const displayTitle = getChatDisplayTitle(chat);
+                            const unreadCount = chat.unread_count || 0;
+                            const unreadBadge = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
+
+                            return `
+                            <div class="chat-item" onclick="enterChat('${chatId}')">
+                                <div class="chat-title">
+                                    <span>${displayTitle}</span>
+                                    ${unreadBadge}
+                                </div>
+                                <div class="chat-participants">${chat.participants.join(', ')}</div>
+                            </div>
+                        `;
+                        }).join('') +
+                        '</div>';
+                });
+        });
+
+        // 페이지 포커스시 리셋
+        window.addEventListener('focus', () => {
+            unreadCount = 0;
+            stopTitleBlink();
+            document.title = originalTitle;
+        });
+
+        function startTitleBlink() {
+            if (titleBlinkInterval) return;
+
+            console.log('제목 깜빡임 시작:', unreadCount);
+            let isOriginal = true;
+            titleBlinkInterval = setInterval(() => {
+                document.title = isOriginal ? `🔴 (${unreadCount}) 새 메시지` : originalTitle;
+                isOriginal = !isOriginal;
+            }, 1000);
+        }
+
+        function stopTitleBlink() {
+            if (titleBlinkInterval) {
+                clearInterval(titleBlinkInterval);
+                titleBlinkInterval = null;
+            }
+        }
+
+        // 초기 로드 (알림 없이)
+        fetch('/api/chats')
+            .then(res => res.json())
+            .then(chats => {
+                previousChatCount = Object.keys(chats).length;
+                loadChats();
+            });
+
+        setInterval(loadChats, 5000);
+    
+        // PWA 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker 등록 성공:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Service Worker 등록 실패:', error);
+                });
+        }
+</script>
+</body>
+</html>

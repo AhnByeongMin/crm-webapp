@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chat_title }}</title>
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 18px; color: #333; }
+        .back-btn {
+            padding: 8px 16px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .back-btn:hover { background: #5a6268; }
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1000px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-height: calc(100vh - 60px); /* 헤더 높이 제외 */
+            overflow: hidden; /* 컨테이너 자체는 넘치지 않게 */
+            position: relative; /* 이모지 피커 위치 기준 */
+        }
+        #messages {
+            flex: 1;
+            overflow-y: auto; /* 스크롤 가능 */
+            overflow-x: hidden;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0; /* flex item에서 스크롤이 작동하도록 */
+        }
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        .message.own {
+            align-self: flex-end;
+            background: #667eea;
+            color: white;
+        }
+        .message.other {
+            align-self: flex-start;
+            background: #e9ecef;
+            color: #333;
+        }
+        .message-header {
+            font-size: 12px;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+        .message-text {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .message-text.emoji-only {
+            font-size: 48px;
+            line-height: 1;
+            background: none !important;
+        }
+        .message.emoji-only-message {
+            background: none !important;
+            padding: 5px;
+        }
+        .message-time {
+            font-size: 11px;
+            margin-top: 4px;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .read-count {
+            font-size: 12px;
+            color: #ff0000;
+            font-weight: bold;
+            background: #ffebee;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-right: 5px;
+        }
+        .system-message {
+            align-self: center;
+            font-size: 12px;
+            color: #999;
+            background: none;
+            padding: 5px;
+        }
+        .input-area {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #ddd;
+            gap: 10px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+        }
+        #messageInput:focus {
+            border-color: #667eea;
+        }
+        #sendBtn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        #sendBtn:hover {
+            background: #5568d3;
+        }
+        .typing-indicator {
+            padding: 10px 20px;
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+            background: #f8f9fa;
+            border-radius: 15px;
+            align-self: flex-start;
+            display: none;
+        }
+        .typing-indicator.show {
+            display: block;
+        }
+        .typing-dots {
+            display: inline-block;
+        }
+        .typing-dots span {
+            animation: blink 1.4s infinite;
+            animation-fill-mode: both;
+        }
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+        .notification-banner {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            display: none;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .notification-banner.show {
+            display: flex;
+        }
+        .notification-banner-text {
+            flex: 1;
+            color: #856404;
+        }
+        .notification-banner-text strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .notification-banner-text small {
+            font-size: 12px;
+        }
+        .notification-banner button {
+            background: #ffc107;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .notification-banner button:hover {
+            background: #e0a800;
+        }
+        .close-banner {
+            background: transparent !important;
+            color: #856404 !important;
+            font-size: 20px;
+            padding: 0 8px !important;
+        }
+        #attachBtn {
+            padding: 10px 16px;
+            background: #f0f0f0;
+            color: #555;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #attachBtn:hover {
+            background: #e0e0e0;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        #emojiBtn {
+            padding: 10px 16px;
+            background: #f0f0f0;
+            color: #555;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #emojiBtn:hover {
+            background: #e0e0e0;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        .emoji-picker {
+            position: absolute;
+            bottom: 70px;
+            left: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 15px;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 320px;
+            z-index: 1000;
+        }
+        .emoji-picker.show {
+            display: block;
+        }
+        .emoji-picker-header {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .emoji-item {
+            font-size: 24px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .emoji-item:hover {
+            background: #f0f0f0;
+            transform: scale(1.2);
+        }
+        .file-preview {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #ddd;
+            display: none;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .file-preview.show {
+            display: flex;
+        }
+        .file-preview-item {
+            position: relative;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .file-preview-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .file-preview-item .remove-file {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+        }
+        .message-file {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .message-file img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            display: block;
+        }
+        .message-file.document {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .message-file.document:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="notificationBanner" class="notification-banner">
+        <div class="notification-banner-text">
+            <strong>💡 알림 안내</strong>
+            <small>HTTP 환경에서는 브라우저 푸시 알림이 작동하지 않습니다. 대신 탭 제목 깜빡임으로 새 메시지를 알려드립니다.</small>
+        </div>
+        <button class="close-banner" onclick="closeBanner()">×</button>
+    </div>
+
+    <div class="header">
+        <h1>{{ chat_title }}</h1>
+        <div class="nav" style="display: flex; gap: 10px;">
+            {% if is_admin %}
+            <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">할일관리</a>
+            <a href="/chats/all" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅관리</a>
+            <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">프로모션게시판</a>
+            {% endif %}
+            <a href="/" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">홈으로</a>
+            <a href="/chats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅</a>
+            <a href="/logout" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">로그아웃</a>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div id="messages"></div>
+        <div id="typingIndicator" class="typing-indicator">
+            <span id="typingUser"></span>님이 입력 중<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+        </div>
+        <div class="input-area">
+            <input type="file" id="fileInput" style="display: none;" multiple>
+            <button id="attachBtn" title="파일 첨부">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+            </button>
+            <button id="emojiBtn" title="이모지">😊</button>
+            <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button id="sendBtn">전송</button>
+        </div>
+        <div id="emojiPicker" class="emoji-picker">
+            <div class="emoji-picker-header">이모지 선택</div>
+            <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <div id="filePreview" class="file-preview"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        const chatId = '{{ chat_id }}';
+        const username = '{{ username }}';
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const typingUser = document.getElementById('typingUser');
+        let notificationPermission = false;
+        let isPageVisible = true;
+        let typingTimeout = null;
+        let isTyping = false;
+        let unreadCount = 0;
+        let originalTitle = '{{ chat_title }}';
+        let titleBlinkInterval = null;
+
+        // 알림 권한 요청 (명확한 요청)
+        if ('Notification' in window) {
+            console.log('현재 알림 권한 상태:', Notification.permission);
+
+            if (Notification.permission === 'default') {
+                // 페이지 로드 직후 권한 요청
+                setTimeout(() => {
+                    Notification.requestPermission().then(permission => {
+                        console.log('알림 권한 응답:', permission);
+                        notificationPermission = permission === 'granted';
+
+                        if (notificationPermission) {
+                            // 테스트 알림
+                            new Notification('알림이 활성화되었습니다!', {
+                                body: '새로운 메시지를 받으면 알려드립니다.',
+                                icon: '/favicon.ico'
+                            });
+                        }
+                    });
+                }, 1000);
+            } else if (Notification.permission === 'granted') {
+                notificationPermission = true;
+                console.log('알림 권한 이미 허용됨');
+            } else {
+                console.log('알림 권한 거부됨 (HTTP 환경에서는 정상)');
+                // HTTP 환경 안내 배너 표시 (선택적)
+                // document.getElementById('notificationBanner').classList.add('show');
+            }
+        } else {
+            console.log('이 브라우저는 알림을 지원하지 않습니다');
+        }
+
+        function closeBanner() {
+            document.getElementById('notificationBanner').classList.remove('show');
+        }
+
+        // 페이지 가시성 감지
+        document.addEventListener('visibilitychange', () => {
+            isPageVisible = !document.hidden;
+
+            // 페이지가 보이면 읽지 않은 메시지 카운트 리셋
+            if (isPageVisible) {
+                unreadCount = 0;
+                stopTitleBlink();
+                document.title = originalTitle;
+            }
+        });
+
+        // 탭이 포커스되면 읽지 않은 메시지 카운트 리셋
+        window.addEventListener('focus', () => {
+            unreadCount = 0;
+            stopTitleBlink();
+            document.title = originalTitle;
+        });
+
+        function startTitleBlink() {
+            if (titleBlinkInterval) {
+                console.log('이미 제목 깜빡임 중');
+                return; // 이미 깜빡이는 중이면 무시
+            }
+
+            console.log('제목 깜빡임 시작! 읽지 않은 메시지:', unreadCount);
+            let isOriginal = true;
+            titleBlinkInterval = setInterval(() => {
+                if (isOriginal) {
+                    document.title = `🔴 (${unreadCount}) 새 메시지`;
+                } else {
+                    document.title = originalTitle;
+                }
+                console.log('제목 변경:', document.title);
+                isOriginal = !isOriginal;
+            }, 1000); // 1초마다 깜빡임
+        }
+
+        function stopTitleBlink() {
+            if (titleBlinkInterval) {
+                console.log('제목 깜빡임 중지');
+                clearInterval(titleBlinkInterval);
+                titleBlinkInterval = null;
+            }
+        }
+
+        function showChatNotification(senderName, message) {
+            if (!notificationPermission || isPageVisible) return;
+
+            const notification = new Notification(`${senderName}님의 메시지`, {
+                body: message,
+                icon: '/favicon.ico',
+                badge: '/favicon.ico',
+                tag: 'chat-' + chatId,
+                requireInteraction: false
+            });
+
+            notification.onclick = function() {
+                window.focus();
+                notification.close();
+            };
+        }
+
+        // 방 입장
+        socket.emit('join', { chat_id: chatId, username: username });
+
+        let chatParticipants = [];
+
+        // 기존 메시지 로드
+        fetch('/api/chats')
+            .then(res => res.json())
+            .then(chats => {
+                const chat = chats[chatId];
+                if (chat && chat.messages) {
+                    chatParticipants = chat.participants || [];
+                    chat.messages.forEach(msg => {
+                        displayMessage(msg, chatParticipants);
+                    });
+                    scrollToBottom();
+
+                    // 페이지 진입시 모든 메시지를 읽음 처리
+                    socket.emit('mark_as_read', {
+                        chat_id: chatId,
+                        username: username
+                    });
+                }
+            });
+
+        // 메시지 전송 (임시 - 나중에 sendMessageWithFiles로 대체됨)
+        function sendMessage() {
+            // 파일이 있으면 sendMessageWithFiles 호출
+            if (selectedFiles && selectedFiles.length > 0) {
+                sendMessageWithFiles();
+            } else {
+                const message = messageInput.value.trim();
+                if (message) {
+                    socket.emit('send_message', {
+                        chat_id: chatId,
+                        username: username,
+                        message: message,
+                        file_info: null
+                    });
+                    messageInput.value = '';
+                }
+            }
+        }
+
+        sendBtn.addEventListener('click', () => {
+            sendMessageWithFiles();
+        });
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessageWithFiles();
+            }
+        });
+
+        // 타이핑 감지
+        messageInput.addEventListener('input', () => {
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing_start', { chat_id: chatId, username: username });
+            }
+
+            // 타이핑 타임아웃 리셋
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                socket.emit('typing_stop', { chat_id: chatId, username: username });
+            }, 1000); // 1초 동안 입력이 없으면 타이핑 중지
+        });
+
+        // 새 메시지 수신
+        socket.on('new_message', (msg) => {
+            console.log('새 메시지 수신:', msg);
+            console.log('파일 정보:', msg.file_info);
+            displayMessage(msg, chatParticipants);
+            scrollToBottom();
+
+            // 페이지가 포커스되어 있으면 자동으로 읽음 처리
+            if (document.hasFocus()) {
+                socket.emit('mark_as_read', {
+                    chat_id: chatId,
+                    username: username
+                });
+            }
+
+            // 다른 사람의 메시지면 알림 표시
+            if (msg.username !== username) {
+                console.log('새 메시지 수신:', msg.username, '페이지 가시성:', isPageVisible, '포커스:', document.hasFocus());
+
+                // 탭이 보이지 않거나 포커스가 없으면 제목 깜빡임
+                if (!document.hasFocus()) {
+                    unreadCount++;
+                    console.log('읽지 않은 메시지:', unreadCount, '제목 깜빡임 시작');
+                    startTitleBlink();
+                } else {
+                    console.log('페이지가 포커스 상태라 제목 깜빡임 안 함');
+                }
+
+                // 브라우저 푸시 알림 (HTTPS일 때만 작동)
+                showChatNotification(msg.username, msg.message);
+            }
+        });
+
+        // 사용자 입장
+        socket.on('user_joined', (data) => {
+            if (data.username !== username) {
+                addSystemMessage(`${data.username}님이 입장했습니다.`);
+            }
+        });
+
+        // 사용자 퇴장
+        socket.on('user_left', (data) => {
+            if (data.username !== username) {
+                addSystemMessage(`${data.username}님이 퇴장했습니다.`);
+            }
+        });
+
+        // 타이핑 시작
+        socket.on('user_typing_start', (data) => {
+            if (data.username !== username) {
+                typingUser.textContent = data.username;
+                typingIndicator.classList.add('show');
+                scrollToBottom();
+            }
+        });
+
+        // 타이핑 중지
+        socket.on('user_typing_stop', (data) => {
+            if (data.username !== username) {
+                typingIndicator.classList.remove('show');
+            }
+        });
+
+        function displayMessage(msg, chatParticipants) {
+            const messageDiv = document.createElement('div');
+            const isOwn = msg.username === username;
+
+            // 이모지만 있는지 체크 (공백 제거 후 체크)
+            const trimmedMsg = msg.message.trim();
+            const emojiOnlyRegex = /^[\p{Emoji}\u200d]+$/u;
+            const isEmojiOnly = emojiOnlyRegex.test(trimmedMsg) && !msg.file_info;
+
+            messageDiv.className = `message ${isOwn ? 'own' : 'other'} ${isEmojiOnly ? 'emoji-only-message' : ''}`;
+
+            const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // 읽지 않은 사람 수 계산
+            let unreadCount = 0;
+            if (isOwn && chatParticipants) {
+                const readBy = msg.read_by || [msg.username];
+                const totalParticipants = chatParticipants.length;
+                const readCount = readBy.length;
+                unreadCount = totalParticipants - readCount;
+                console.log('읽음 표시 계산:', {
+                    message: msg.message,
+                    totalParticipants,
+                    readBy,
+                    readCount,
+                    unreadCount
+                });
+            }
+
+            const unreadBadge = (isOwn && unreadCount > 0)
+                ? `<span class="read-count">${unreadCount}</span>`
+                : '';
+
+            // 파일 첨부 표시
+            let fileHtml = '';
+            if (msg.file_info && msg.file_info.length > 0) {
+                fileHtml = msg.file_info.map(file => {
+                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.filename);
+                    if (isImage) {
+                        return `
+                            <div class="message-file" onclick="window.open('${file.url}', '_blank')">
+                                <img src="${file.url}" alt="${escapeHtml(file.filename)}">
+                            </div>
+                        `;
+                    } else {
+                        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                        return `
+                            <div class="message-file document" onclick="window.open('${file.url}', '_blank')">
+                                <span>📄</span>
+                                <div>
+                                    <div>${escapeHtml(file.filename)}</div>
+                                    <small style="opacity: 0.7;">${fileSize}</small>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+            }
+
+            messageDiv.innerHTML = `
+                ${!isOwn ? `<div class="message-header">${msg.username}</div>` : ''}
+                <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${escapeHtml(msg.message)}</div>
+                ${fileHtml}
+                <div class="message-time">${unreadBadge}${time}</div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+        }
+
+        function addSystemMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.textContent = text;
+            messagesDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 읽음 상태 업데이트 수신
+        socket.on('read_receipt_update', (data) => {
+            console.log('읽음 상태 업데이트:', data);
+            // 메시지 목록을 다시 로드하여 읽음 표시 업데이트
+            fetch('/api/chats')
+                .then(res => res.json())
+                .then(chats => {
+                    const chat = chats[chatId];
+                    if (chat && chat.messages) {
+                        messagesDiv.innerHTML = '';
+                        chat.messages.forEach(msg => {
+                            displayMessage(msg, chatParticipants);
+                        });
+                        scrollToBottom();
+                    }
+                });
+        });
+
+        // 페이지 포커스시 읽음 처리
+        window.addEventListener('focus', () => {
+            socket.emit('mark_as_read', {
+                chat_id: chatId,
+                username: username
+            });
+        });
+
+        // 페이지 떠날 때 방 나가기
+        window.addEventListener('beforeunload', () => {
+            socket.emit('leave', { chat_id: chatId, username: username });
+        });
+
+        // 이모지 피커 기능
+        const emojiBtn = document.getElementById('emojiBtn');
+        const emojiPicker = document.getElementById('emojiPicker');
+        const emojiGrid = document.getElementById('emojiGrid');
+
+        // 자주 사용하는 이모지 목록
+        const emojis = [
+            '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊',
+            '😋', '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '🙂', '🤗',
+            '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥',
+            '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝',
+            '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁',
+            '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩',
+            '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡',
+            '😠', '🤬', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '😇', '🤠',
+            '🥳', '🥴', '🥺', '🤥', '🤫', '🤭', '🧐', '🤓', '😈', '👿',
+            '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟',
+            '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎',
+            '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏',
+            '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷',
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+            '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️',
+            '✨', '⭐', '🌟', '💫', '✔️', '✅', '❌', '❎', '⚠️', '🔥'
+        ];
+
+        // 이모지 그리드 생성
+        emojis.forEach(emoji => {
+            const emojiItem = document.createElement('div');
+            emojiItem.className = 'emoji-item';
+            emojiItem.textContent = emoji;
+            emojiItem.onclick = () => {
+                messageInput.value += emoji;
+                messageInput.focus();
+                emojiPicker.classList.remove('show');
+            };
+            emojiGrid.appendChild(emojiItem);
+        });
+
+        // 이모지 버튼 클릭
+        emojiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            emojiPicker.classList.toggle('show');
+        });
+
+        // 이모지 피커 외부 클릭시 닫기
+        document.addEventListener('click', (e) => {
+            if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                emojiPicker.classList.remove('show');
+            }
+        });
+
+        // 파일 업로드 기능
+        const fileInput = document.getElementById('fileInput');
+        const attachBtn = document.getElementById('attachBtn');
+        const filePreview = document.getElementById('filePreview');
+        let selectedFiles = [];
+
+        // 첨부 버튼 클릭시 파일 선택창 열기
+        attachBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 파일 선택시
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (file.size > 50 * 1024 * 1024) {
+                    alert(`${file.name}은(는) 50MB를 초과합니다.`);
+                    return;
+                }
+                selectedFiles.push(file);
+                displayFilePreview(file);
+            });
+            fileInput.value = ''; // 같은 파일 다시 선택 가능하도록
+        });
+
+        // 파일 미리보기 표시
+        function displayFilePreview(file) {
+            filePreview.classList.add('show');
+            const previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-item';
+
+            const isImage = file.type.startsWith('image/');
+            if (isImage) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                previewItem.appendChild(img);
+            }
+
+            const fileName = document.createElement('span');
+            fileName.textContent = file.name;
+            previewItem.appendChild(fileName);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-file';
+            removeBtn.textContent = '×';
+            removeBtn.onclick = () => {
+                selectedFiles = selectedFiles.filter(f => f !== file);
+                previewItem.remove();
+                if (selectedFiles.length === 0) {
+                    filePreview.classList.remove('show');
+                }
+            };
+            previewItem.appendChild(removeBtn);
+
+            filePreview.appendChild(previewItem);
+        }
+
+        // 클립보드 붙여넣기 (Ctrl+V)
+        document.addEventListener('paste', async (e) => {
+            const items = e.clipboardData.items;
+
+            for (let item of items) {
+                // 이미지 붙여넣기
+                if (item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) {
+                        selectedFiles.push(file);
+                        displayFilePreview(file);
+                    }
+                }
+            }
+        });
+
+        // 드래그 앤 드롭
+        messagesDiv.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            messagesDiv.style.background = '#f0f0f0';
+        });
+
+        messagesDiv.addEventListener('dragleave', () => {
+            messagesDiv.style.background = '';
+        });
+
+        messagesDiv.addEventListener('drop', (e) => {
+            e.preventDefault();
+            messagesDiv.style.background = '';
+
+            const files = Array.from(e.dataTransfer.files);
+            files.forEach(file => {
+                if (file.size > 50 * 1024 * 1024) {
+                    alert(`${file.name}은(는) 50MB를 초과합니다.`);
+                    return;
+                }
+                selectedFiles.push(file);
+                displayFilePreview(file);
+            });
+        });
+
+        // 메시지 전송 (파일 포함)
+        async function sendMessageWithFiles() {
+            const message = messageInput.value.trim();
+
+            if (!message && selectedFiles.length === 0) return;
+
+            // 파일 업로드
+            const fileInfos = [];
+            for (let file of selectedFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const fileInfo = await response.json();
+                        fileInfos.push(fileInfo);
+                    } else {
+                        alert(`${file.name} 업로드 실패`);
+                    }
+                } catch (error) {
+                    console.error('파일 업로드 오류:', error);
+                    alert(`${file.name} 업로드 중 오류 발생`);
+                }
+            }
+
+            // 메시지 전송
+            socket.emit('send_message', {
+                chat_id: chatId,
+                username: username,
+                message: message || '파일 전송',
+                file_info: fileInfos.length > 0 ? fileInfos : null
+            });
+
+            // 초기화
+            messageInput.value = '';
+            selectedFiles = [];
+            filePreview.innerHTML = '';
+            filePreview.classList.remove('show');
+        }
+
+        // PWA 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker 등록 성공:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Service Worker 등록 실패:', error);
+                });
+        }
+</script>
+</body>
+</html>

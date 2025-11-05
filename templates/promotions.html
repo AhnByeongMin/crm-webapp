@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로모션 게시판</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 20px; color: #333; }
+        .nav { display: flex; gap: 10px; }
+        .nav a {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .nav a:hover { background: #5568d3; }
+        .nav a.secondary { background: #6c757d; }
+        .nav a.secondary:hover { background: #5a6268; }
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .controls-row:last-child { margin-bottom: 0; }
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            min-width: 150px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .group-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .group-tab {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .group-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .group-tab:hover {
+            border-color: #667eea;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+        }
+
+        /* 프로모션 블록 */
+        .promo-block {
+            border-bottom: 3px solid #e0e0e0;
+            margin-bottom: 2px;
+        }
+        .promo-block:hover {
+            background: #f8f9fa;
+        }
+
+        /* 상세 정보 */
+        .detail-row td {
+            padding: 15px 20px;
+            border: none;
+            vertical-align: top;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr auto 1fr auto 1fr;
+            gap: 10px 20px;
+            align-items: start;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .info-value.highlight {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .content-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .actions-cell {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-expired {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status-unlimited {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+        .form-group label.required::after {
+            content: ' *';
+            color: #dc3545;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 8px;
+            color: #999;
+        }
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .admin-badge {
+            background: #ffc107;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        /* 채팅 알림 토글 */
+        .notification-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        .notification-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+        .notification-toggle.disabled {
+            background: #6c757d;
+            opacity: 0.6;
+        }
+
+        /* 토스트 알림 */
+        .toast-container {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+        .toast {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transform: translateX(400px);
+            animation: slideIn 0.3s forwards;
+            border-left: 4px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toast:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            transform: translateY(-2px);
+        }
+        .toast.slide-out {
+            animation: slideOut 0.3s forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        .toast-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .toast-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toast-message {
+            color: #666;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            프로모션 게시판
+            {% if is_admin %}
+            <span class="admin-badge">관리자</span>
+            {% endif %}
+        </h1>
+        <div class="nav">
+            {% if is_admin %}
+            <a href="/admin">할일관리</a>
+            <a href="/chats/all">채팅관리</a>
+            <a href="/promotions">프로모션게시판</a>
+            {% endif %}
+            <a href="/">홈으로</a>
+            <a href="/chats">채팅</a>
+            <a href="/logout" class="secondary">로그아웃</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="controls-row">
+                <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력...">
+                <select id="categoryFilter">
+                    <option value="">전체 대분류</option>
+                </select>
+                <select id="productFilter">
+                    <option value="">전체 상품</option>
+                </select>
+                <select id="channelFilter">
+                    <option value="">전체 채널</option>
+                </select>
+                <select id="promotionFilter">
+                    <option value="">전체 프로모션</option>
+                </select>
+                <button class="btn btn-secondary" onclick="clearFilters()">필터 초기화</button>
+                {% if is_admin %}
+                <button class="btn btn-primary" onclick="openCreateModal()">+ 새 프로모션</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="group-tabs" id="groupTabs"></div>
+
+        <div id="promotionList"></div>
+    </div>
+
+    <!-- 생성/수정 모달 -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">새 프로모션</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="promotionForm">
+                <input type="hidden" id="promoId">
+                <div class="form-group">
+                    <label class="required">대분류</label>
+                    <input type="text" id="category" required>
+                </div>
+                <div class="form-group">
+                    <label class="required">상품명</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label class="required">프로모션 채널</label>
+                    <input type="text" id="channel" required>
+                </div>
+                <div class="form-group">
+                    <label class="required">프로모션명</label>
+                    <input type="text" id="promotionName" required>
+                </div>
+                <div class="form-group">
+                    <label>금액할인</label>
+                    <input type="text" id="discountAmount" placeholder="예: 10,000원 또는 10%">
+                </div>
+                <div class="form-group">
+                    <label>회차면제</label>
+                    <input type="text" id="sessionExemption" placeholder="예: 1회차 면제">
+                </div>
+                <div class="form-group">
+                    <label>중복여부</label>
+                    <div style="display: flex; gap: 15px; margin-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                            <input type="checkbox" id="typeExisting" value="기존">
+                            기존
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                            <input type="checkbox" id="typeCombined" value="결합">
+                            결합
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                            <input type="checkbox" id="typeReferral" value="지인">
+                            지인
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>프로모션 코드</label>
+                    <input type="text" id="promotionCode">
+                </div>
+                <div class="form-group">
+                    <label class="required">프로모션 내용</label>
+                    <textarea id="content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="required">시작일</label>
+                    <input type="date" id="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label>종료일</label>
+                    <input type="date" id="endDate">
+                    <small style="color: #666;">비워두면 '무기한'으로 설정됩니다</small>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">취소</button>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 상세보기 모달 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>프로모션 상세</h2>
+                <button class="close-btn" onclick="closeDetailModal()">&times;</button>
+            </div>
+            <div id="detailContent"></div>
+            <div class="form-actions">
+                {% if is_admin %}
+                <button class="btn btn-danger" onclick="deletePromotion()">삭제</button>
+                <button class="btn btn-primary" onclick="editFromDetail()">수정</button>
+                {% endif %}
+                <button class="btn btn-secondary" onclick="closeDetailModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const isAdmin = {{ 'true' if is_admin else 'false' }};
+        let currentPromoId = null;
+        let allPromotions = [];
+        let filteredPromotions = [];
+        let groupBy = 'none'; // none, product, channel, promotion
+
+        // 프로모션 목록 로드
+        function loadPromotions() {
+            const params = new URLSearchParams();
+            const search = document.getElementById('searchInput').value;
+            const product = document.getElementById('productFilter').value;
+            const channel = document.getElementById('channelFilter').value;
+            const promotion = document.getElementById('promotionFilter').value;
+
+            if (search) params.append('search', search);
+            if (product) params.append('product_name', product);
+            if (channel) params.append('channel', channel);
+            if (promotion) params.append('promotion_name', promotion);
+
+            fetch(`/api/promotions?${params}`)
+                .then(res => res.json())
+                .then(data => {
+                    allPromotions = data;
+                    filteredPromotions = data;
+                    renderGroupTabs();
+                    renderPromotions();
+                });
+        }
+
+        // 필터 옵션 로드
+        function loadFilters() {
+            fetch('/api/promotions/filters')
+                .then(res => res.json())
+                .then(data => {
+                    const categoryFilter = document.getElementById('categoryFilter');
+                    const productFilter = document.getElementById('productFilter');
+                    const channelFilter = document.getElementById('channelFilter');
+                    const promotionFilter = document.getElementById('promotionFilter');
+
+                    categoryFilter.innerHTML = '<option value="">전체 대분류</option>' +
+                        (data.categories || []).map(c => `<option value="${c}">${c}</option>`).join('');
+
+                    productFilter.innerHTML = '<option value="">전체 상품</option>' +
+                        data.products.map(p => `<option value="${p}">${p}</option>`).join('');
+
+                    channelFilter.innerHTML = '<option value="">전체 채널</option>' +
+                        data.channels.map(c => `<option value="${c}">${c}</option>`).join('');
+
+                    promotionFilter.innerHTML = '<option value="">전체 프로모션</option>' +
+                        data.promotion_names.map(n => `<option value="${n}">${n}</option>`).join('');
+                });
+        }
+
+        // 그룹 탭 렌더링
+        function renderGroupTabs() {
+            const tabsContainer = document.getElementById('groupTabs');
+            tabsContainer.innerHTML = `
+                <div class="group-tab ${groupBy === 'none' ? 'active' : ''}" onclick="setGroupBy('none')">
+                    전체 목록
+                </div>
+                <div class="group-tab ${groupBy === 'product' ? 'active' : ''}" onclick="setGroupBy('product')">
+                    상품별
+                </div>
+                <div class="group-tab ${groupBy === 'channel' ? 'active' : ''}" onclick="setGroupBy('channel')">
+                    채널별
+                </div>
+                <div class="group-tab ${groupBy === 'promotion' ? 'active' : ''}" onclick="setGroupBy('promotion')">
+                    프로모션별
+                </div>
+            `;
+        }
+
+        function setGroupBy(type) {
+            groupBy = type;
+            renderGroupTabs();
+            renderPromotions();
+        }
+
+        // 프로모션 목록 렌더링
+        function renderPromotions() {
+            const container = document.getElementById('promotionList');
+
+            if (filteredPromotions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">📢</div>
+                        <p>등록된 프로모션이 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (groupBy === 'none') {
+                // 전체 목록
+                container.innerHTML = renderTable(filteredPromotions);
+            } else {
+                // 그룹별
+                const grouped = groupPromotions(filteredPromotions, groupBy);
+                let html = '';
+                for (const [group, promos] of Object.entries(grouped)) {
+                    html += `
+                        <h3 style="margin: 20px 0 10px 0; color: #333;">${group} (${promos.length}건)</h3>
+                        ${renderTable(promos)}
+                    `;
+                }
+                container.innerHTML = html;
+            }
+        }
+
+        function groupPromotions(promos, type) {
+            const grouped = {};
+            const key = type === 'product' ? 'product_name' :
+                       type === 'channel' ? 'channel' : 'promotion_name';
+
+            promos.forEach(p => {
+                const groupKey = p[key] || '미분류';
+                if (!grouped[groupKey]) {
+                    grouped[groupKey] = [];
+                }
+                grouped[groupKey].push(p);
+            });
+
+            return grouped;
+        }
+
+        function renderTable(promos) {
+            return `
+                <div class="table-wrapper">
+                    <table>
+                        <tbody>
+                            ${promos.map(p => `
+                                <tr class="promo-block">
+                                    <td colspan="100">
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <tr class="detail-row">
+                                                <td onclick="viewDetail(${p.id})" style="cursor: pointer;">
+                                                    <div class="info-grid">
+                                                        <div class="info-label">대분류:</div>
+                                                        <div class="info-value highlight">${p.category || '분류없음'}</div>
+
+                                                        <div class="info-label">상품:</div>
+                                                        <div class="info-value highlight">${p.product_name}</div>
+
+                                                        <div class="info-label">채널:</div>
+                                                        <div class="info-value">${p.channel}</div>
+
+                                                        <div class="info-label">프로모션:</div>
+                                                        <div class="info-value highlight">${p.promotion_name}</div>
+
+                                                        <div class="info-label">금액할인:</div>
+                                                        <div class="info-value highlight">${p.discount_amount || '-'}</div>
+
+                                                        <div class="info-label">기간:</div>
+                                                        <div class="info-value">${p.start_date} ~ ${p.end_date}</div>
+
+                                                        <div class="info-label">회차면제:</div>
+                                                        <div class="info-value">${p.session_exemption || '-'}</div>
+
+                                                        <div class="info-label">중복여부:</div>
+                                                        <div class="info-value">${(p.subscription_types || []).join(', ') || '-'}</div>
+
+                                                        <div class="info-label">상태:</div>
+                                                        <div class="info-value">${getStatusBadge(p)}</div>
+
+                                                        ${isAdmin ? `
+                                                            <div class="info-label"></div>
+                                                            <div class="actions-cell" onclick="event.stopPropagation();">
+                                                                <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;" onclick="editPromotion(${p.id})">수정</button>
+                                                                <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; margin-left: 5px;" onclick="confirmDelete(${p.id})">삭제</button>
+                                                            </div>
+                                                        ` : ''}
+
+                                                        <div class="info-label">내용:</div>
+                                                        <div class="info-value content-text" style="grid-column: span 5;">${p.content}</div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function getStatusBadge(promo) {
+            if (promo.end_date === '무기한') {
+                return '<span class="status-badge status-unlimited">무기한</span>';
+            }
+
+            const today = new Date();
+            const endDate = new Date(promo.end_date);
+
+            if (endDate < today) {
+                return '<span class="status-badge status-expired">종료</span>';
+            } else {
+                return '<span class="status-badge status-active">진행중</span>';
+            }
+        }
+
+        // 상세보기
+        function viewDetail(id) {
+            currentPromoId = id;
+            fetch(`/api/promotions/${id}`)
+                .then(res => res.json())
+                .then(promo => {
+                    document.getElementById('detailContent').innerHTML = `
+                        <div style="line-height: 1.8;">
+                            <p><strong>대분류:</strong> ${promo.category || '-'}</p>
+                            <p><strong>상품명:</strong> ${promo.product_name}</p>
+                            <p><strong>채널:</strong> ${promo.channel}</p>
+                            <p><strong>프로모션명:</strong> ${promo.promotion_name}</p>
+                            <p><strong>금액할인:</strong> ${promo.discount_amount || '-'}</p>
+                            <p><strong>회차면제:</strong> ${promo.session_exemption || '-'}</p>
+                            <p><strong>중복여부:</strong> ${(promo.subscription_types || []).join(', ') || '-'}</p>
+                            <p><strong>프로모션 코드:</strong> ${promo.promotion_code || '-'}</p>
+                            <p><strong>내용:</strong></p>
+                            <p style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px;">${promo.content}</p>
+                            <p><strong>기간:</strong> ${promo.start_date} ~ ${promo.end_date}</p>
+                            <p><strong>상태:</strong> ${getStatusBadge(promo)}</p>
+                            <p style="font-size: 12px; color: #666; margin-top: 20px;">
+                                등록일: ${new Date(promo.created_at).toLocaleString('ko-KR')}<br>
+                                ${promo.created_by ? `등록자: ${promo.created_by}<br>` : ''}
+                                ${promo.updated_at ? `최종 수정: ${new Date(promo.updated_at).toLocaleString('ko-KR')}` : ''}
+                            </p>
+                        </div>
+                    `;
+                    document.getElementById('detailModal').classList.add('show');
+                });
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('show');
+            currentPromoId = null;
+        }
+
+        function editFromDetail() {
+            closeDetailModal();
+            editPromotion(currentPromoId);
+        }
+
+        // 생성 모달
+        function openCreateModal() {
+            document.getElementById('modalTitle').textContent = '새 프로모션';
+            document.getElementById('promotionForm').reset();
+            document.getElementById('promoId').value = '';
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        // 수정 모달
+        function editPromotion(id) {
+            fetch(`/api/promotions/${id}`)
+                .then(res => res.json())
+                .then(promo => {
+                    document.getElementById('modalTitle').textContent = '프로모션 수정';
+                    document.getElementById('promoId').value = promo.id;
+                    document.getElementById('category').value = promo.category || '안마의자';
+                    document.getElementById('productName').value = promo.product_name;
+                    document.getElementById('channel').value = promo.channel;
+                    document.getElementById('promotionName').value = promo.promotion_name;
+                    document.getElementById('discountAmount').value = promo.discount_amount || '';
+                    document.getElementById('sessionExemption').value = promo.session_exemption || '';
+
+                    // 체크박스 설정
+                    const types = promo.subscription_types || [];
+                    document.getElementById('typeExisting').checked = types.includes('기존');
+                    document.getElementById('typeCombined').checked = types.includes('결합');
+                    document.getElementById('typeReferral').checked = types.includes('지인');
+
+                    document.getElementById('promotionCode').value = promo.promotion_code || '';
+                    document.getElementById('content').value = promo.content;
+                    document.getElementById('startDate').value = promo.start_date;
+                    document.getElementById('endDate').value = promo.end_date === '무기한' ? '' : promo.end_date;
+                    document.getElementById('editModal').classList.add('show');
+                });
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('show');
+        }
+
+        // 폼 제출
+        document.getElementById('promotionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('promoId').value;
+
+            // 가입유형 체크박스 값 수집
+            const subscriptionTypes = [];
+            if (document.getElementById('typeExisting').checked) subscriptionTypes.push('기존');
+            if (document.getElementById('typeCombined').checked) subscriptionTypes.push('결합');
+            if (document.getElementById('typeReferral').checked) subscriptionTypes.push('지인');
+
+            const data = {
+                category: document.getElementById('category').value,
+                product_name: document.getElementById('productName').value,
+                channel: document.getElementById('channel').value,
+                promotion_name: document.getElementById('promotionName').value,
+                discount_amount: document.getElementById('discountAmount').value,
+                session_exemption: document.getElementById('sessionExemption').value,
+                subscription_types: subscriptionTypes,
+                promotion_code: document.getElementById('promotionCode').value,
+                content: document.getElementById('content').value,
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value || '무기한'
+            };
+
+            const url = id ? `/api/promotions/${id}` : '/api/promotions';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert(id ? '프로모션이 수정되었습니다.' : '프로모션이 등록되었습니다.');
+                    closeModal();
+                    loadPromotions();
+                    loadFilters();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || '오류가 발생했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('오류가 발생했습니다.');
+            }
+        });
+
+        // 삭제
+        function confirmDelete(id) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            deletePromotionById(id);
+        }
+
+        function deletePromotion() {
+            if (!currentPromoId) return;
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            deletePromotionById(currentPromoId);
+        }
+
+        async function deletePromotionById(id) {
+            try {
+                const response = await fetch(`/api/promotions/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('프로모션이 삭제되었습니다.');
+                    closeDetailModal();
+                    loadPromotions();
+                    loadFilters();
+                } else {
+                    alert('삭제에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('오류가 발생했습니다.');
+            }
+        }
+
+        // 필터 초기화
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('productFilter').value = '';
+            document.getElementById('channelFilter').value = '';
+            document.getElementById('promotionFilter').value = '';
+            loadPromotions();
+        }
+
+        // 이벤트 리스너
+        document.getElementById('searchInput').addEventListener('input', () => {
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(loadPromotions, 500);
+        });
+
+        document.getElementById('productFilter').addEventListener('change', loadPromotions);
+        document.getElementById('channelFilter').addEventListener('change', loadPromotions);
+        document.getElementById('promotionFilter').addEventListener('change', loadPromotions);
+
+        // 초기 로드
+        loadFilters();
+        loadPromotions();
+
+        // Socket.IO 및 채팅 알림 기능
+        const socket = io();
+        let notificationsEnabled = localStorage.getItem('chatNotifications') !== 'false';
+
+        // 알림 토글 버튼 업데이트
+        function updateToggleButton() {
+            const toggle = document.getElementById('notificationToggle');
+            if (toggle) {
+                toggle.className = notificationsEnabled ? 'notification-toggle' : 'notification-toggle disabled';
+                toggle.textContent = notificationsEnabled ? '🔔' : '🔕';
+                toggle.title = notificationsEnabled ? '알림 끄기' : '알림 켜기';
+            }
+        }
+
+        // 알림 토글
+        function toggleNotifications() {
+            notificationsEnabled = !notificationsEnabled;
+            localStorage.setItem('chatNotifications', notificationsEnabled);
+            updateToggleButton();
+        }
+
+        // 토스트 알림 표시
+        function showToast(chatTitle, message, chatId) {
+            if (!notificationsEnabled) return;
+
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-icon">💬</div>
+                <div class="toast-content">
+                    <div class="toast-title">${chatTitle}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+
+            toast.onclick = () => {
+                window.location.href = `/chat/${chatId}`;
+            };
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('slide-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Socket.IO 이벤트 리스너
+        socket.on('new_message', (data) => {
+            if (data.username !== '{{ session.get("username", "") }}') {
+                showToast(data.chat_title, `${data.username}: ${data.message}`, data.chat_id);
+            }
+        });
+
+        // 초기 토글 버튼 상태 설정
+        updateToggleButton();
+    </script>
+
+    <!-- 토스트 알림 컨테이너 -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- 알림 토글 버튼 -->
+    <button id="notificationToggle" class="notification-toggle" onclick="toggleNotifications()" title="알림 끄기">🔔</button>
+</body>
+</html>
