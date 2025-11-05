@@ -21,7 +21,12 @@
       "Bash(timeout 3 python:*)",
       "Bash(cmd /c \"taskkill /PID 80168 /F & taskkill /PID 55584 /F\")",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(.gitignore)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Flask CRM 웹 애플리케이션\n\n주요 기능:\n- 할일 관리 시스템 (관리자)\n- 실시간 채팅 (Socket.IO, 읽음 표시, 파일 공유)\n- 프로모션 게시판 (CRUD, 필터링, 검색)\n- 사용자 관리 및 세션 기반 인증\n- PWA 지원\n\n기술 스택:\n- Flask 3.1.0, Flask-SocketIO 5.4.1\n- JSON 파일 기반 데이터 저장\n- Vanilla JavaScript\n\n🤖 Generated with Claude Code\nEOF\n)\")",
+      "Bash(git config:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
