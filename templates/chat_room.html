@@ -362,6 +362,66 @@
         .message-file.document:hover {
             background: rgba(255,255,255,0.3);
         }
+
+        /* 이미지 모달 팝업 */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            animation: fadeIn 0.2s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .image-modal-content {
+            position: relative;
+            margin: auto;
+            padding: 0;
+            width: 90%;
+            max-width: 1200px;
+            height: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-modal-content img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .image-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10001;
+            transition: 0.3s;
+        }
+        .image-modal-close:hover,
+        .image-modal-close:focus {
+            color: #bbb;
+        }
+        .image-modal-filename {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -378,11 +438,10 @@
         <div class="nav" style="display: flex; gap: 10px;">
             {% if is_admin %}
             <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">할일관리</a>
-            <a href="/chats/all" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅관리</a>
-            <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">프로모션게시판</a>
             {% endif %}
-            <a href="/" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">홈으로</a>
+            <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">프로모션게시판</a>
             <a href="/chats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅</a>
+            <a href="/" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">홈으로</a>
             <a href="/logout" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">로그아웃</a>
         </div>
     </div>
@@ -695,12 +754,14 @@
 
             // 파일 첨부 표시
             let fileHtml = '';
+
+            // file_info 형식 (실시간 전송된 파일)
             if (msg.file_info && msg.file_info.length > 0) {
                 fileHtml = msg.file_info.map(file => {
                     const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.filename);
                     if (isImage) {
                         return `
-                            <div class="message-file" onclick="window.open('${file.url}', '_blank')">
+                            <div class="message-file" onclick="openImageModal('${file.url}', '${escapeHtml(file.filename)}')">
                                 <img src="${file.url}" alt="${escapeHtml(file.filename)}">
                             </div>
                         `;
@@ -717,6 +778,26 @@
                         `;
                     }
                 }).join('');
+            }
+            // file_path 형식 (DB에서 로드된 파일)
+            else if (msg.file_path && msg.file_name) {
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.file_name);
+                if (isImage) {
+                    fileHtml = `
+                        <div class="message-file" onclick="openImageModal('${msg.file_path}', '${escapeHtml(msg.file_name)}')">
+                            <img src="${msg.file_path}" alt="${escapeHtml(msg.file_name)}">
+                        </div>
+                    `;
+                } else {
+                    fileHtml = `
+                        <div class="message-file document" onclick="window.open('${msg.file_path}', '_blank')">
+                            <span>📄</span>
+                            <div>
+                                <div>${escapeHtml(msg.file_name)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
             }
 
             messageDiv.innerHTML = `
@@ -738,7 +819,12 @@
         }
 
         function scrollToBottom() {
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            // requestAnimationFrame으로 DOM 렌더링 완료 후 스크롤
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                });
+            });
         }
 
         function escapeHtml(text) {
@@ -746,6 +832,30 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // 이미지 모달 열기
+        function openImageModal(imageSrc, filename) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('imageModalImg');
+            const filenameDiv = document.getElementById('imageModalFilename');
+
+            modal.style.display = 'block';
+            modalImg.src = imageSrc;
+            filenameDiv.textContent = filename;
+        }
+
+        // 이미지 모달 닫기
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+        }
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
 
         // 읽음 상태 업데이트 수신
         socket.on('read_receipt_update', (data) => {
@@ -984,5 +1094,15 @@
                 });
         }
 </script>
+
+<!-- 이미지 모달 팝업 -->
+<div id="imageModal" class="image-modal" onclick="closeImageModal()">
+    <span class="image-modal-close">&times;</span>
+    <div class="image-modal-content" onclick="event.stopPropagation()">
+        <img id="imageModalImg" src="" alt="">
+    </div>
+    <div class="image-modal-filename" id="imageModalFilename"></div>
+</div>
+
 </body>
 </html>

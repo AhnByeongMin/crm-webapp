@@ -6,23 +6,20 @@ import os
 import uuid
 import threading
 from datetime import datetime
+import database  # SQLite 데이터베이스 헬퍼
+import pandas as pd
+import random
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 최대 파일 크기
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 캐시 비활성화
+app.config['TEMPLATES_AUTO_RELOAD'] = True  # 템플릿 자동 리로드
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
+EXCEL_EXTENSIONS = {'xls', 'xlsx'}
 
 socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=50 * 1024 * 1024)
-
-DATA_FILE = 'data.json'
-CHAT_FILE = 'chats.json'
-USERS_FILE = 'users.json'
-PROMOTIONS_FILE = 'promotions.json'
-
-# 파일 쓰기 동기화를 위한 락
-chat_file_lock = threading.Lock()
-promotions_file_lock = threading.Lock()
 
 # 관리자 계정 (이름: 비밀번호)
 ADMIN_ACCOUNTS = {
@@ -33,93 +30,19 @@ ADMIN_ACCOUNTS = {
     '안병민': 'admin1234'
 }
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
-
-def save_data(data):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def load_chats():
-    with chat_file_lock:
-        if os.path.exists(CHAT_FILE):
-            try:
-                with open(CHAT_FILE, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except json.JSONDecodeError as e:
-                print(f"[ERROR] chats.json 파싱 오류: {e}")
-                # 백업 파일 생성
-                import shutil
-                backup_file = f'chats_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-                if os.path.exists(CHAT_FILE):
-                    shutil.copy(CHAT_FILE, backup_file)
-                    print(f"[ERROR] 손상된 파일을 {backup_file}로 백업했습니다")
-                return {}
-        return {}
-
-def save_chats(chats):
-    with chat_file_lock:
-        # 임시 파일에 먼저 저장 후 원본 파일로 이동 (원자적 쓰기)
-        import shutil
-        temp_file = CHAT_FILE + '.tmp'
-        try:
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(chats, f, ensure_ascii=False, indent=2)
-            # 임시 파일을 원본으로 교체
-            shutil.move(temp_file, CHAT_FILE)
-        except Exception as e:
-            print(f"[ERROR] chats.json 저장 오류: {e}")
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-
-def load_users():
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
-
-def save_users(users):
-    with open(USERS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
-
-def load_promotions():
-    with promotions_file_lock:
-        if os.path.exists(PROMOTIONS_FILE):
-            try:
-                with open(PROMOTIONS_FILE, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except json.JSONDecodeError as e:
-                print(f"[ERROR] promotions.json 파싱 오류: {e}")
-                import shutil
-                backup_file = f'promotions_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-                if os.path.exists(PROMOTIONS_FILE):
-                    shutil.copy(PROMOTIONS_FILE, backup_file)
-                    print(f"[ERROR] 손상된 파일을 {backup_file}로 백업했습니다")
-                return []
-        return []
-
-def save_promotions(promotions):
-    with promotions_file_lock:
-        import shutil
-        temp_file = PROMOTIONS_FILE + '.tmp'
-        try:
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(promotions, f, ensure_ascii=False, indent=2)
-            shutil.move(temp_file, PROMOTIONS_FILE)
-        except Exception as e:
-            print(f"[ERROR] promotions.json 저장 오류: {e}")
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-
-def add_user(username):
-    """로그인한 사용자를 사용자 목록에 추가"""
-    users = load_users()
-    if username not in users:
-        users.append(username)
-        save_users(users)
+# SQLite 데이터베이스 함수 사용
+load_data = database.load_data
+save_data = database.save_data
+load_chats = database.load_chats
+save_chats = database.save_chats
+load_users = database.load_users
+save_users = database.save_users
+load_promotions = database.load_promotions
+save_promotions = database.save_promotions
+add_user = database.add_user
+load_users_by_team = database.load_users_by_team
+load_teams = database.load_teams
+load_users_with_team = database.load_users_with_team
 
 def is_localhost():
     return request.remote_addr in ['127.0.0.1', 'localhost', '::1']
@@ -134,6 +57,14 @@ def is_admin():
         return True
 
     return False
+
+@app.after_request
+def add_no_cache_headers(response):
+    """모든 응답에 캐시 비활성화 헤더 추가"""
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 @app.route('/')
 def index():
@@ -211,7 +142,7 @@ def create_item():
 
     data = load_data()
     new_item = request.json
-    new_item['id'] = max([item.get('id', 0) for item in data], default=0) + 1
+    new_item['id'] = database.get_next_id('tasks')
     new_item['created_at'] = datetime.now().isoformat()
     data.append(new_item)
     save_data(data)
@@ -241,11 +172,234 @@ def delete_item(item_id):
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
-    data = load_data()
-    data = [item for item in data if item.get('id') != item_id]
-    save_data(data)
+    # 최적화된 delete_task 함수 사용 (개별 삭제)
+    success = database.delete_task(item_id)
 
-    return jsonify({'success': True})
+    return jsonify({'success': success})
+
+@app.route('/api/items/<int:item_id>/unassign', methods=['POST'])
+def unassign_item(item_id):
+    """할일 배정 해제 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    try:
+        database.update_task_assignment(item_id, None)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/items/<int:item_id>/status', methods=['PUT'])
+def update_item_status(item_id):
+    """할일 상태 변경 (일반 사용자: 자신에게 배정된 항목만)"""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    status = request.json.get('status')
+    if status not in ['대기중', '진행중', '완료']:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    # 일반 사용자는 자신에게 배정된 항목만 변경 가능
+    if not is_admin():
+        data = load_data()
+        item = next((item for item in data if item.get('id') == item_id), None)
+        if not item:
+            return jsonify({'error': 'Not found'}), 404
+        if item.get('assigned_to') != session['username']:
+            return jsonify({'error': 'Forbidden'}), 403
+
+    database.update_task_status(item_id, status)
+    return jsonify({'success': True, 'status': status})
+
+@app.route('/api/items/<int:item_id>/assign', methods=['PUT'])
+def update_item_assignment(item_id):
+    """할일 배정/회수 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    assigned_to = request.json.get('assigned_to')  # None이면 회수
+    database.update_task_assignment(item_id, assigned_to)
+    return jsonify({'success': True, 'assigned_to': assigned_to})
+
+@app.route('/api/items/bulk-assign', methods=['POST'])
+def bulk_assign_items():
+    """할일 일괄 배정 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    task_ids = request.json.get('task_ids', [])
+    assign_mode = request.json.get('mode')  # 'individual', 'random', 'sequential'
+    users = request.json.get('users', [])  # 배정할 사용자 목록
+
+    if not task_ids or not users:
+        return jsonify({'error': 'Invalid parameters'}), 400
+
+    try:
+        if assign_mode == 'random':
+            # 랜덤 배정: 각 할일마다 무작위 사용자 배정
+            for task_id in task_ids:
+                user = random.choice(users)
+                database.update_task_assignment(task_id, user)
+
+        elif assign_mode == 'sequential':
+            # 순차 배정: 사용자 순서대로 돌아가며 배정
+            for i, task_id in enumerate(task_ids):
+                user = users[i % len(users)]
+                database.update_task_assignment(task_id, user)
+
+        elif assign_mode == 'individual':
+            # 개별 배정: task_ids와 users가 1:1 매칭
+            for task_id, user in zip(task_ids, users):
+                database.update_task_assignment(task_id, user)
+
+        return jsonify({'success': True, 'count': len(task_ids)})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/items/bulk-upload', methods=['POST'])
+def bulk_upload_items():
+    """엑셀 파일로 할일 일괄 등록 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'error': '파일이 없습니다'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': '파일이 선택되지 않았습니다'}), 400
+
+    # 엑셀 파일 확인
+    if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in EXCEL_EXTENSIONS):
+        return jsonify({'error': '엑셀 파일만 업로드 가능합니다 (.xlsx, .xls)'}), 400
+
+    try:
+        # 엑셀 파일 읽기
+        df = pd.read_excel(file)
+
+        # 필수 컬럼 확인
+        required_columns = ['제목', '내용']
+        if not all(col in df.columns for col in required_columns):
+            return jsonify({'error': f'필수 컬럼이 없습니다: {", ".join(required_columns)}'}), 400
+
+        # 데이터 검증 및 등록
+        added_count = 0
+        skipped_count = 0
+
+        for _, row in df.iterrows():
+            title = str(row['제목']).strip() if pd.notna(row['제목']) else ''
+            content = str(row['내용']).strip() if pd.notna(row['내용']) else ''
+
+            # 제목이 비어있으면 스킵
+            if not title:
+                skipped_count += 1
+                continue
+
+            # 대상 처리 로직
+            assigned_to = None
+            if '대상' in df.columns and pd.notna(row['대상']):
+                target_user = str(row['대상']).strip()
+                if target_user:  # 빈 문자열이 아닌 경우만 검증
+                    # DB에 사용자가 존재하는지 확인
+                    if database.user_exists(target_user):
+                        assigned_to = target_user
+                    # 존재하지 않는 사용자명은 자동으로 미배정(None)으로 처리
+
+            # 개별 삽입 (ID 자동 증가)
+            database.add_task(assigned_to, title, content, '대기중')
+            added_count += 1
+
+        return jsonify({'success': True, 'count': added_count, 'skipped': skipped_count})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'파일 처리 오류: {str(e)}'}), 500
+
+@app.route('/api/users/non-admin', methods=['GET'])
+def get_non_admin_users():
+    """관리자가 아닌 일반 사용자 목록 조회 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    all_users = database.load_users()
+    # 관리자 계정 제외
+    non_admin_users = [user for user in all_users if user not in ADMIN_ACCOUNTS]
+    return jsonify(non_admin_users)
+
+@app.route('/api/teams', methods=['GET'])
+def get_teams():
+    """팀 목록 조회 (관리자 전용) - 배정 가능한 팀만 반환"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    teams = load_teams()
+    # '관리자' 팀은 배정 대상이 아니므로 제외
+    teams = [team for team in teams if team != '관리자']
+    return jsonify(teams)
+
+@app.route('/api/users/by-team', methods=['GET'])
+def get_users_by_team():
+    """팀별 사용자 목록 조회 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    team = request.args.get('team')
+
+    if team == '전체':
+        # 전체 팀원 (관리자 팀 제외, 팀 없는 사용자 제외)
+        users = load_users_by_team()
+        # 관리자 계정은 배정 대상에서 제외
+        users = [user for user in users if user not in ADMIN_ACCOUNTS]
+    elif team == '관리자':
+        # 관리자 팀은 배정 대상이 아니므로 빈 리스트 반환
+        users = []
+    elif team:
+        # 특정 팀 사용자
+        users = load_users_by_team(team)
+        # 혹시 모를 경우를 대비해 관리자 제외
+        users = [user for user in users if user not in ADMIN_ACCOUNTS]
+    else:
+        # 팀 파라미터 없으면 전체 사용자 (관리자 제외)
+        users = database.load_users()
+        users = [user for user in users if user not in ADMIN_ACCOUNTS]
+
+    return jsonify(users)
+
+@app.route('/api/users/with-team', methods=['GET'])
+def get_users_with_team():
+    """팀 정보를 포함한 사용자 목록 조회 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    users = load_users_with_team()
+    # 관리자 계정 제외
+    users = [user for user in users if user['username'] not in ADMIN_ACCOUNTS]
+    return jsonify(users)
+
+@app.route('/download/template/tasks')
+def download_tasks_template():
+    """할일 등록용 엑셀 템플릿 다운로드"""
+    if not is_admin():
+        return "Access Denied", 403
+
+    # 템플릿 데이터 생성
+    template_data = {
+        '제목': ['예시: 고객 문의 응대', '예시: 보고서 작성'],
+        '내용': ['고객 A의 문의사항 확인 및 답변', '월간 실적 보고서 작성 및 제출'],
+        '대상자': ['홍길동', '']  # 비워두면 미배정
+    }
+
+    df = pd.DataFrame(template_data)
+
+    # 임시 파일로 저장
+    template_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tasks_template.xlsx')
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    df.to_excel(template_path, index=False, engine='openpyxl')
+
+    return send_from_directory(app.config['UPLOAD_FOLDER'], 'tasks_template.xlsx',
+                             as_attachment=True, download_name='할일목록_업로드양식.xlsx')
 
 @app.route('/logout')
 def logout():
@@ -303,21 +457,15 @@ def chat_list():
     if 'username' not in session and not is_localhost():
         return redirect(url_for('login'))
 
-    # 관리자는 관리 페이지로
-    if is_admin():
-        username = session.get('username', 'Admin')
-        return render_template('admin_chat.html', username=username, is_admin=True)
-
-    return render_template('chat_list.html', username=session.get('username'), is_admin=False)
+    username = session.get('username', 'Admin')
+    admin = is_admin()
+    localhost = is_localhost()
+    return render_template('chat_list.html', username=username, is_admin=admin, is_localhost=localhost)
 
 @app.route('/chats/all')
 def chat_list_admin():
-    """관리자 전용 채팅 관리 페이지"""
-    if not is_admin():
-        return redirect(url_for('chat_list'))
-
-    username = session.get('username', 'Admin')
-    return render_template('admin_chat.html', username=username, is_admin=True)
+    """관리자 전용 채팅 관리 페이지 - /chats로 리다이렉트"""
+    return redirect(url_for('chat_list'))
 
 @app.route('/chat/create')
 def chat_create_page():
@@ -402,12 +550,8 @@ def create_chat():
     chats = load_chats()
     new_chat = request.json
 
-    # 기존 ID 중 최대값을 찾아서 +1 (삭제로 인한 ID 중복 방지)
-    if chats:
-        max_id = max(int(cid) for cid in chats.keys())
-        chat_id = str(max_id + 1)
-    else:
-        chat_id = '1'
+    # 다음 채팅방 ID 가져오기
+    chat_id = str(database.get_next_id('chats'))
 
     creator = session.get('username', 'Admin')
 
@@ -516,6 +660,13 @@ def handle_message(data):
             'read_by': [username],  # 보낸 사람은 자동으로 읽음 처리
             'file_info': file_info  # 파일 정보 (이미지, 문서 등)
         }
+
+        # file_info를 file_path/file_name으로 변환 (DB 저장용)
+        if file_info and len(file_info) > 0:
+            first_file = file_info[0]
+            msg_obj['file_path'] = first_file.get('url')
+            msg_obj['file_name'] = first_file.get('filename')
+
         chats[chat_id]['messages'].append(msg_obj)
         save_chats(chats)
 
@@ -586,6 +737,50 @@ def handle_mark_as_read(data):
 
 # ============== 프로모션 게시판 ==============
 
+# 프로모션 편집 잠금 상태 (promotion_id: username)
+promotion_locks = {}
+
+@socketio.on('lock_promotion_edit')
+def handle_lock_promotion_edit(data):
+    """프로모션 수정 잠금"""
+    promo_id = str(data['promo_id'])
+    username = data['username']
+
+    # 이미 다른 사용자가 편집 중인지 확인
+    if promo_id in promotion_locks and promotion_locks[promo_id] != username:
+        emit('promotion_locked', {
+            'promo_id': promo_id,
+            'locked_by': promotion_locks[promo_id]
+        })
+        return
+
+    # 잠금 설정
+    promotion_locks[promo_id] = username
+
+    # 모든 사용자에게 잠금 상태 브로드캐스트
+    emit('promotion_edit_status', {
+        'promo_id': promo_id,
+        'locked_by': username,
+        'is_locked': True
+    }, broadcast=True)
+
+@socketio.on('unlock_promotion_edit')
+def handle_unlock_promotion_edit(data):
+    """프로모션 수정 잠금 해제"""
+    promo_id = str(data['promo_id'])
+    username = data['username']
+
+    # 본인이 잠근 경우만 해제 가능
+    if promo_id in promotion_locks and promotion_locks[promo_id] == username:
+        del promotion_locks[promo_id]
+
+        # 모든 사용자에게 잠금 해제 브로드캐스트
+        emit('promotion_edit_status', {
+            'promo_id': promo_id,
+            'locked_by': None,
+            'is_locked': False
+        }, broadcast=True)
+
 @app.route('/promotions')
 def promotions_page():
     if 'username' not in session:
@@ -602,6 +797,7 @@ def get_promotions():
     promotions = load_promotions()
 
     # 필터링 (쿼리 파라미터)
+    category = request.args.get('category')
     product_name = request.args.get('product_name')
     channel = request.args.get('channel')
     promotion_name = request.args.get('promotion_name')
@@ -609,6 +805,8 @@ def get_promotions():
 
     filtered = promotions
 
+    if category:
+        filtered = [p for p in filtered if p.get('category') == category]
     if product_name:
         filtered = [p for p in filtered if p.get('product_name') == product_name]
     if channel:
@@ -643,7 +841,7 @@ def create_promotion():
     promotions = load_promotions()
 
     new_promotion = {
-        'id': max([p.get('id', 0) for p in promotions], default=0) + 1,
+        'id': database.get_next_id('promotions'),
         'category': data['category'],
         'product_name': data['product_name'],
         'channel': data['channel'],
@@ -739,12 +937,27 @@ def get_promotion_filters():
     channels = list(set(p.get('channel') for p in promotions if p.get('channel')))
     promo_names = list(set(p.get('promotion_name') for p in promotions if p.get('promotion_name')))
 
+    # 대분류별 상품 매핑 생성
+    category_products = {}
+    for promo in promotions:
+        cat = promo.get('category')
+        prod = promo.get('product_name')
+        if cat and prod:
+            if cat not in category_products:
+                category_products[cat] = set()
+            category_products[cat].add(prod)
+
+    # set을 list로 변환하고 정렬
+    for cat in category_products:
+        category_products[cat] = sorted(list(category_products[cat]))
+
     return jsonify({
         'categories': sorted(categories),
         'products': sorted(products),
         'channels': sorted(channels),
-        'promotion_names': sorted(promo_names)
+        'promotion_names': sorted(promo_names),
+        'category_products': category_products  # 대분류별 상품 매핑 추가
     })
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

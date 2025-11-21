@@ -40,6 +40,79 @@
         .nav a.secondary { background: #6c757d; }
         .nav a.secondary:hover { background: #5a6268; }
         .container { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
+
+        /* 탭 스타일 */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            color: #667eea;
+        }
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        /* 검색 바 */
+        .search-bar {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 18px;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn-new-chat {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-new-chat:hover {
+            background: #5568d3;
+        }
+
         .chat-list { display: grid; gap: 15px; }
         .chat-item {
             background: white;
@@ -49,19 +122,43 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             border-left: 4px solid #667eea;
+            display: flex;
+            gap: 15px;
+            align-items: start;
         }
         .chat-item:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
+        .chat-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
         .chat-title {
             font-size: 18px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .chat-title span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .chat-time {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
         }
         .unread-badge {
             background: #ff4444;
@@ -73,9 +170,17 @@
             min-width: 20px;
             text-align: center;
         }
-        .chat-participants {
+        .chat-preview {
             font-size: 14px;
-            color: #666;
+            color: #888;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 5px;
+        }
+        .chat-participants {
+            font-size: 13px;
+            color: #999;
             display: flex;
             align-items: center;
             gap: 5px;
@@ -175,9 +280,8 @@
         <div class="nav">
             {% if is_admin %}
             <a href="/admin">할일관리</a>
-            <a href="/chats/all">채팅관리</a>
-            <a href="/promotions">프로모션게시판</a>
             {% endif %}
+            <a href="/promotions">프로모션게시판</a>
             <a href="/">홈으로</a>
             <a href="/chats">채팅</a>
             <a href="/logout" class="secondary">로그아웃</a>
@@ -185,7 +289,24 @@
     </div>
 
     <div class="container">
-        <button onclick="location.href='/chat/create'" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 20px; font-size: 14px; font-weight: bold;">새 채팅방 만들기</button>
+        {% if is_admin %}
+        <!-- 관리자용 탭 -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('my')">내 채팅</button>
+            <button class="tab" onclick="switchTab('all')">전체 채팅 관리</button>
+        </div>
+        {% endif %}
+
+        <!-- 검색 바 -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="채팅방 검색..." oninput="filterChats()">
+            <span class="search-icon">🔍</span>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-new-chat" onclick="location.href='/chat/create'">새 채팅방 만들기</button>
+        </div>
+
         <div id="chatList"></div>
     </div>
 
@@ -194,9 +315,13 @@
         let previousChatCount = 0;
         let notificationPermission = false;
         const currentUsername = '{{ username }}';
+        const isAdmin = {{ 'true' if is_admin else 'false' }};
+        const isLocalhost = {{ 'true' if is_localhost else 'false' }};
         let unreadCount = 0;
         let originalTitle = '채팅 목록';
         let titleBlinkInterval = null;
+        let currentTab = 'my';  // 현재 탭 (my or all)
+        let allChatsData = null;  // 전체 채팅 데이터 캐시
 
         // localStorage에서 읽지 않은 메시지 카운트 가져오기
         function getUnreadCounts() {
@@ -224,6 +349,41 @@
         function getTotalUnreadCount() {
             const unreadCounts = getUnreadCounts();
             return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+        }
+
+        // 탭 전환
+        function switchTab(tab) {
+            currentTab = tab;
+
+            // 탭 버튼 활성화 상태 변경
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 채팅 목록 새로고침
+            loadChats();
+        }
+
+        // 시간 포맷팅
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const diffMinutes = Math.floor(diff / (1000 * 60));
+            const diffHours = Math.floor(diff / (1000 * 60 * 60));
+            const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (diffMinutes < 1) return '방금';
+            if (diffMinutes < 60) return `${diffMinutes}분 전`;
+            if (diffHours < 24) return `${diffHours}시간 전`;
+            if (diffDays < 7) return `${diffDays}일 전`;
+
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${month}/${day}`;
         }
 
         // 알림 권한 요청
@@ -264,15 +424,36 @@
             return chat.title;
         }
 
+        // 채팅 검색 필터링
+        function filterChats() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const chatItems = document.querySelectorAll('.chat-item');
+
+            chatItems.forEach(item => {
+                const title = item.querySelector('.chat-title span').textContent.toLowerCase();
+                const participants = item.querySelector('.chat-participants').textContent.toLowerCase();
+                const preview = item.querySelector('.chat-preview')?.textContent.toLowerCase() || '';
+
+                if (title.includes(searchTerm) || participants.includes(searchTerm) || preview.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
         function loadChats() {
-            fetch('/api/chats')
+            const endpoint = (isAdmin && currentTab === 'all') ? '/api/chats/all' : '/api/chats';
+
+            fetch(endpoint)
                 .then(res => res.json())
                 .then(chats => {
+                    allChatsData = chats;  // 캐시 저장
                     const container = document.getElementById('chatList');
-                    const chatArray = Object.entries(chats);
+                    let chatArray = Object.entries(chats);
 
-                    // 새 채팅방 알림
-                    if (previousChatCount > 0 && chatArray.length > previousChatCount) {
+                    // 새 채팅방 알림 (내 채팅 탭일 때만)
+                    if (currentTab === 'my' && previousChatCount > 0 && chatArray.length > previousChatCount) {
                         const newChatsCount = chatArray.length - previousChatCount;
                         const latestChat = chatArray[chatArray.length - 1];
                         const displayTitle = getChatDisplayTitle(latestChat[1]);
@@ -282,17 +463,28 @@
                             `/chat/${latestChat[0]}`
                         );
                     }
-                    previousChatCount = chatArray.length;
+                    if (currentTab === 'my') {
+                        previousChatCount = chatArray.length;
+                    }
 
                     if (chatArray.length === 0) {
                         container.innerHTML = `
                             <div class="empty">
                                 <div class="empty-icon">💬</div>
-                                <p>참여 중인 채팅방이 없습니다.</p>
+                                <p>${currentTab === 'all' ? '채팅방이 없습니다.' : '참여 중인 채팅방이 없습니다.'}</p>
                             </div>
                         `;
                         return;
                     }
+
+                    // 최신 메시지 순으로 정렬
+                    chatArray.sort((a, b) => {
+                        const aLastMsg = a[1].messages[a[1].messages.length - 1];
+                        const bLastMsg = b[1].messages[b[1].messages.length - 1];
+                        const aTime = aLastMsg ? new Date(aLastMsg.timestamp) : new Date(a[1].created_at);
+                        const bTime = bLastMsg ? new Date(bLastMsg.timestamp) : new Date(b[1].created_at);
+                        return bTime - aTime;  // 최신순
+                    });
 
                     container.innerHTML = '<div class="chat-list">' +
                         chatArray.map(([chatId, chat]) => {
@@ -301,13 +493,87 @@
                             const unreadCount = chat.unread_count || 0;
                             const unreadBadge = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
 
+                            // 전체 채팅 관리 탭인 경우
+                            if (isAdmin && currentTab === 'all') {
+                                // 로컬 Admin인 경우: 메시지 미리보기 + 입장 가능 + 삭제 가능
+                                if (isLocalhost) {
+                                    const lastMessage = chat.messages[chat.messages.length - 1];
+                                    let preview = '메시지가 없습니다.';
+                                    let timestamp = chat.created_at;
+
+                                    if (lastMessage) {
+                                        if (lastMessage.file_name) {
+                                            preview = `📎 ${lastMessage.file_name}`;
+                                        } else {
+                                            preview = `${lastMessage.username}: ${lastMessage.message}`;
+                                        }
+                                        timestamp = lastMessage.timestamp;
+                                    }
+
+                                    return `
+                                    <div class="chat-item" onclick="enterChat('${chatId}')">
+                                        <div class="chat-info" style="flex: 1;">
+                                            <div class="chat-header">
+                                                <div class="chat-title">
+                                                    <span>${displayTitle}</span>
+                                                    ${unreadBadge}
+                                                </div>
+                                                <div class="chat-time">${formatTime(timestamp)}</div>
+                                            </div>
+                                            <div class="chat-preview">${preview}</div>
+                                            <div class="chat-participants">${chat.participants.join(', ')}</div>
+                                        </div>
+                                        <button class="delete-btn" onclick="deleteChat('${chatId}', event)" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px;">삭제</button>
+                                    </div>
+                                `;
+                                }
+
+                                // 일반 Admin인 경우: 메시지 미리보기 없음 + 입장 불가 + 삭제만 가능
+                                return `
+                                <div class="chat-item" style="cursor: default;">
+                                    <div class="chat-info" style="flex: 1;">
+                                        <div class="chat-header">
+                                            <div class="chat-title">
+                                                <span>${displayTitle}</span>
+                                            </div>
+                                            <div class="chat-time">${formatTime(chat.created_at)}</div>
+                                        </div>
+                                        <div class="chat-participants">${chat.participants.join(', ')}</div>
+                                    </div>
+                                    <button class="delete-btn" onclick="deleteChat('${chatId}', event)" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px;">삭제</button>
+                                </div>
+                            `;
+                            }
+
+                            // 내 채팅 탭인 경우
+                            // 최신 메시지 미리보기
+                            const lastMessage = chat.messages[chat.messages.length - 1];
+                            let preview = '메시지가 없습니다.';
+                            let timestamp = chat.created_at;
+
+                            if (lastMessage) {
+                                // 파일인 경우
+                                if (lastMessage.file_name) {
+                                    preview = `📎 ${lastMessage.file_name}`;
+                                } else {
+                                    preview = `${lastMessage.username}: ${lastMessage.message}`;
+                                }
+                                timestamp = lastMessage.timestamp;
+                            }
+
                             return `
                             <div class="chat-item" onclick="enterChat('${chatId}')">
-                                <div class="chat-title">
-                                    <span>${displayTitle}</span>
-                                    ${unreadBadge}
+                                <div class="chat-info">
+                                    <div class="chat-header">
+                                        <div class="chat-title">
+                                            <span>${displayTitle}</span>
+                                            ${unreadBadge}
+                                        </div>
+                                        <div class="chat-time">${formatTime(timestamp)}</div>
+                                    </div>
+                                    <div class="chat-preview">${preview}</div>
+                                    <div class="chat-participants">${chat.participants.join(', ')}</div>
                                 </div>
-                                <div class="chat-participants">${chat.participants.join(', ')}</div>
                             </div>
                         `;
                         }).join('') +
@@ -318,6 +584,29 @@
         function enterChat(chatId) {
             // 채팅방 입장하면 chat_room.html에서 자동으로 mark_as_read 처리됨
             location.href = `/chat/${chatId}`;
+        }
+
+        function deleteChat(chatId, event) {
+            event.stopPropagation();
+
+            if (confirm('이 채팅방을 삭제하시겠습니까?')) {
+                fetch(`/api/chats/${chatId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('채팅방이 삭제되었습니다.');
+                        loadChats(); // 목록 새로고침
+                    } else {
+                        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+                    }
+                })
+                .catch(error => {
+                    console.error('삭제 오류:', error);
+                    alert('삭제 중 오류가 발생했습니다.');
+                });
+            }
         }
 
         // 사용자별 room에 join (전역 알림 받기 위함)
@@ -395,10 +684,13 @@
             showToast(data.chat_id, displayTitle, data.message, data.sender);
 
             // 채팅 목록 새로고침 (배지 업데이트) - 서버에서 unread_count 계산됨
-            fetch('/api/chats')
+            loadChats();
+
+            // 전체 읽지 않은 메시지 개수 계산 및 제목 깜빡임
+            const endpoint = '/api/chats';  // 내 채팅만 확인
+            fetch(endpoint)
                 .then(res => res.json())
                 .then(chats => {
-                    // 전체 읽지 않은 메시지 개수 계산
                     const totalUnread = Object.values(chats).reduce((sum, chat) => sum + (chat.unread_count || 0), 0);
 
                     // 탭이 포커스되어 있지 않으면 제목 깜빡임
@@ -407,38 +699,6 @@
                         console.log('전체 읽지 않은 메시지:', unreadCount);
                         startTitleBlink();
                     }
-
-                    // 채팅 목록 UI 업데이트
-                    const container = document.getElementById('chatList');
-                    const chatArray = Object.entries(chats);
-
-                    if (chatArray.length === 0) {
-                        container.innerHTML = `
-                            <div class="empty">
-                                <div class="empty-icon">💬</div>
-                                <p>참여 중인 채팅방이 없습니다.</p>
-                            </div>
-                        `;
-                        return;
-                    }
-
-                    container.innerHTML = '<div class="chat-list">' +
-                        chatArray.map(([chatId, chat]) => {
-                            const displayTitle = getChatDisplayTitle(chat);
-                            const unreadCount = chat.unread_count || 0;
-                            const unreadBadge = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
-
-                            return `
-                            <div class="chat-item" onclick="enterChat('${chatId}')">
-                                <div class="chat-title">
-                                    <span>${displayTitle}</span>
-                                    ${unreadBadge}
-                                </div>
-                                <div class="chat-participants">${chat.participants.join(', ')}</div>
-                            </div>
-                        `;
-                        }).join('') +
-                        '</div>';
                 });
         });
 
@@ -476,7 +736,7 @@
             });
 
         setInterval(loadChats, 5000);
-    
+
         // PWA 서비스 워커 등록
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/service-worker.js')
@@ -487,6 +747,6 @@
                     console.log('Service Worker 등록 실패:', error);
                 });
         }
-</script>
+    </script>
 </body>
 </html>

@@ -125,7 +125,7 @@
 
         <!-- 탭 1: 할일 등록 -->
         <div id="content-register" class="tab-content active">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; max-width: 900px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px;">
                 <!-- 단일 항목 추가 -->
                 <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea;">
                     <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -164,6 +164,7 @@
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                     <h2 style="margin: 0 0 20px 0; color: white; font-size: 22px; font-weight: 600;">📤 엑셀 일괄 등록</h2>
                     <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="margin-bottom: 15px;">
                     <div id="dropZone" style="border: 2px dashed #ddd; border-radius: 8px; padding: 30px; text-align: center; background: #fafafa; cursor: pointer; transition: all 0.3s; margin-bottom: 15px;"
                          ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="document.getElementById('excelFile').click()">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" style="margin: 0 auto 10px;">
@@ -190,10 +191,37 @@
                         • 대상이 DB에 있으면 자동 배정<br>
                         • 대상이 비어있거나 없으면 미배정
                     </p>
+                </div>
+
+                <!-- 일괄 배정 섹션 -->
+                <div style="flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff9800" stroke-width="2" style="margin-right: 8px;">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: 600;">선택 항목 일괄 배정</h3>
+                    </div>
+                    <div style="background: #fff8f0; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ff9800;">
+                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">체크박스로 항목을 선택한 후<br>일괄 배정 버튼을 클릭하세요</p>
+                        <div style="display: flex; gap: 8px; color: #999; font-size: 13px; align-items: center;">
+                            <span style="background: #fff; padding: 4px 8px; border-radius: 4px; font-weight: 600; color: #ff9800;">✓</span>
+                            <span>랜덤 또는 순차 배정 가능</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button onclick="openBulkAssignModal()" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; border: none; padding: 14px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 5px rgba(255,152,0,0.3); font-size: 15px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(255,152,0,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(255,152,0,0.3)'">
+                            👥 일괄 배정
+                        </button>
+                        <button onclick="selectAllUnassigned()" style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; border: none; padding: 14px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 5px rgba(156,39,176,0.3); font-size: 15px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(156,39,176,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(156,39,176,0.3)'">
+                            📋 미배정 전체 선택
+                        </button>
                     </div>
                 </div>
             </div>
-        </div> <!-- content-register 종료 -->
+        </div>
 
         <style>
             #dropZone.dragover {
@@ -203,93 +231,60 @@
             }
         </style>
 
-        <!-- 탭 2: 할일 관리 -->
-        <div id="content-manage" class="tab-content">
-            <!-- 필터 및 검색 영역 -->
-            <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
-                    <h2 style="margin: 0;">📋 등록된 할일 관리</h2>
-                    <select id="assignmentFilter" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
-                        <option value="all">전체</option>
-                        <option value="assigned">배정됨</option>
-                        <option value="unassigned">미배정</option>
-                    </select>
-                    <select id="statusFilter" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
-                        <option value="all">모든 상태</option>
-                        <option value="대기중">대기중</option>
-                        <option value="진행중">진행중</option>
-                        <option value="완료">완료</option>
-                    </select>
-                    <div style="flex: 1; max-width: 400px; position: relative;">
-                        <input type="text" id="searchInput" placeholder="🔍 제목, 내용, 담당자로 검색..."
-                               onkeyup="applyFilters()"
-                               style="width: 100%; padding: 10px 40px 10px 15px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: all 0.3s;"
-                               onfocus="this.style.borderColor='#667eea'"
-                               onblur="this.style.borderColor='#ddd'">
-                        <button onclick="document.getElementById('searchInput').value=''; applyFilters();"
-                                style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #999; cursor: pointer; padding: 5px 10px; font-size: 18px;"
-                                title="검색 초기화">✕</button>
-                    </div>
-                </div>
-
-                <!-- 일괄 작업 버튼 -->
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; padding-top: 15px; border-top: 1px solid #eee;">
-                    <button onclick="openBulkAssignModal()" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(255,152,0,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        👥 선택 항목 배정
-                    </button>
-                    <button onclick="bulkUnassign()" style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(156,39,176,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        ↩️ 선택 항목 배정 해제
-                    </button>
-                    <button onclick="bulkDelete()" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(244,67,54,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        🗑️ 선택 항목 삭제
-                    </button>
-                    <button onclick="selectAllUnassigned()" style="background: linear-gradient(135deg, #607d8b 0%, #455a64 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(96,125,139,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        📋 미배정 전체 선택
-                    </button>
-                    <div style="flex: 1; text-align: right; color: #666; font-size: 14px; display: flex; align-items: center; justify-content: flex-end;">
-                        <span id="resultCount">검색 결과: 0개</span>
-                    </div>
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                <h2 style="margin: 0;">전체 항목 목록</h2>
+                <select id="assignmentFilter" onchange="loadItems()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="all">전체</option>
+                    <option value="assigned">배정됨</option>
+                    <option value="unassigned">미배정</option>
+                </select>
+                <select id="statusFilter" onchange="loadItems()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="all">모든 상태</option>
+                    <option value="대기중">대기중</option>
+                    <option value="진행중">진행중</option>
+                    <option value="완료">완료</option>
+                </select>
+                <div style="flex: 1; max-width: 400px; position: relative;">
+                    <input type="text" id="searchInput" placeholder="🔍 제목, 내용, 담당자로 검색..."
+                           onkeyup="searchItems()"
+                           style="width: 100%; padding: 10px 40px 10px 15px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: all 0.3s;"
+                           onfocus="this.style.borderColor='#667eea'"
+                           onblur="this.style.borderColor='#ddd'">
+                    <button onclick="document.getElementById('searchInput').value=''; searchItems();"
+                            style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #999; cursor: pointer; padding: 5px 10px; font-size: 18px;"
+                            title="검색 초기화">✕</button>
                 </div>
             </div>
-
-            <!-- 테이블 컨테이너 (고정 높이 + 스크롤) -->
-            <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
-                <div style="max-height: 500px; overflow-y: auto;" id="tableContainer">
-                    <table id="itemsTable" style="width: 100%; border-collapse: collapse;">
-                        <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">
-                            <tr>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 60px;">ID</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 100px;">상태</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 120px;">대상자</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">제목</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">내용</th>
-                                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 180px;">작업</th>
-                            </tr>
-                        </thead>
-                        <tbody id="itemsList">
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- 페이징 영역 -->
-                <div id="paginationContainer" style="padding: 15px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa;">
-                    <div style="color: #666; font-size: 14px;">
-                        <span id="pageInfo">1-20 / 100</span>
-                    </div>
-                    <div id="paginationButtons" style="display: flex; gap: 5px;">
-                        <!-- 페이지 버튼들이 여기에 동적으로 생성됨 -->
-                    </div>
-                    <div>
-                        <select id="pageSizeSelect" onchange="changePageSize()" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                            <option value="20">20개씩 보기</option>
-                            <option value="50">50개씩 보기</option>
-                            <option value="100">100개씩 보기</option>
-                        </select>
-                    </div>
-                </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="openBulkAssignModal()" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(255,152,0,0.3);">
+                    👥 선택 항목 배정
+                </button>
+                <button onclick="bulkUnassign()" style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(156,39,176,0.3);">
+                    ↩️ 선택 항목 배정 해제
+                </button>
+                <button onclick="bulkDelete()" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(244,67,54,0.3);">
+                    🗑️ 선택 항목 삭제
+                </button>
+                <button onclick="selectAllUnassigned()" style="background: linear-gradient(135deg, #607d8b 0%, #455a64 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(96,125,139,0.3);">
+                    📋 미배정 전체 선택
+                </button>
             </div>
-        </div> <!-- content-manage 종료 -->
+        </div>
+        <table id="itemsTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                    <th>ID</th>
+                    <th>상태</th>
+                    <th>대상자</th>
+                    <th>제목</th>
+                    <th>내용</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody id="itemsList"></tbody>
+        </table>
     </div>
 
     <!-- 모달 -->
@@ -603,30 +598,6 @@
                         { text: '확인', type: 'primary', onclick: 'closeModal()' }
                     ]);
                 });
-        }
-
-        // 탭 전환 함수
-        function switchTab(tabName) {
-            // 모든 탭 콘텐츠 숨기기
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            // 모든 탭 버튼 비활성화
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // 선택된 탭 콘텐츠 보이기
-            document.getElementById('content-' + tabName).classList.add('active');
-
-            // 선택된 탭 버튼 활성화
-            document.getElementById('tab-' + tabName).classList.add('active');
-
-            // 관리 탭으로 전환 시 할일 목록 새로고침
-            if (tabName === 'manage') {
-                loadItems();
-            }
         }
 
         // 드래그 앤 드롭 핸들러
