@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { margin-bottom: 20px; color: #333; }
+
+        /* 헤더 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-buttons a, .nav-buttons button { padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .nav-buttons a:hover, .nav-buttons button:hover { background: #5568d3; }
+        .nav-buttons .logout { background: #dc3545; }
+        .nav-buttons .logout:hover { background: #c82333; }
+
+        /* 사용자 정보 */
+        .user-info-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #dee2e6; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: bold; color: #495057; width: 120px; }
+        .info-value { color: #212529; }
+
+        /* 비밀번호 변경 섹션 */
+        .password-section { margin-top: 30px; }
+        .password-section h2 { font-size: 20px; margin-bottom: 20px; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+
+        .btn-primary { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-primary:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.6; }
+
+        /* 토스트 */
+        .toast-container { position: fixed; bottom: 90px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateX(400px); animation: slideIn 0.3s forwards; border-left: 4px solid #667eea; }
+        .toast.success { border-left-color: #28a745; }
+        .toast.error { border-left-color: #dc3545; }
+        .toast.slide-out { animation: slideOut 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+
+        .password-hint { font-size: 13px; color: #6c757d; margin-top: 8px; }
+        .localhost-notice { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin-bottom: 20px; color: #856404; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 10001;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10002;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.3s ease-out;
+        }
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        {% include 'includes/header.html' %}
+
+        <!-- 사용자 정보 -->
+        <div class="user-info-section">
+            <h2 style="margin-bottom: 15px; font-size: 18px; color: #333;">내 정보</h2>
+            <div class="info-row">
+                <div class="info-label">이름</div>
+                <div class="info-value">{{ user_info.username }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">권한</div>
+                <div class="info-value">{{ user_info.role }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">팀</div>
+                <div class="info-value">{{ user_info.team if user_info.team else '없음' }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">상태</div>
+                <div class="info-value">
+                    {% if user_info.status == 'active' %}
+                    <span style="color: #28a745; font-weight: bold;">활성</span>
+                    {% else %}
+                    <span style="color: #dc3545; font-weight: bold;">비활성</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if user_info.created_at %}
+            <div class="info-row">
+                <div class="info-label">가입일</div>
+                <div class="info-value">{{ user_info.created_at.split('.')[0] if user_info.created_at else '-' }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 비밀번호 변경 -->
+        <div class="password-section">
+            <h2>비밀번호 변경</h2>
+
+            {% if username == 'Admin' %}
+            <div class="localhost-notice">
+                <strong>⚠️ 알림</strong>
+                <p style="margin-top: 8px;">로컬호스트 접속 시에는 비밀번호 변경이 불가능합니다.</p>
+            </div>
+            {% endif %}
+
+            <form id="passwordForm" {% if username == 'Admin' %}onsubmit="return false;"{% else %}onsubmit="changePassword(event)"{% endif %}>
+                <div class="form-group">
+                    <label for="currentPassword">현재 비밀번호</label>
+                    <input type="password" id="currentPassword" {% if username == 'Admin' %}disabled{% else %}required{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">새 비밀번호</label>
+                    <input type="password" id="newPassword" {% if username == 'Admin' %}disabled{% else %}required{% endif %} minlength="4">
+                    <div class="password-hint">비밀번호는 최소 4자 이상이어야 합니다.</div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">새 비밀번호 확인</label>
+                    <input type="password" id="confirmPassword" {% if username == 'Admin' %}disabled{% else %}required{% endif %} minlength="4">
+                </div>
+                <button type="submit" class="btn-primary" {% if username == 'Admin' %}disabled{% endif %}>비밀번호 변경</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function changePassword(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                showToast('새 비밀번호가 일치하지 않습니다.', 'error');
+                return;
+            }
+
+            if (newPassword.length < 4) {
+                showToast('비밀번호는 최소 4자 이상이어야 합니다.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmPassword
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    showToast(result.error, 'error');
+                }
+            } catch (error) {
+                console.error('비밀번호 변경 실패:', error);
+                showToast('비밀번호 변경에 실패했습니다.', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('slide-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.addEventListener('DOMContentLoaded', () => {
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
+
+    </script>
+
+    <!-- 도움말 버튼 -->
+    <button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+        ❓
+    </button>
+
+    <!-- 도움말 모달 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <div class="help-modal-title">
+                    📖 마이페이지 사용법
+                </div>
+                <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">👤 내 정보 확인</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>이름</strong>: 현재 로그인한 사용자 이름</li>
+                        <li><strong>권한</strong>: 상담사 또는 관리자</li>
+                        <li><strong>팀</strong>: 소속 팀 (없으면 '없음' 표시)</li>
+                        <li><strong>상태</strong>: 계정 활성화 상태</li>
+                        <li><strong>가입일</strong>: 계정 생성 일시</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">🔐 비밀번호 변경</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>현재 비밀번호</strong>: 본인 확인을 위한 현재 비밀번호 입력</li>
+                        <li><strong>새 비밀번호</strong>: 변경할 비밀번호 (최소 4자 이상)</li>
+                        <li><strong>새 비밀번호 확인</strong>: 동일한 비밀번호 재입력</li>
+                        <li>비밀번호는 최소 <strong>4자 이상</strong>이어야 합니다</li>
+                        <li>변경 후 즉시 새 비밀번호로 로그인 가능합니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">⚠️ 주의사항</div>
+                <div class="help-content">
+                    <ul>
+                        <li>현재 비밀번호가 일치하지 않으면 변경할 수 없습니다</li>
+                        <li>새 비밀번호와 확인이 일치해야 합니다</li>
+                        <li>비밀번호를 잊어버린 경우 관리자에게 연락하세요</li>
+                        <li>로컬호스트 접속 시에는 비밀번호 변경이 불가능합니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <strong>💡 Tip:</strong> 주기적으로 비밀번호를 변경하여 계정 보안을 강화하세요. 다른 사람과 비밀번호를 공유하지 마세요!
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/today_reminders.html' %}
+</body>
+</html>

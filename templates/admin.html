@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>관리자 페이지</title>
 
     <!-- PWA 메타 태그 -->
@@ -19,7 +22,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 1200px; margin: 0 auto; }
         h1 { margin-bottom: 30px; color: #333; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
@@ -72,143 +75,194 @@
         .modal-btn-secondary:hover { background: #5a6268; }
         .modal-btn-danger { background: #dc3545; color: white; }
         .modal-btn-danger:hover { background: #c82333; }
+
+        /* 페이지네이션 버튼 스타일 */
+        #paginationButtons button { padding: 6px 12px; border: 1px solid #ddd; background: white; color: #333; cursor: pointer; border-radius: 4px; font-size: 14px; min-width: 36px; }
+        #paginationButtons button:hover:not(:disabled) { background: #007bff; color: white; border-color: #007bff; }
+        #paginationButtons button.active { background: #007bff; color: white; border-color: #007bff; font-weight: bold; }
+        #paginationButtons button:disabled { cursor: not-allowed; opacity: 0.5; background: #f5f5f5; }
+
+        /* 당일 예약 배너 */
+        #reminderBanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9998;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 12px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        #reminderBanner.show { display: flex; align-items: center; justify-content: space-between; }
+        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        body.has-banner { padding-top: 60px; }
+        #reminderBanner .banner-content { flex: 1; display: flex; align-items: center; gap: 12px; font-weight: bold; }
+        #reminderBanner .banner-icon { font-size: 20px; }
+        #reminderBanner .banner-close { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px; }
+        #reminderBanner .banner-close:hover { background: rgba(255,255,255,0.3); }
+        #reminderBanner .banner-link { background: white; color: #dc3545; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-left: 10px; }
+        #reminderBanner .banner-link:hover { background: #f8f9fa; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 9997;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
+    <div id="reminderBanner">
+        <div class="banner-content">
+            <span class="banner-icon">🔴</span>
+            <span id="bannerText">오늘 예약이 있습니다!</span>
+        </div>
+        <a href="/reminders" class="banner-link">예약 확인</a>
+        <button class="banner-close" onclick="closeBanner()">닫기</button>
+    </div>
     <div class="toast-container" id="toastContainer"></div>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <div>
-                <h1 style="margin-bottom: 5px;">관리자 페이지</h1>
-                <p style="color: #667eea; font-weight: bold; font-size: 16px;">{{ username }}</p>
-            </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">할일관리</a>
-                <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">프로모션게시판</a>
-                <a href="/chats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px;">채팅</a>
-                <a href="/" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">홈으로</a>
-                <a href="/logout" style="padding: 8px 16px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px;">로그아웃</a>
-            </div>
-        </div>
+        {% include 'includes/header.html' %}
 
-        <!-- 탭 메뉴 -->
-        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
-            <button class="tab-button active" onclick="switchTab('register')" id="tab-register" style="padding: 15px 30px; border: none; background: none; font-size: 16px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; color: #667eea;">
-                ✍️ 할일 등록
-            </button>
-            <button class="tab-button" onclick="switchTab('manage')" id="tab-manage" style="padding: 15px 30px; border: none; background: none; font-size: 16px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; color: #666;">
-                📋 할일 관리
-            </button>
-        </div>
 
-        <style>
-            .tab-button:hover {
-                background: #f5f5f5;
-                color: #667eea !important;
-            }
-            .tab-button.active {
-                color: #667eea !important;
-                border-bottom-color: #667eea !important;
-            }
-            .tab-content {
-                display: none;
-                animation: fadeIn 0.3s;
-            }
-            .tab-content.active {
-                display: block;
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-        </style>
-
-        <!-- 탭 1: 할일 등록 -->
-        <div id="content-register" class="tab-content active">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; max-width: 900px;">
-                <!-- 단일 항목 추가 -->
-                <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea;">
-                    <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2" style="margin-right: 10px;">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="12" y1="18" x2="12" y2="12"></line>
-                            <line x1="9" y1="15" x2="15" y2="15"></line>
-                        </svg>
-                        <h2 style="margin: 0; color: #333; font-size: 22px; font-weight: 600;">새 할일 추가</h2>
-                    </div>
-                    <div class="form-group">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">대상자 이름 (선택사항)</label>
-                        <input type="text" id="assignedTo" placeholder="이름 입력 또는 공란 (미배정)" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: all 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
-                        <small style="color: #999; font-size: 12px;">공란으로 두면 미배정 상태로 등록됩니다</small>
-                    </div>
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">제목</label>
-                        <input type="text" id="title" placeholder="제목 입력" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: all 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
-                    </div>
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">내용</label>
-                        <textarea id="content" placeholder="내용 입력" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-height: 120px; transition: all 0.3s; resize: vertical;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button onclick="addItem()" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 14px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.3s; box-shadow: 0 2px 5px rgba(102,126,234,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(102,126,234,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(102,126,234,0.3)'">
-                            ➕ 추가
-                        </button>
-                        <button onclick="clearForm()" style="flex: 0.5; background: #6c757d; color: white; border: none; padding: 14px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.3s;" onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">
-                            🔄 초기화
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 일괄 등록 섹션 -->
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                    <h2 style="margin: 0 0 20px 0; color: white; font-size: 22px; font-weight: 600;">📤 엑셀 일괄 등록</h2>
-                    <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <div id="dropZone" style="border: 2px dashed #ddd; border-radius: 8px; padding: 30px; text-align: center; background: #fafafa; cursor: pointer; transition: all 0.3s; margin-bottom: 15px;"
-                         ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="document.getElementById('excelFile').click()">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" style="margin: 0 auto 10px;">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="12" y1="18" x2="12" y2="12"></line>
-                            <line x1="9" y1="15" x2="15" y2="15"></line>
-                        </svg>
-                        <p style="margin: 0 0 5px 0; color: #4caf50; font-weight: 600; font-size: 16px;">파일을 드래그하거나 클릭하세요</p>
-                        <p style="margin: 0; color: #999; font-size: 13px;">지원 형식: .xlsx, .xls</p>
-                        <p id="selectedFileName" style="margin: 10px 0 0 0; color: #666; font-size: 14px; font-weight: 500;"></p>
-                    </div>
-                    <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelect(event)">
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="uploadExcel()" style="flex: 1; background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 5px rgba(76,175,80,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(76,175,80,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(76,175,80,0.3)'">
-                            📤 업로드
-                        </button>
-                        <a href="/download/template/tasks" style="flex: 1; background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: 600; text-align: center; transition: all 0.3s; box-shadow: 0 2px 5px rgba(33,150,243,0.3); display: flex; align-items: center; justify-content: center;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 10px rgba(33,150,243,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(33,150,243,0.3)'">
-                            📥 양식 다운로드
-                        </a>
-                    </div>
-                    <p style="margin: 12px 0 0 0; padding: 10px; background: #fff3cd; border-radius: 6px; font-size: 13px; color: #856404; line-height: 1.5;">
-                        💡 <strong>형식:</strong> 대상 | 제목 | 내용<br>
-                        • 대상이 DB에 있으면 자동 배정<br>
-                        • 대상이 비어있거나 없으면 미배정
-                    </p>
-                    </div>
-                </div>
-            </div>
-        </div> <!-- content-register 종료 -->
-
-        <style>
-            #dropZone.dragover {
-                background: #e8f5e9 !important;
-                border-color: #4caf50 !important;
-                transform: scale(1.02);
-            }
-        </style>
-
-        <!-- 탭 2: 할일 관리 -->
-        <div id="content-manage" class="tab-content">
+        <!-- 할일 관리 -->
+        <div id="content-manage">
             <!-- 필터 및 검색 영역 -->
             <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
-                    <h2 style="margin: 0;">📋 등록된 할일 관리</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <h2 style="margin: 0;">📋 할일 관리</h2>
+                        <button onclick="openTaskRegistrationModal()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                            ➕ 할일 등록
+                        </button>
+                    </div>
                     <select id="assignmentFilter" onchange="applyFilters()" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
                         <option value="all">전체</option>
                         <option value="assigned">배정됨</option>
@@ -232,6 +286,23 @@
                     </div>
                 </div>
 
+                <!-- 날짜 필터 영역 -->
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 15px; border-top: 1px solid #eee;">
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <label style="font-size: 14px; font-weight: 600; color: #555; white-space: nowrap;">등록일:</label>
+                        <input type="date" id="createdFromDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        <span style="color: #999;">~</span>
+                        <input type="date" id="createdToDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <label style="font-size: 14px; font-weight: 600; color: #555; white-space: nowrap;">배정일:</label>
+                        <input type="date" id="assignedFromDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        <span style="color: #999;">~</span>
+                        <input type="date" id="assignedToDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    <button onclick="clearDateFilters()" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">초기화</button>
+                </div>
+
                 <!-- 일괄 작업 버튼 -->
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; padding-top: 15px; border-top: 1px solid #eee;">
                     <button onclick="openBulkAssignModal()" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(255,152,0,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
@@ -252,20 +323,31 @@
                 </div>
             </div>
 
-            <!-- 테이블 컨테이너 (고정 높이 + 스크롤) -->
+            <!-- 레이아웃 프리셋 선택 -->
+            <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-weight: 600; color: #555;">테이블 레이아웃:</label>
+                    <select id="layoutPreset" onchange="loadLayoutPreset()" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 200px;">
+                        <optgroup label="기본 프리셋">
+                            <option value="default">기본 (날짜 뒤로)</option>
+                            <option value="compact">간결 (날짜 숨김)</option>
+                            <option value="detailed">상세 (날짜 앞으로)</option>
+                        </optgroup>
+                        <optgroup label="나만의 레이아웃" id="customLayoutsGroup">
+                            <!-- 커스텀 레이아웃들이 여기에 동적으로 추가됨 -->
+                        </optgroup>
+                    </select>
+                    <button onclick="openColumnManager()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">⚙️ 컬럼 관리</button>
+                    <button onclick="openSaveLayoutDialog()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">💾 새 레이아웃 저장</button>
+                    <button onclick="openManageLayoutsDialog()" style="padding: 8px 16px; background: #ff9800; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">📂 레이아웃 관리</button>
+                </div>
+            </div>
+
+            <!-- 테이블 컨테이너 (가로/세로 스크롤) -->
             <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
-                <div style="max-height: 500px; overflow-y: auto;" id="tableContainer">
-                    <table id="itemsTable" style="width: 100%; border-collapse: collapse;">
-                        <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">
-                            <tr>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 60px;">ID</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 100px;">상태</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; width: 120px;">대상자</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">제목</th>
-                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">내용</th>
-                                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; width: 180px;">작업</th>
-                            </tr>
+                <div style="max-height: 500px; overflow: auto;" id="tableContainer">
+                    <table id="itemsTable" style="min-width: 100%; border-collapse: separate; border-spacing: 0; white-space: nowrap;">
+                        <thead id="itemsTableHead" style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">
                         </thead>
                         <tbody id="itemsList">
                         </tbody>
@@ -285,6 +367,7 @@
                             <option value="20">20개씩 보기</option>
                             <option value="50">50개씩 보기</option>
                             <option value="100">100개씩 보기</option>
+                            <option value="all">전체 보기</option>
                         </select>
                     </div>
                 </div>
@@ -303,6 +386,58 @@
         </div>
     </div>
 
+    <!-- 할일 등록 모달 -->
+    <div class="modal-overlay" id="taskRegistrationModal">
+        <div class="modal-box" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="modal-title" style="margin: 0;">✍️ 할일 등록</h2>
+                <button onclick="closeTaskRegistrationModal()" style="background: none; border: none; font-size: 24px; color: #999; cursor: pointer;">×</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 25px;">
+                <!-- 단일 항목 추가 -->
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <h3 style="margin-bottom: 15px; color: #667eea;">📝 단일 항목 추가</h3>
+                    <div class="form-group">
+                        <label>대상자 (선택)</label>
+                        <input type="text" id="taskRegModalAssignedTo" placeholder="배정할 사용자 이름 (선택사항)">
+                    </div>
+                    <div class="form-group">
+                        <label>제목 <span style="color: red;">*</span></label>
+                        <input type="text" id="taskRegModalTitle" placeholder="할일 제목을 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label>내용 <span style="color: red;">*</span></label>
+                        <textarea id="taskRegModalContent" placeholder="할일 내용을 입력하세요"></textarea>
+                    </div>
+                    <button onclick="addSingleItemFromModal()" style="width: 100%; background: #667eea; padding: 12px; font-size: 15px; font-weight: bold;">추가</button>
+                </div>
+
+                <!-- 엑셀 일괄 업로드 -->
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                    <h3 style="margin-bottom: 15px; color: #28a745;">📊 엑셀 일괄 등록</h3>
+                    <div class="form-group">
+                        <label>엑셀 파일 선택 (.xlsx, .xls)</label>
+                        <input type="file" id="taskRegModalExcelFile" accept=".xlsx,.xls" style="padding: 8px;">
+                    </div>
+                    <div style="background: #fff; padding: 12px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px;">
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;"><strong>엑셀 파일 형식:</strong></p>
+                        <p style="font-size: 12px; color: #999; line-height: 1.6;">
+                            • <strong>제목</strong> (필수): 할일 제목<br>
+                            • <strong>내용</strong> (필수): 할일 내용<br>
+                            • <strong>대상자</strong> (선택): 배정할 사용자 이름<br>
+                            • 첫 번째 행은 헤더로 인식됩니다
+                        </p>
+                        <button onclick="downloadExcelTemplate()" style="width: 100%; margin-top: 10px; padding: 8px; background: #fff; border: 2px solid #28a745; color: #28a745; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                            📥 서식 다운로드
+                        </button>
+                    </div>
+                    <button onclick="uploadExcelFromModal()" style="width: 100%; background: #28a745; padding: 12px; font-size: 15px; font-weight: bold;">업로드</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const socket = io();
         const currentUsername = '{{ username }}';
@@ -310,6 +445,126 @@
         let unreadCount = 0;
         let originalTitle = '관리자 페이지';
         let titleBlinkInterval = null;
+
+        // 컬럼 설정
+        const COLUMN_DEFINITIONS = {
+            checkbox: { key: 'checkbox', label: '', width: '40px', fixed: true },
+            id: { key: 'id', label: 'ID', width: '60px' },
+            status: { key: 'status', label: '상태', width: '100px' },
+            team: { key: 'team', label: '팀', width: '100px' },
+            assigned_to: { key: 'assigned_to', label: '대상자', width: '100px' },
+            title: { key: 'title', label: '제목', width: 'auto' },
+            content: { key: 'content', label: '내용', width: 'auto' },
+            created_at: { key: 'created_at', label: '등록일', width: '110px' },
+            assigned_at: { key: 'assigned_at', label: '배정일', width: '110px' },
+            updated_at: { key: 'updated_at', label: '수정일', width: '110px' },
+            completed_at: { key: 'completed_at', label: '완료일', width: '110px' },
+            actions: { key: 'actions', label: '작업', width: '180px', fixed: true }
+        };
+
+        // 레이아웃 프리셋
+        const LAYOUT_PRESETS = {
+            default: {
+                name: '기본 (날짜 뒤로)',
+                columns: ['checkbox', 'id', 'status', 'team', 'assigned_to', 'title', 'content', 'created_at', 'assigned_at', 'updated_at', 'completed_at', 'actions'],
+                visible: ['checkbox', 'id', 'status', 'team', 'assigned_to', 'title', 'content', 'created_at', 'assigned_at', 'updated_at', 'completed_at', 'actions'],
+                pinned: []
+            },
+            compact: {
+                name: '간결 (날짜 숨김)',
+                columns: ['checkbox', 'id', 'status', 'team', 'assigned_to', 'title', 'content', 'actions'],
+                visible: ['checkbox', 'id', 'status', 'team', 'assigned_to', 'title', 'content', 'actions'],
+                pinned: []
+            },
+            detailed: {
+                name: '상세 (날짜 앞으로)',
+                columns: ['checkbox', 'id', 'created_at', 'assigned_at', 'updated_at', 'completed_at', 'status', 'team', 'assigned_to', 'title', 'content', 'actions'],
+                visible: ['checkbox', 'id', 'created_at', 'assigned_at', 'updated_at', 'completed_at', 'status', 'team', 'assigned_to', 'title', 'content', 'actions'],
+                pinned: []
+            }
+        };
+
+        let currentLayout = null;
+
+        // Excel 스타일 컬럼 필터 상태 (다중 조건 지원)
+        // { columnKey: { logic: 'AND', conditions: [{ operator: 'equals', value: 'somevalue' }, ...] } }
+        let columnFilters = {};
+
+        // 정렬 상태 { column: 'columnKey', direction: 'asc' | 'desc' }
+        let sortState = null;
+
+        // 클릭 타이머 (싱글/더블클릭 구분용)
+        let clickTimer = null;
+        let clickCount = 0;
+
+        // 드래그 상태
+        let draggedColumn = null;
+        let dragOverColumn = null;
+
+        // 필터 연산자 정의
+        const FILTER_OPERATORS = {
+            text: [
+                { value: 'equals', label: '같음' },
+                { value: 'not_equals', label: '같지 않음' },
+                { value: 'contains', label: '포함' },
+                { value: 'not_contains', label: '포함하지 않음' },
+                { value: 'starts_with', label: '시작함' },
+                { value: 'ends_with', label: '끝남' },
+                { value: 'in', label: 'IN (다음 중 하나)' },
+                { value: 'not_in', label: 'NOT IN (다음 제외)' },
+                { value: 'is_empty', label: '비어있음' },
+                { value: 'not_empty', label: '빈 값 제외' }
+            ],
+            number: [
+                { value: 'equals', label: '같음 (=)' },
+                { value: 'not_equals', label: '같지 않음 (≠)' },
+                { value: 'greater', label: '큼 (>)' },
+                { value: 'greater_equal', label: '크거나 같음 (≥)' },
+                { value: 'less', label: '작음 (<)' },
+                { value: 'less_equal', label: '작거나 같음 (≤)' },
+                { value: 'between', label: '범위' },
+                { value: 'in', label: 'IN (다음 중 하나)' },
+                { value: 'not_in', label: 'NOT IN (다음 제외)' },
+                { value: 'is_empty', label: '비어있음' },
+                { value: 'not_empty', label: '빈 값 제외' }
+            ],
+            date: [
+                { value: 'equals', label: '같은 날짜' },
+                { value: 'not_equals', label: '같지 않음' },
+                { value: 'after', label: '이후' },
+                { value: 'after_equal', label: '이후 또는 같음' },
+                { value: 'before', label: '이전' },
+                { value: 'before_equal', label: '이전 또는 같음' },
+                { value: 'between', label: '기간' },
+                { value: 'in', label: 'IN (다음 중 하나)' },
+                { value: 'not_in', label: 'NOT IN (다음 제외)' },
+                { value: 'is_empty', label: '비어있음' },
+                { value: 'not_empty', label: '빈 값 제외' }
+            ],
+            select: [
+                { value: 'in', label: 'IN (다음 중 하나)' },
+                { value: 'not_in', label: 'NOT IN (다음 제외)' },
+                { value: 'is_empty', label: '비어있음' },
+                { value: 'not_empty', label: '빈 값 제외' }
+            ]
+        };
+
+        // 핀 컬럼 위치 캐시 (헤더에서 계산한 값을 바디에서 재사용)
+        let cachedPinnedPositions = {};
+
+        // 컬럼 타입 매핑
+        const COLUMN_TYPES = {
+            id: 'number',
+            status: 'text',      // 텍스트로 변경 - 모든 연산자 사용 가능
+            team: 'text',        // 텍스트로 변경 - 모든 연산자 사용 가능
+            assigned_to: 'text', // 텍스트로 변경 - 모든 연산자 사용 가능
+            title: 'text',
+            content: 'text',
+            created_at: 'date',
+            assigned_at: 'date',
+            updated_at: 'date',
+            completed_at: 'date'
+        };
 
         // 모달 함수
         function showModal(title, message, buttons) {
@@ -320,7 +575,7 @@
             const modalButtons = document.getElementById('modalButtons');
 
             modalTitle.textContent = title;
-            modalMessage.textContent = message;
+            modalMessage.innerHTML = message;  // textContent → innerHTML로 변경
             modalInput.style.display = 'none';
             modalInput.value = '';
 
@@ -384,64 +639,8 @@
             fetch('/api/items')
                 .then(res => res.json())
                 .then(data => {
-                    const tbody = document.getElementById('itemsList');
-
-                    // 체크박스 상태 저장
-                    const checkedIds = new Set(
-                        Array.from(document.querySelectorAll('.task-checkbox:checked'))
-                            .map(cb => parseInt(cb.value))
-                    );
-
-                    tbody.innerHTML = '';
-
-                    // 필터 적용
-                    const assignmentFilter = document.getElementById('assignmentFilter').value;
-                    const statusFilter = document.getElementById('statusFilter').value;
-
-                    let filteredData = data;
-
-                    if (assignmentFilter === 'assigned') {
-                        filteredData = filteredData.filter(item => item.assigned_to);
-                    } else if (assignmentFilter === 'unassigned') {
-                        filteredData = filteredData.filter(item => !item.assigned_to);
-                    }
-
-                    if (statusFilter !== 'all') {
-                        filteredData = filteredData.filter(item => item.status === statusFilter);
-                    }
-
-                    filteredData.forEach(item => {
-                        const tr = document.createElement('tr');
-
-                        // 상태 배지 색상
-                        let statusColor = '#6c757d';
-                        if (item.status === '진행중') statusColor = '#ffc107';
-                        if (item.status === '완료') statusColor = '#28a745';
-
-                        tr.innerHTML = `
-                            <td><input type="checkbox" class="task-checkbox" value="${item.id}"></td>
-                            <td>${item.id}</td>
-                            <td><span style="background: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${item.status || '대기중'}</span></td>
-                            <td>${item.assigned_to || '<span style="color: #999;">미배정</span>'}</td>
-                            <td>${item.title || ''}</td>
-                            <td>${item.content || ''}</td>
-                            <td class="actions">
-                                ${!item.assigned_to ? `<button onclick="assignItem(${item.id})" style="background: #17a2b8;">배정</button>` : `<button onclick="unassignItem(${item.id})" style="background: #ffc107;">회수</button>`}
-                                <button class="edit" onclick="editItem(${item.id})">수정</button>
-                                <button class="delete" onclick="deleteItem(${item.id})">삭제</button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-
-                        // 체크박스 상태 복원
-                        if (checkedIds.has(item.id)) {
-                            const checkbox = tr.querySelector('.task-checkbox');
-                            checkbox.checked = true;
-                        }
-                    });
-
-                    // 전체 선택 체크박스 상태 업데이트
-                    updateSelectAllState();
+                    allItemsData = data;  // 전체 데이터 저장
+                    renderFilteredItems();  // 통합 필터링 및 렌더링
                 });
         }
 
@@ -473,41 +672,341 @@
             }
         }
 
-        // 검색 기능
+        // 필터 및 검색 통합 관리
         let allItemsData = [];  // 전체 데이터 저장
+        let currentPage = 1;
+        let pageSize = 20;
 
-        function searchItems() {
+        // 필터 적용 (통합)
+        function applyFilters() {
+            renderFilteredItems();
+        }
+
+        // 페이지 크기 변경
+        function changePageSize() {
+            const selectValue = document.getElementById('pageSizeSelect').value;
+            if (selectValue === 'all') {
+                pageSize = -1;  // 전체 보기
+            } else {
+                pageSize = parseInt(selectValue);
+            }
+            currentPage = 1;  // 첫 페이지로 리셋
+            renderFilteredItems();
+        }
+
+        // 필터링 및 렌더링
+        function renderFilteredItems() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
-            const tableBody = document.querySelector('#itemsTable tbody');
-            const rows = tableBody.querySelectorAll('tr');
+            const assignmentFilter = document.getElementById('assignmentFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
 
-            let visibleCount = 0;
-            rows.forEach(row => {
-                const title = row.cells[3]?.textContent.toLowerCase() || '';
-                const content = row.cells[4]?.textContent.toLowerCase() || '';
-                const assignedTo = row.cells[5]?.textContent.toLowerCase() || '';
+            // 날짜 필터 값 가져오기
+            const createdFromDate = document.getElementById('createdFromDate').value;
+            const createdToDate = document.getElementById('createdToDate').value;
+            const assignedFromDate = document.getElementById('assignedFromDate').value;
+            const assignedToDate = document.getElementById('assignedToDate').value;
 
-                if (title.includes(searchText) || content.includes(searchText) || assignedTo.includes(searchText)) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
+            // 필터 적용
+            let filteredData = allItemsData;
+
+            // 배정 필터
+            if (assignmentFilter === 'assigned') {
+                filteredData = filteredData.filter(item => item.assigned_to);
+            } else if (assignmentFilter === 'unassigned') {
+                filteredData = filteredData.filter(item => !item.assigned_to);
+            }
+
+            // 상태 필터
+            if (statusFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.status === statusFilter);
+            }
+
+            // 검색 필터
+            if (searchText) {
+                filteredData = filteredData.filter(item => {
+                    const title = (item.title || '').toLowerCase();
+                    const content = (item.content || '').toLowerCase();
+                    const assignedTo = (item.assigned_to || '').toLowerCase();
+                    return title.includes(searchText) || content.includes(searchText) || assignedTo.includes(searchText);
+                });
+            }
+
+            // 등록일 필터 (created_at)
+            if (createdFromDate) {
+                filteredData = filteredData.filter(item => {
+                    if (!item.created_at) return false;
+                    const itemDate = item.created_at.split(' ')[0]; // "2025-01-15 10:30:45" -> "2025-01-15"
+                    return itemDate >= createdFromDate;
+                });
+            }
+            if (createdToDate) {
+                filteredData = filteredData.filter(item => {
+                    if (!item.created_at) return false;
+                    const itemDate = item.created_at.split(' ')[0];
+                    return itemDate <= createdToDate;
+                });
+            }
+
+            // 배정일 필터 (assigned_at)
+            if (assignedFromDate) {
+                filteredData = filteredData.filter(item => {
+                    if (!item.assigned_at) return false;
+                    const itemDate = item.assigned_at.split(' ')[0];
+                    return itemDate >= assignedFromDate;
+                });
+            }
+            if (assignedToDate) {
+                filteredData = filteredData.filter(item => {
+                    if (!item.assigned_at) return false;
+                    const itemDate = item.assigned_at.split(' ')[0];
+                    return itemDate <= assignedToDate;
+                });
+            }
+
+            // 다중 조건 필터 적용
+            Object.keys(columnFilters).forEach(columnKey => {
+                const filterConfig = columnFilters[columnKey];
+                const logic = filterConfig.logic || 'AND';
+                const conditions = filterConfig.conditions || [];
+
+                if (conditions.length === 0) return;
+
+                filteredData = filteredData.filter(item => {
+                    const itemValue = item[columnKey];
+
+                    const results = conditions.map(condition => {
+                        const operator = condition.operator;
+
+                        if (operator === 'is_empty') {
+                            return !itemValue || itemValue === '';
+                        }
+                        if (operator === 'not_empty') {
+                            return itemValue && itemValue !== '';
+                        }
+
+                        if (operator === 'in') {
+                            return condition.values.includes(itemValue);
+                        }
+                        if (operator === 'not_in') {
+                            return !condition.values.includes(itemValue);
+                        }
+
+                        const itemStr = String(itemValue || '').toLowerCase();
+                        const filterStr = String(condition.value || '').toLowerCase();
+
+                        if (operator === 'equals') return itemStr === filterStr;
+                        if (operator === 'not_equals') return itemStr !== filterStr;
+                        if (operator === 'contains') return itemStr.includes(filterStr);
+                        if (operator === 'not_contains') return !itemStr.includes(filterStr);
+                        if (operator === 'starts_with') return itemStr.startsWith(filterStr);
+                        if (operator === 'ends_with') return itemStr.endsWith(filterStr);
+
+                        const itemNum = parseFloat(itemValue);
+                        const filterNum = parseFloat(condition.value);
+
+                        if (operator === 'greater') return itemNum > filterNum;
+                        if (operator === 'greater_equal') return itemNum >= filterNum;
+                        if (operator === 'less') return itemNum < filterNum;
+                        if (operator === 'less_equal') return itemNum <= filterNum;
+
+                        if (operator === 'after') return itemValue > condition.value;
+                        if (operator === 'after_equal') return itemValue >= condition.value;
+                        if (operator === 'before') return itemValue < condition.value;
+                        if (operator === 'before_equal') return itemValue <= condition.value;
+
+                        if (operator === 'between') {
+                            const val1 = parseFloat(condition.value);
+                            const val2 = parseFloat(condition.value2);
+                            return itemNum >= val1 && itemNum <= val2;
+                        }
+
+                        return true;
+                    });
+
+                    if (logic === 'OR') {
+                        return results.some(r => r);
+                    } else {
+                        return results.every(r => r);
+                    }
+                });
             });
 
-            // 검색 결과 표시
-            if (searchText && visibleCount === 0) {
-                if (!document.getElementById('noResultsRow')) {
-                    const noResultsRow = tableBody.insertRow(0);
-                    noResultsRow.id = 'noResultsRow';
-                    noResultsRow.innerHTML = '<td colspan="8" style="text-align: center; padding: 40px; color: #999;">검색 결과가 없습니다.</td>';
-                }
-            } else {
-                const noResultsRow = document.getElementById('noResultsRow');
-                if (noResultsRow) {
-                    noResultsRow.remove();
-                }
+            // 정렬 적용
+            if (sortState) {
+                const col = sortState.column;
+                const dir = sortState.direction;
+
+                filteredData.sort((a, b) => {
+                    let aVal = a[col];
+                    let bVal = b[col];
+
+                    // null/undefined 처리
+                    if (aVal === null || aVal === undefined) aVal = '';
+                    if (bVal === null || bVal === undefined) bVal = '';
+
+                    // 숫자 타입이면 숫자로 비교
+                    if (COLUMN_TYPES[col] === 'number') {
+                        aVal = parseFloat(aVal) || 0;
+                        bVal = parseFloat(bVal) || 0;
+                    } else {
+                        // 문자열로 비교
+                        aVal = String(aVal).toLowerCase();
+                        bVal = String(bVal).toLowerCase();
+                    }
+
+                    if (aVal < bVal) return dir === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return dir === 'asc' ? 1 : -1;
+                    return 0;
+                });
             }
+
+            // 결과 개수 업데이트
+            document.getElementById('resultCount').textContent = `검색 결과: ${filteredData.length}개`;
+
+            // 페이징 처리
+            let pageData;
+            let totalPages;
+
+            if (pageSize === -1) {
+                // 전체 보기
+                pageData = filteredData;
+                totalPages = 1;
+                currentPage = 1;
+            } else {
+                totalPages = Math.ceil(filteredData.length / pageSize);
+                if (currentPage > totalPages && totalPages > 0) {
+                    currentPage = totalPages;
+                }
+                const startIdx = (currentPage - 1) * pageSize;
+                const endIdx = startIdx + pageSize;
+                pageData = filteredData.slice(startIdx, endIdx);
+            }
+
+            // 테이블 헤더 렌더링
+            renderTableHeader();
+
+            // 테이블 바디 렌더링
+            const tbody = document.getElementById('itemsList');
+            const checkedIds = new Set(
+                Array.from(document.querySelectorAll('.task-checkbox:checked'))
+                    .map(cb => parseInt(cb.value))
+            );
+            tbody.innerHTML = '';
+
+            if (!currentLayout) currentLayout = LAYOUT_PRESETS.default;
+            const visibleCols = currentLayout.visible || currentLayout.columns;
+            const colCount = visibleCols.length;
+            const pinnedColumns = currentLayout.pinned || [];
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 40px; color: #999;">검색 결과가 없습니다.</td></tr>`;
+            } else {
+                pageData.forEach(item => {
+                    const tr = document.createElement('tr');
+                    let rowHTML = '';
+
+                    currentLayout.columns.forEach(colKey => {
+                        if (!visibleCols.includes(colKey)) return;
+
+                        const align = colKey === 'actions' ? 'center' : 'left';
+                        let cellStyle = `padding: 12px; text-align: ${align}; border-bottom: 1px solid #ddd;`;
+
+                        // Apply sticky positioning to pinned columns (left는 나중에 JS로 설정)
+                        if (pinnedColumns.includes(colKey)) {
+                            cellStyle += ` position: sticky; left: 0px; background: white; z-index: 1; box-shadow: 2px 0 4px rgba(0,0,0,0.1);`;
+                        }
+
+                        rowHTML += `<td style="${cellStyle}">${getCellContent(item, colKey)}</td>`;
+                    });
+
+                    tr.innerHTML = rowHTML;
+                    tbody.appendChild(tr);
+
+                    if (checkedIds.has(item.id)) {
+                        const checkbox = tr.querySelector('.task-checkbox');
+                        if (checkbox) checkbox.checked = true;
+                    }
+                });
+            }
+
+            // 페이지 네비게이션 렌더링
+            renderPagination(filteredData.length, totalPages);
+            updateSelectAllState();
+
+            // 바디 렌더링 후 핀 위치 업데이트 (캐시된 값 사용)
+            setTimeout(() => {
+                if (Object.keys(cachedPinnedPositions).length > 0) {
+                    updateBodyPinnedPositions(cachedPinnedPositions);
+                }
+            }, 0);
+        }
+
+        // 페이지 네비게이션 렌더링
+        function renderPagination(totalItems, totalPages) {
+            const pageInfo = document.getElementById('pageInfo');
+            const pageButtons = document.getElementById('paginationButtons');  // 올바른 ID로 수정
+
+            // 페이지 정보 업데이트
+            if (pageSize === -1) {
+                // 전체 보기 모드
+                pageInfo.textContent = totalItems > 0 ? `전체 ${totalItems}개` : '0개';
+            } else {
+                const startIdx = (currentPage - 1) * pageSize + 1;
+                const endIdx = Math.min(currentPage * pageSize, totalItems);
+                pageInfo.textContent = totalItems > 0 ? `${startIdx}-${endIdx} / ${totalItems}` : '0 / 0';
+            }
+
+            // 페이지 버튼 생성
+            pageButtons.innerHTML = '';
+
+            // 전체 보기 모드이거나 페이지가 1개 이하면 버튼 숨김
+            if (pageSize === -1 || totalPages <= 1) return;
+
+            // 이전 버튼
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '‹';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => goToPage(currentPage - 1);
+            pageButtons.appendChild(prevBtn);
+
+            // 페이지 번호 버튼 (최대 5개 표시)
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, startPage + 4);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                btn.className = i === currentPage ? 'active' : '';
+                btn.onclick = () => goToPage(i);
+                pageButtons.appendChild(btn);
+            }
+
+            // 다음 버튼
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = '›';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => goToPage(currentPage + 1);
+            pageButtons.appendChild(nextBtn);
+        }
+
+        // 페이지 이동
+        function goToPage(page) {
+            currentPage = page;
+            renderFilteredItems();
+        }
+
+        // 검색 기능 (통합 필터 호출)
+        function searchItems() {
+            applyFilters();
+        }
+
+        // 날짜 필터 초기화
+        function clearDateFilters() {
+            document.getElementById('createdFromDate').value = '';
+            document.getElementById('createdToDate').value = '';
+            document.getElementById('assignedFromDate').value = '';
+            document.getElementById('assignedToDate').value = '';
+            applyFilters();
         }
 
         // 미배정 항목 전체 선택
@@ -605,106 +1104,115 @@
                 });
         }
 
-        // 탭 전환 함수
-        function switchTab(tabName) {
-            // 모든 탭 콘텐츠 숨기기
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
+        // 할일 등록 모달 열기
+        function openTaskRegistrationModal() {
+            document.getElementById('taskRegistrationModal').classList.add('active');
+        }
 
-            // 모든 탭 버튼 비활성화
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
+        // 할일 등록 모달 닫기
+        function closeTaskRegistrationModal() {
+            document.getElementById('taskRegistrationModal').classList.remove('active');
+            // 입력 필드 초기화
+            document.getElementById('taskRegModalAssignedTo').value = '';
+            document.getElementById('taskRegModalTitle').value = '';
+            document.getElementById('taskRegModalContent').value = '';
+            document.getElementById('taskRegModalExcelFile').value = '';
+        }
 
-            // 선택된 탭 콘텐츠 보이기
-            document.getElementById('content-' + tabName).classList.add('active');
+        // 모달에서 단일 항목 추가
+        function addSingleItemFromModal() {
+            const assignedTo = document.getElementById('taskRegModalAssignedTo').value.trim();
+            const title = document.getElementById('taskRegModalTitle').value.trim();
+            const content = document.getElementById('taskRegModalContent').value.trim();
 
-            // 선택된 탭 버튼 활성화
-            document.getElementById('tab-' + tabName).classList.add('active');
-
-            // 관리 탭으로 전환 시 할일 목록 새로고침
-            if (tabName === 'manage') {
-                loadItems();
+            if (!title || !content) {
+                showToast('⚠️ 입력 오류', '제목과 내용을 모두 입력하세요.');
+                return;
             }
-        }
 
-        // 드래그 앤 드롭 핸들러
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('dropZone').classList.add('dragover');
-        }
+            const data = { title, content };
+            if (assignedTo) {
+                data.assigned_to = assignedTo;
+            }
 
-        function handleDragLeave(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('dropZone').classList.remove('dragover');
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            document.getElementById('dropZone').classList.remove('dragover');
-
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                    document.getElementById('excelFile').files = files;
-                    document.getElementById('selectedFileName').textContent = '✓ ' + file.name;
+            fetch('/api/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✅ 성공', '할일이 추가되었습니다.');
+                    // 입력 필드 초기화
+                    document.getElementById('taskRegModalAssignedTo').value = '';
+                    document.getElementById('taskRegModalTitle').value = '';
+                    document.getElementById('taskRegModalContent').value = '';
+                    // 목록 새로고침
+                    loadItems();
                 } else {
-                    showModal('오류', '엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.', [
-                        { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                    ]);
+                    showToast('❌ 실패', data.message || '추가 중 오류가 발생했습니다.');
                 }
-            }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ 오류', '서버와의 통신에 실패했습니다.');
+            });
         }
 
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('selectedFileName').textContent = '✓ ' + file.name;
-            }
+        // 엑셀 서식 다운로드
+        function downloadExcelTemplate() {
+            // 간단한 CSV 형식으로 다운로드
+            const csvContent = "제목,내용,대상자\n" +
+                               "할일 제목 예시,할일 내용 예시,홍길동\n" +
+                               "두 번째 할일,두 번째 내용,김철수\n" +
+                               "세 번째 할일,세 번째 내용,";
+
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', '할일_등록_서식.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('📥 다운로드', '서식 파일이 다운로드되었습니다.');
         }
 
-        // 엑셀 업로드
-        function uploadExcel() {
-            const fileInput = document.getElementById('excelFile');
+        // 모달에서 엑셀 업로드
+        function uploadExcelFromModal() {
+            const fileInput = document.getElementById('taskRegModalExcelFile');
             const file = fileInput.files[0];
 
             if (!file) {
-                showModal('오류', '파일을 선택하세요.', [
-                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                ]);
+                showToast('⚠️ 파일 선택', '업로드할 엑셀 파일을 선택하세요.');
                 return;
             }
 
             const formData = new FormData();
             formData.append('file', file);
 
+            showToast('⏳ 업로드 중', '엑셀 파일을 처리하고 있습니다...');
+
             fetch('/api/items/bulk-upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(res => res.json())
+            .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showModal('완료', `${data.count}개의 할일이 등록되었습니다.`, [
-                        { text: '확인', type: 'primary', onclick: 'closeModal(); loadItems();' }
-                    ]);
+                    showToast('✅ 성공', `${data.count || 0}개의 할일이 추가되었습니다.`);
                     fileInput.value = '';
-                    document.getElementById('selectedFileName').textContent = '';
+                    loadItems();
                 } else {
-                    showModal('오류', data.error || '업로드 실패', [
-                        { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                    ]);
+                    showToast('❌ 실패', data.message || '업로드 중 오류가 발생했습니다.');
                 }
             })
-            .catch(err => {
-                showModal('오류', '업로드 중 오류가 발생했습니다: ' + err.message, [
-                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                ]);
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('❌ 오류', '파일 업로드에 실패했습니다.');
             });
         }
 
@@ -915,19 +1423,33 @@
                 return;
             }
 
-            // 나머지가 발생하는 경우: 나머지는 배정하지 않고 딱 떨어지게 (순차 및 랜덤 모드 공통)
+            // 나머지가 발생하는 경우: 모드에 따라 다르게 처리
             const remainder = taskIds.length % selectedUsers.length;
             if (remainder > 0) {
                 const assignableCount = taskIds.length - remainder;
                 const perUser = Math.floor(taskIds.length / selectedUsers.length);
-                window.tempBulkAssignData = { taskIds: taskIds.slice(0, assignableCount), selectedUsers, mode };
-                showModal('나머지 할일 처리',
-                    `할일 ${taskIds.length}개를 ${selectedUsers.length}명에게 배정하면 ${remainder}개가 남습니다.\n` +
-                    `${assignableCount}개만 배정(1인당 ${perUser}건)하고 나머지 ${remainder}개는 미배정 상태로 두시겠습니까?`, [
-                    { text: '취소', type: 'secondary', onclick: 'closeModal(); openBulkAssignModal();' },
-                    { text: '확인', type: 'primary', onclick: 'closeModal(); proceedBulkAssign(window.tempBulkAssignData.taskIds, window.tempBulkAssignData.selectedUsers, window.tempBulkAssignData.mode);' }
-                ]);
-                return;
+
+                if (mode === 'sequential') {
+                    // 순차 배정: 나머지는 미배정
+                    window.tempBulkAssignData = { taskIds: taskIds.slice(0, assignableCount), selectedUsers, mode };
+                    showModal('나머지 할일 처리',
+                        `할일 ${taskIds.length}개를 ${selectedUsers.length}명에게 배정하면 ${remainder}개가 남습니다.\n` +
+                        `${assignableCount}개만 배정(1인당 ${perUser}건)하고 나머지 ${remainder}개는 미배정 상태로 두시겠습니까?`, [
+                        { text: '취소', type: 'secondary', onclick: 'closeModal(); openBulkAssignModal();' },
+                        { text: '확인', type: 'primary', onclick: 'closeModal(); proceedBulkAssign(window.tempBulkAssignData.taskIds, window.tempBulkAssignData.selectedUsers, window.tempBulkAssignData.mode);' }
+                    ]);
+                    return;
+                } else if (mode === 'random') {
+                    // 랜덤 배정: 나머지도 랜덤하게 추가 배정
+                    window.tempBulkAssignData = { taskIds, selectedUsers, mode };
+                    showModal('나머지 할일 처리',
+                        `할일 ${taskIds.length}개를 ${selectedUsers.length}명에게 배정합니다.\n` +
+                        `모두에게 최소 ${perUser}건씩 배정하고, 나머지 ${remainder}건은 랜덤하게 추가 배정합니다.\n계속 진행하시겠습니까?`, [
+                        { text: '취소', type: 'secondary', onclick: 'closeModal(); openBulkAssignModal();' },
+                        { text: '확인', type: 'primary', onclick: 'closeModal(); proceedBulkAssign(window.tempBulkAssignData.taskIds, window.tempBulkAssignData.selectedUsers, window.tempBulkAssignData.mode);' }
+                    ]);
+                    return;
+                }
             }
 
             closeModal();
@@ -984,57 +1506,6 @@
             });
         }
 
-        function addItem() {
-            const assignedTo = document.getElementById('assignedTo').value.trim();
-            const title = document.getElementById('title').value.trim();
-            const content = document.getElementById('content').value.trim();
-
-            if (!title) {
-                showModal('입력 오류', '제목을 입력하세요.', [
-                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                ]);
-                return;
-            }
-
-            // assigned_to가 공란이면 null로 (미배정)
-            const item = {
-                assigned_to: assignedTo || null,
-                title,
-                content,
-                status: '대기중'
-            };
-
-            if (editingId) {
-                fetch(`/api/items/${editingId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
-                })
-                .then(res => res.json())
-                .then(() => {
-                    editingId = null;
-                    clearForm();
-                    loadItems();
-                    showModal('완료', '수정되었습니다.', [
-                        { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                    ]);
-                });
-            } else {
-                fetch('/api/items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(item)
-                })
-                .then(res => res.json())
-                .then(() => {
-                    clearForm();
-                    loadItems();
-                    showModal('완료', '추가되었습니다.', [
-                        { text: '확인', type: 'primary', onclick: 'closeModal()' }
-                    ]);
-                });
-            }
-        }
 
         function editItem(id) {
             fetch('/api/items')
@@ -1042,13 +1513,64 @@
                 .then(data => {
                     const item = data.find(i => i.id === id);
                     if (item) {
-                        document.getElementById('assignedTo').value = item.assigned_to || '';
-                        document.getElementById('title').value = item.title || '';
-                        document.getElementById('content').value = item.content || '';
-                        editingId = id;
-                        window.scrollTo(0, 0);
+                        // 수정 모달 표시
+                        showModal('할일 수정', `
+                            <div style="text-align: left;">
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">배정 대상:</label>
+                                    <input type="text" id="editModalAssignedTo" value="${item.assigned_to || ''}" placeholder="배정 대상 입력 (선택)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">제목:</label>
+                                    <input type="text" id="editModalTitle" value="${item.title || ''}" placeholder="제목 입력" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">내용:</label>
+                                    <textarea id="editModalContent" placeholder="내용 입력" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-height: 120px; resize: vertical;">${item.content || ''}</textarea>
+                                </div>
+                            </div>
+                        `, [
+                            { text: '취소', type: 'secondary', onclick: 'closeModal()' },
+                            { text: '수정', type: 'primary', onclick: `confirmEdit(${id})` }
+                        ]);
                     }
                 });
+        }
+
+        function confirmEdit(id) {
+            const assignedTo = document.getElementById('editModalAssignedTo').value.trim();
+            const title = document.getElementById('editModalTitle').value.trim();
+            const content = document.getElementById('editModalContent').value.trim();
+
+            if (!title) {
+                alert('제목을 입력하세요.');
+                return;
+            }
+
+            const data = { title, content };
+            if (assignedTo) {
+                data.assigned_to = assignedTo;
+            }
+
+            fetch(`/api/items/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(() => {
+                closeModal();
+                loadItems();
+                showModal('완료', '수정되었습니다.', [
+                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
+                ]);
+            })
+            .catch(err => {
+                closeModal();
+                showModal('오류', '수정에 실패했습니다: ' + err.message, [
+                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
+                ]);
+            });
         }
 
         function deleteItem(id) {
@@ -1069,12 +1591,6 @@
                 });
         }
 
-        function clearForm() {
-            document.getElementById('assignedTo').value = '';
-            document.getElementById('title').value = '';
-            document.getElementById('content').value = '';
-            editingId = null;
-        }
 
         function assignItem(id) {
             showPromptModal('할일 배정', '배정할 사용자 이름을 입력하세요:', (username) => {
@@ -1219,6 +1735,1027 @@
             }
         }
 
+        // 레이아웃 관리 함수들
+        function getStorageKey(key) {
+            return `crm_${currentUsername}_${key}`;
+        }
+
+        // 커스텀 레이아웃 목록 가져오기
+        function getCustomLayouts() {
+            const layoutsJson = localStorage.getItem(getStorageKey('customLayouts'));
+            return layoutsJson ? JSON.parse(layoutsJson) : {};
+        }
+
+        // 커스텀 레이아웃 저장
+        function setCustomLayouts(layouts) {
+            localStorage.setItem(getStorageKey('customLayouts'), JSON.stringify(layouts));
+        }
+
+        // 레이아웃 셀렉터 업데이트
+        function updateLayoutSelector() {
+            const customLayouts = getCustomLayouts();
+            const customGroup = document.getElementById('customLayoutsGroup');
+
+            // 기존 옵션 제거
+            customGroup.innerHTML = '';
+
+            // 커스텀 레이아웃 옵션 추가
+            Object.keys(customLayouts).forEach(layoutId => {
+                const layout = customLayouts[layoutId];
+                const option = document.createElement('option');
+                option.value = `custom:${layoutId}`;
+                option.textContent = layout.name;
+                customGroup.appendChild(option);
+            });
+        }
+
+        function loadLayoutPreset() {
+            const presetValue = document.getElementById('layoutPreset').value;
+
+            if (presetValue.startsWith('custom:')) {
+                // 커스텀 레이아웃
+                const layoutId = presetValue.substring(7); // 'custom:' 제거
+                const customLayouts = getCustomLayouts();
+
+                if (customLayouts[layoutId]) {
+                    currentLayout = customLayouts[layoutId].layout;
+                } else {
+                    showModal('오류', '레이아웃을 찾을 수 없습니다. 기본 레이아웃을 사용합니다.', [
+                        { text: '확인', type: 'primary', onclick: 'closeModal()' }
+                    ]);
+                    document.getElementById('layoutPreset').value = 'default';
+                    currentLayout = LAYOUT_PRESETS.default;
+                }
+            } else {
+                // 기본 프리셋
+                currentLayout = LAYOUT_PRESETS[presetValue];
+            }
+
+            // 마지막 선택 저장 (사용자별)
+            localStorage.setItem(getStorageKey('lastLayoutPreset'), presetValue);
+            renderFilteredItems();
+        }
+
+        // 새 레이아웃 저장 다이얼로그
+        function openSaveLayoutDialog() {
+            if (!currentLayout) {
+                showModal('오류', '현재 레이아웃이 없습니다.', [
+                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
+                ]);
+                return;
+            }
+
+            showModal('레이아웃 저장', `
+                <div style="text-align: left;">
+                    <p style="margin-bottom: 15px; color: #666;">현재 컬럼 설정을 저장합니다.</p>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">레이아웃 이름:</label>
+                        <input type="text" id="layoutNameInput" placeholder="예: 작업용 레이아웃" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+            `, [
+                { text: '취소', type: 'secondary', onclick: 'closeModal()' },
+                { text: '저장', type: 'primary', onclick: 'confirmSaveLayout()' }
+            ]);
+
+            setTimeout(() => {
+                document.getElementById('layoutNameInput').focus();
+            }, 100);
+        }
+
+        function confirmSaveLayout() {
+            const layoutName = document.getElementById('layoutNameInput').value.trim();
+
+            if (!layoutName) {
+                alert('레이아웃 이름을 입력하세요.');
+                return;
+            }
+
+            // 고유 ID 생성 (타임스탬프 기반)
+            const layoutId = `layout_${Date.now()}`;
+
+            // 커스텀 레이아웃 저장
+            const customLayouts = getCustomLayouts();
+            customLayouts[layoutId] = {
+                name: layoutName,
+                layout: currentLayout,
+                createdAt: new Date().toISOString()
+            };
+            setCustomLayouts(customLayouts);
+
+            // 셀렉터 업데이트
+            updateLayoutSelector();
+
+            // 방금 저장한 레이아웃으로 선택
+            document.getElementById('layoutPreset').value = `custom:${layoutId}`;
+            localStorage.setItem(getStorageKey('lastLayoutPreset'), `custom:${layoutId}`);
+
+            closeModal();
+            showModal('완료', `"${layoutName}" 레이아웃이 저장되었습니다.`, [
+                { text: '확인', type: 'primary', onclick: 'closeModal()' }
+            ]);
+        }
+
+        // 레이아웃 관리 다이얼로그
+        function openManageLayoutsDialog() {
+            const customLayouts = getCustomLayouts();
+            const layoutKeys = Object.keys(customLayouts);
+
+            if (layoutKeys.length === 0) {
+                showModal('레이아웃 관리', '저장된 레이아웃이 없습니다.', [
+                    { text: '확인', type: 'primary', onclick: 'closeModal()' }
+                ]);
+                return;
+            }
+
+            let html = '<div style="text-align: left;">';
+            html += '<p style="margin-bottom: 15px; color: #666;">저장된 레이아웃을 관리합니다.</p>';
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+            layoutKeys.forEach(layoutId => {
+                const layout = customLayouts[layoutId];
+                const createdDate = new Date(layout.createdAt).toLocaleString('ko-KR');
+
+                html += `
+                    <div style="background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #667eea;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 15px; margin-bottom: 5px;">${layout.name}</div>
+                                <div style="font-size: 12px; color: #999;">생성일: ${createdDate}</div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="renameLayout('${layoutId}')" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">이름 변경</button>
+                                <button onclick="deleteLayout('${layoutId}')" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div></div>';
+
+            showModal('레이아웃 관리', html, [
+                { text: '닫기', type: 'primary', onclick: 'closeModal()' }
+            ]);
+        }
+
+        // 레이아웃 이름 변경
+        function renameLayout(layoutId) {
+            const customLayouts = getCustomLayouts();
+            const layout = customLayouts[layoutId];
+
+            if (!layout) return;
+
+            closeModal();
+
+            setTimeout(() => {
+                showModal('레이아웃 이름 변경', `
+                    <div style="text-align: left;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: bold;">새 이름:</label>
+                            <input type="text" id="newLayoutNameInput" value="${layout.name}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                        </div>
+                    </div>
+                `, [
+                    { text: '취소', type: 'secondary', onclick: 'closeModal(); openManageLayoutsDialog();' },
+                    { text: '변경', type: 'primary', onclick: `confirmRenameLayout('${layoutId}')` }
+                ]);
+
+                setTimeout(() => {
+                    const input = document.getElementById('newLayoutNameInput');
+                    input.focus();
+                    input.select();
+                }, 100);
+            }, 100);
+        }
+
+        function confirmRenameLayout(layoutId) {
+            const newName = document.getElementById('newLayoutNameInput').value.trim();
+
+            if (!newName) {
+                alert('레이아웃 이름을 입력하세요.');
+                return;
+            }
+
+            const customLayouts = getCustomLayouts();
+            if (customLayouts[layoutId]) {
+                customLayouts[layoutId].name = newName;
+                setCustomLayouts(customLayouts);
+                updateLayoutSelector();
+
+                closeModal();
+                showModal('완료', '레이아웃 이름이 변경되었습니다.', [
+                    { text: '확인', type: 'primary', onclick: 'closeModal(); openManageLayoutsDialog();' }
+                ]);
+            }
+        }
+
+        // 레이아웃 삭제
+        function deleteLayout(layoutId) {
+            const customLayouts = getCustomLayouts();
+            const layout = customLayouts[layoutId];
+
+            if (!layout) return;
+
+            closeModal();
+
+            setTimeout(() => {
+                showModal('레이아웃 삭제', `"${layout.name}" 레이아웃을 삭제하시겠습니까?`, [
+                    { text: '취소', type: 'secondary', onclick: 'closeModal(); openManageLayoutsDialog();' },
+                    { text: '삭제', type: 'danger', onclick: `confirmDeleteLayout('${layoutId}')` }
+                ]);
+            }, 100);
+        }
+
+        function confirmDeleteLayout(layoutId) {
+            const customLayouts = getCustomLayouts();
+            const currentPreset = document.getElementById('layoutPreset').value;
+
+            delete customLayouts[layoutId];
+            setCustomLayouts(customLayouts);
+            updateLayoutSelector();
+
+            // 삭제된 레이아웃이 현재 선택된 레이아웃이면 기본으로 변경
+            if (currentPreset === `custom:${layoutId}`) {
+                document.getElementById('layoutPreset').value = 'default';
+                loadLayoutPreset();
+            }
+
+            closeModal();
+            showModal('완료', '레이아웃이 삭제되었습니다.', [
+                { text: '확인', type: 'primary', onclick: 'closeModal(); openManageLayoutsDialog();' }
+            ]);
+        }
+
+        function openColumnManager() {
+            if (!currentLayout) currentLayout = LAYOUT_PRESETS.default;
+
+            const allColumns = Object.keys(COLUMN_DEFINITIONS);
+            const visibleCols = currentLayout.visible || currentLayout.columns;
+
+            let html = '<div style="text-align: left;">';
+            html += '<p style="margin-bottom: 15px; color: #666;">컬럼을 드래그하여 순서를 변경하고, 체크박스로 표시/숨김을 설정하세요.</p>';
+            html += '<div id="columnList" style="background: #f8f9fa; padding: 15px; border-radius: 6px; max-height: 400px; overflow-y: auto;">';
+
+            currentLayout.columns.forEach((colKey, index) => {
+                const col = COLUMN_DEFINITIONS[colKey];
+                if (!col) return;
+
+                const isVisible = visibleCols.includes(colKey);
+                const isFixed = col.fixed;
+
+                html += `
+                    <div class="column-item" draggable="${!isFixed}" data-col="${colKey}" style="background: white; padding: 12px; margin-bottom: 8px; border-radius: 4px; border: 2px solid #ddd; cursor: ${isFixed ? 'default' : 'move'}; display: flex; align-items: center; gap: 10px;">
+                        <span style="color: #999; font-size: 18px;">${isFixed ? '🔒' : '☰'}</span>
+                        <input type="checkbox" ${isVisible ? 'checked' : ''} ${isFixed ? 'disabled' : ''} onchange="toggleColumnVisibility('${colKey}')" style="width: 18px; height: 18px; cursor: ${isFixed ? 'not-allowed' : 'pointer'};">
+                        <span style="flex: 1; font-weight: 500;">${col.label || colKey}</span>
+                        <span style="color: #999; font-size: 12px;">${col.width}</span>
+                    </div>
+                `;
+            });
+
+            html += '</div></div>';
+
+            showModal('컬럼 관리', html, [
+                { text: '취소', type: 'secondary', onclick: 'closeModal()' },
+                { text: '적용', type: 'primary', onclick: 'applyColumnChanges()' }
+            ]);
+
+            // 드래그 앤 드롭 이벤트 설정
+            setTimeout(() => {
+                const columnList = document.getElementById('columnList');
+                const items = columnList.querySelectorAll('.column-item[draggable="true"]');
+                let draggedItem = null;
+
+                items.forEach(item => {
+                    item.addEventListener('dragstart', (e) => {
+                        draggedItem = item;
+                        item.style.opacity = '0.5';
+                    });
+
+                    item.addEventListener('dragend', (e) => {
+                        item.style.opacity = '1';
+                    });
+
+                    item.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        if (item !== draggedItem && item.getAttribute('draggable') === 'true') {
+                            const rect = item.getBoundingClientRect();
+                            const midpoint = rect.top + rect.height / 2;
+                            if (e.clientY < midpoint) {
+                                item.parentNode.insertBefore(draggedItem, item);
+                            } else {
+                                item.parentNode.insertBefore(draggedItem, item.nextSibling);
+                            }
+                        }
+                    });
+                });
+            }, 100);
+        }
+
+        function toggleColumnVisibility(colKey) {
+            // 이 함수는 체크박스 상태를 추적하는 용도로만 사용
+            // 실제 적용은 applyColumnChanges에서 수행
+        }
+
+        function applyColumnChanges() {
+            const columnList = document.getElementById('columnList');
+            const items = columnList.querySelectorAll('.column-item');
+
+            const newColumns = [];
+            const newVisible = [];
+
+            items.forEach(item => {
+                const colKey = item.getAttribute('data-col');
+                newColumns.push(colKey);
+
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox && checkbox.checked) {
+                    newVisible.push(colKey);
+                }
+            });
+
+            currentLayout = {
+                columns: newColumns,
+                visible: newVisible
+            };
+
+            closeModal();
+            renderFilteredItems();
+
+            showModal('완료', '컬럼 설정이 적용되었습니다. "현재 레이아웃 저장" 버튼을 눌러 저장하세요.', [
+                { text: '확인', type: 'primary', onclick: 'closeModal()' }
+            ]);
+        }
+
+        // 렌더링 헬퍼 함수들
+        function renderTableHeader() {
+            if (!currentLayout) currentLayout = LAYOUT_PRESETS.default;
+
+            const thead = document.getElementById('itemsTableHead');
+            const visibleCols = currentLayout.visible || currentLayout.columns;
+            const pinnedColumns = currentLayout.pinned || [];
+
+            // 단일 헤더 행 (Excel 스타일) - 먼저 sticky 없이 렌더링
+            let headerHTML = '<tr>';
+
+            currentLayout.columns.forEach(colKey => {
+                if (!visibleCols.includes(colKey)) return;
+
+                const col = COLUMN_DEFINITIONS[colKey];
+                if (!col) return;
+
+                const width = col.width !== 'auto' ? `width: ${col.width};` : '';
+                const align = colKey === 'actions' ? 'center' : 'left';
+                const fontSize = ['created_at', 'assigned_at', 'updated_at', 'completed_at'].includes(colKey) ? 'font-size: 12px;' : '';
+                const isPinned = pinnedColumns.includes(colKey);
+
+                // 핀 표시용 임시 스타일 (실제 left 값은 나중에 JS로 적용)
+                let stickyStyle = '';
+                if (isPinned) {
+                    stickyStyle = `position: sticky; left: 0px; z-index: 11; box-shadow: 2px 0 4px rgba(0,0,0,0.1);`;
+                }
+
+                if (colKey === 'checkbox') {
+                    headerHTML += `<th style="padding: 12px 8px; text-align: ${align}; border-bottom: 2px solid #ddd; ${width} background: #f8f9fa; ${stickyStyle}" draggable="false"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>`;
+                } else if (colKey === 'actions') {
+                    // actions 컬럼은 필터 없음, 드래그 불가
+                    headerHTML += `<th style="padding: 12px 8px; text-align: ${align}; border-bottom: 2px solid #ddd; ${width} ${fontSize} background: #f8f9fa; font-weight: bold; ${stickyStyle}" draggable="false">${col.label}</th>`;
+                } else {
+                    // 필터 가능한 컬럼 - 헤더에 아이콘 포함
+                    const hasFilter = columnFilters[colKey];
+                    const filterIcon = hasFilter ? '🔽' : '▼';
+                    const sortIcon = sortState && sortState.column === colKey
+                        ? (sortState.direction === 'asc' ? ' ↑' : ' ↓')
+                        : '';
+                    const pinIcon = isPinned ? ' 📌' : '';
+                    const headerBg = hasFilter ? '#fff3cd' : '#f8f9fa';
+                    const headerColor = hasFilter ? '#856404' : '#333';
+                    const draggableAttr = col.fixed ? 'draggable="false"' : 'draggable="true"';
+                    const headerStyle = `padding: 12px 8px; text-align: ${align}; border-bottom: 2px solid #ddd; ${width} ${fontSize} background: ${headerBg}; font-weight: bold; cursor: pointer; user-select: none; color: ${headerColor}; transition: background 0.2s; ${stickyStyle}`;
+                    const hoverStyle = 'onmouseover="this.style.background=\'#e9ecef\'" onmouseout="this.style.background=\'' + headerBg + '\'"';
+
+                    headerHTML += `<th
+                        style="${headerStyle}"
+                        ${draggableAttr}
+                        onclick="handleHeaderClick('${colKey}')"
+                        ondragstart="handleColumnDragStart(event, '${colKey}')"
+                        ondragover="handleColumnDragOver(event, '${colKey}')"
+                        ondrop="handleColumnDrop(event, '${colKey}')"
+                        ondragleave="handleColumnDragLeave(event)"
+                        oncontextmenu="showColumnContextMenu(event, '${colKey}'); return false;"
+                        ${hoverStyle}>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                            <span>${col.label}</span>
+                            <span style="font-size: 10px; opacity: 0.7;">${filterIcon}${sortIcon}${pinIcon}</span>
+                        </div>
+                    </th>`;
+                }
+            });
+            headerHTML += '</tr>';
+
+            thead.innerHTML = headerHTML;
+
+            // 렌더링 후 실제 DOM 너비를 측정하여 핀 위치 재조정
+            setTimeout(() => {
+                const headerCells = thead.querySelectorAll('th');
+                const pinnedWidths = {}; // 각 핀 컬럼의 측정된 너비 저장
+                let cumulativeLeft = 0;
+                let colIndex = 0;
+
+                currentLayout.columns.forEach(colKey => {
+                    if (!visibleCols.includes(colKey)) return;
+
+                    const isPinned = pinnedColumns.includes(colKey);
+                    const cell = headerCells[colIndex];
+
+                    if (cell && isPinned) {
+                        // 실제 측정된 너비로 left 값 설정
+                        cell.style.left = `${cumulativeLeft}px`;
+                        pinnedWidths[colKey] = cell.offsetWidth;
+                        cumulativeLeft += cell.offsetWidth;
+                    }
+
+                    colIndex++;
+                });
+
+                // 전역 변수에 저장
+                cachedPinnedPositions = pinnedWidths;
+
+                // 바디 셀도 헤더와 동일한 너비로 업데이트
+                updateBodyPinnedPositions(pinnedWidths);
+            }, 0);
+        }
+
+        // 바디의 핀 고정 위치 업데이트 (헤더 너비 기준)
+        function updateBodyPinnedPositions(pinnedWidths) {
+            const visibleCols = currentLayout.visible || currentLayout.columns;
+            const pinnedColumns = currentLayout.pinned || [];
+            const tbody = document.getElementById('itemsList');
+            if (!tbody) return;
+
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                let cumulativeLeft = 0;
+                let colIndex = 0;
+
+                currentLayout.columns.forEach(colKey => {
+                    if (!visibleCols.includes(colKey)) return;
+
+                    const isPinned = pinnedColumns.includes(colKey);
+                    const cell = cells[colIndex];
+
+                    if (cell && isPinned) {
+                        cell.style.left = `${cumulativeLeft}px`;
+                        cumulativeLeft += pinnedWidths[colKey] || cell.offsetWidth;
+                    }
+
+                    colIndex++;
+                });
+            });
+        }
+
+        // 헤더 클릭 처리 (싱글클릭: 필터, 더블클릭: 정렬)
+        function handleHeaderClick(columnKey) {
+            clickCount++;
+
+            if (clickCount === 1) {
+                // 첫 번째 클릭 - 300ms 대기
+                clickTimer = setTimeout(() => {
+                    // 더블클릭 아님 - 필터 열기
+                    toggleColumnFilter(columnKey);
+                    clickCount = 0;
+                }, 300);
+            } else if (clickCount === 2) {
+                // 두 번째 클릭 - 더블클릭
+                clearTimeout(clickTimer);
+                toggleSort(columnKey);
+                clickCount = 0;
+            }
+        }
+
+        // 컬럼 정렬 토글
+        function toggleSort(columnKey) {
+            if (sortState && sortState.column === columnKey) {
+                // 같은 컬럼: asc -> desc -> null (정렬 해제)
+                if (sortState.direction === 'asc') {
+                    sortState.direction = 'desc';
+                } else {
+                    sortState = null;
+                }
+            } else {
+                // 새 컬럼: 오름차순으로 시작
+                sortState = { column: columnKey, direction: 'asc' };
+            }
+
+            applyFilters();
+        }
+
+        // 컬럼 드래그 시작
+        function handleColumnDragStart(event, columnKey) {
+            draggedColumn = columnKey;
+            event.dataTransfer.effectAllowed = 'move';
+            event.target.style.opacity = '0.5';
+        }
+
+        // 컬럼 위로 드래그
+        function handleColumnDragOver(event, columnKey) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            if (draggedColumn && draggedColumn !== columnKey) {
+                dragOverColumn = columnKey;
+                event.currentTarget.style.background = '#d4e3fc';
+            }
+        }
+
+        // 드래그 떠남
+        function handleColumnDragLeave(event) {
+            event.currentTarget.style.background = '';
+        }
+
+        // 컬럼 드롭
+        function handleColumnDrop(event, targetColumn) {
+            event.preventDefault();
+            event.currentTarget.style.background = '';
+
+            if (!draggedColumn || draggedColumn === targetColumn) {
+                return;
+            }
+
+            // 고정 컬럼은 이동 불가
+            const draggedCol = COLUMN_DEFINITIONS[draggedColumn];
+            const targetCol = COLUMN_DEFINITIONS[targetColumn];
+            if (draggedCol?.fixed || targetCol?.fixed) {
+                showToast('알림', '고정된 컬럼은 이동할 수 없습니다.');
+                draggedColumn = null;
+                return;
+            }
+
+            // 핀 경계 체크: 핀 컬럼은 핀 영역 내에서만, 일반 컬럼은 일반 영역 내에서만 이동 가능
+            const pinnedColumns = currentLayout.pinned || [];
+            const isDraggedPinned = pinnedColumns.includes(draggedColumn);
+            const isTargetPinned = pinnedColumns.includes(targetColumn);
+
+            if (isDraggedPinned !== isTargetPinned) {
+                showToast('알림', '핀 고정된 컬럼과 일반 컬럼 사이에는 이동할 수 없습니다.');
+                draggedColumn = null;
+                return;
+            }
+
+            // 컬럼 순서 변경
+            const columns = [...currentLayout.columns];
+            const draggedIndex = columns.indexOf(draggedColumn);
+            const targetIndex = columns.indexOf(targetColumn);
+
+            // 배열에서 제거 후 새 위치에 삽입
+            columns.splice(draggedIndex, 1);
+            columns.splice(targetIndex, 0, draggedColumn);
+
+            currentLayout.columns = columns;
+
+            // 렌더링 업데이트
+            renderFilteredItems();
+
+            draggedColumn = null;
+            dragOverColumn = null;
+
+            showToast('성공', '컬럼 순서가 변경되었습니다.');
+        }
+
+        // 우클릭 컨텍스트 메뉴
+        function showColumnContextMenu(event, columnKey) {
+            event.preventDefault();
+
+            const col = COLUMN_DEFINITIONS[columnKey];
+            if (col?.fixed) {
+                showToast('안내', '이 컬럼은 고정되어 있어 핀 설정을 변경할 수 없습니다.');
+                return;
+            }
+
+            if (!currentLayout.pinned) {
+                currentLayout.pinned = [];
+            }
+
+            const isPinned = currentLayout.pinned.includes(columnKey);
+            const action = isPinned ? '핀 해제' : '핀 고정';
+
+            showModal('컬럼 설정', `"${col.label}" 컬럼을 ${action}하시겠습니까?<br><br><small style="color: #666;">핀 고정된 컬럼은 좌측에 고정되어 스크롤 시에도 보입니다.</small>`, [
+                { text: action, type: 'primary', onclick: `toggleColumnPin('${columnKey}')` },
+                { text: '취소', type: 'default', onclick: 'closeModal()' }
+            ]);
+        }
+
+        // 컬럼 핀 토글
+        function toggleColumnPin(columnKey) {
+            if (!currentLayout.pinned) {
+                currentLayout.pinned = [];
+            }
+
+            const index = currentLayout.pinned.indexOf(columnKey);
+            if (index > -1) {
+                // 핀 해제 - 핀 목록에서 제거하고 컬럼을 핀이 아닌 영역의 첫 번째로 이동
+                currentLayout.pinned.splice(index, 1);
+
+                // 컬럼 배열에서 제거
+                const colIndex = currentLayout.columns.indexOf(columnKey);
+                if (colIndex > -1) {
+                    currentLayout.columns.splice(colIndex, 1);
+                }
+
+                // 첫 번째 핀 아닌 컬럼 위치 찾기
+                let insertIndex = currentLayout.columns.length; // 기본값: 맨 끝
+                for (let i = 0; i < currentLayout.columns.length; i++) {
+                    if (!currentLayout.pinned.includes(currentLayout.columns[i])) {
+                        insertIndex = i;
+                        break;
+                    }
+                }
+
+                // 해당 위치에 삽입
+                currentLayout.columns.splice(insertIndex, 0, columnKey);
+                showToast('핀 해제', `컬럼이 핀 해제되었습니다.`);
+            } else {
+                // 핀 고정 - 핀 목록에 추가하고 컬럼을 마지막 핀 컬럼 뒤로 이동
+                currentLayout.pinned.push(columnKey);
+
+                // 컬럼 배열에서 제거
+                const colIndex = currentLayout.columns.indexOf(columnKey);
+                if (colIndex > -1) {
+                    currentLayout.columns.splice(colIndex, 1);
+                }
+
+                // 마지막 핀 컬럼 뒤에 삽입 (새로 추가된 핀 제외하고 검색)
+                let insertIndex = 0;
+                for (let i = currentLayout.columns.length - 1; i >= 0; i--) {
+                    if (currentLayout.pinned.includes(currentLayout.columns[i]) && currentLayout.columns[i] !== columnKey) {
+                        insertIndex = i + 1;
+                        break;
+                    }
+                }
+
+                currentLayout.columns.splice(insertIndex, 0, columnKey);
+                showToast('핀 고정', `컬럼이 좌측에 고정되었습니다.`);
+            }
+
+            closeModal();
+            renderFilteredItems();
+        }
+
+        function getCellContent(item, colKey) {
+            // 날짜 포맷팅 함수
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '<span style="color: #ccc;">-</span>';
+                try {
+                    const parts = dateStr.split(' ');
+                    if (parts.length >= 2) {
+                        const datePart = parts[0].split('-');
+                        const timePart = parts[1].split(':');
+                        return `<span style="font-size: 11px; color: #666;">${datePart[1]}-${datePart[2]} ${timePart[0]}:${timePart[1]}</span>`;
+                    }
+                    return `<span style="font-size: 11px; color: #666;">${dateStr}</span>`;
+                } catch (e) {
+                    return '<span style="color: #ccc;">-</span>';
+                }
+            };
+
+            switch (colKey) {
+                case 'checkbox':
+                    return `<input type="checkbox" class="task-checkbox" value="${item.id}">`;
+                case 'id':
+                    return item.id;
+                case 'status':
+                    let statusColor = '#6c757d';
+                    if (item.status === '진행중') statusColor = '#ffc107';
+                    if (item.status === '완료') statusColor = '#28a745';
+                    return `<span style="background: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${item.status || '대기중'}</span>`;
+                case 'team':
+                    return item.team || '<span style="color: #999;">-</span>';
+                case 'assigned_to':
+                    return item.assigned_to || '<span style="color: #999;">미배정</span>';
+                case 'title':
+                    return item.title || '';
+                case 'content':
+                    return item.content || '';
+                case 'created_at':
+                case 'assigned_at':
+                case 'updated_at':
+                case 'completed_at':
+                    return formatDate(item[colKey]);
+                case 'actions':
+                    return `
+                        ${!item.assigned_to ? `<button onclick="assignItem(${item.id})" style="background: #17a2b8;">배정</button>` : `<button onclick="unassignItem(${item.id})" style="background: #ffc107;">회수</button>`}
+                        <button class="edit" onclick="editItem(${item.id})">수정</button>
+                        <button class="delete" onclick="deleteItem(${item.id})">삭제</button>
+                    `;
+                default:
+                    return '';
+            }
+        }
+
+        // 연산자 라벨 가져오기
+        function getOperatorLabel(columnType, operatorValue) {
+            const operators = FILTER_OPERATORS[columnType] || FILTER_OPERATORS.text;
+            const op = operators.find(o => o.value === operatorValue);
+            return op ? op.label : operatorValue;
+        }
+
+        // Excel 스타일 필터 UI 표시 (다중 조건 지원)
+        function toggleColumnFilter(columnKey) {
+            const columnType = COLUMN_TYPES[columnKey] || 'text';
+            const currentFilter = columnFilters[columnKey] || { logic: 'AND', conditions: [] };
+            const operators = FILTER_OPERATORS[columnType];
+
+            let filterHTML = '<div style="text-align: left; max-width: 500px;">';
+
+            // 기존 조건 목록 (있으면 표시)
+            if (currentFilter.conditions && currentFilter.conditions.length > 0) {
+                filterHTML += '<div style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #667eea;">';
+                filterHTML += '<div style="font-weight: bold; margin-bottom: 10px; color: #333;">적용된 조건:</div>';
+
+                currentFilter.conditions.forEach((cond, idx) => {
+                    const opLabel = getOperatorLabel(columnType, cond.operator);
+                    let valueDisplay = '';
+
+                    if (cond.operator === 'is_empty' || cond.operator === 'not_empty') {
+                        valueDisplay = '';
+                    } else if (cond.values) {
+                        valueDisplay = ': ' + cond.values.join(', ');
+                    } else if (cond.value2) {
+                        valueDisplay = ': ' + cond.value + ' ~ ' + cond.value2;
+                    } else {
+                        valueDisplay = ': ' + cond.value;
+                    }
+
+                    filterHTML += `<div style="padding: 8px 10px; background: white; margin-bottom: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">`;
+                    filterHTML += `<span style="font-size: 13px; color: #555;"><strong>${opLabel}</strong>${valueDisplay}</span>`;
+                    filterHTML += `<button onclick="removeCondition('${columnKey}', ${idx}); event.stopPropagation();" style="padding: 4px 10px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; font-weight: bold;">삭제</button>`;
+                    filterHTML += `</div>`;
+
+                    if (idx < currentFilter.conditions.length - 1) {
+                        filterHTML += `<div style="text-align: center; padding: 4px; font-weight: bold; font-size: 12px; color: #667eea;">${currentFilter.logic}</div>`;
+                    }
+                });
+
+                // AND/OR 선택
+                filterHTML += '<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #ddd;">';
+                filterHTML += '<label style="font-weight: bold; margin-right: 10px; color: #555; font-size: 13px;">조건 연결:</label>';
+                filterHTML += `<select id="filterLogic_${columnKey}" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                filterHTML += `<option value="AND" ${currentFilter.logic === 'AND' ? 'selected' : ''}>AND (모두 만족)</option>`;
+                filterHTML += `<option value="OR" ${currentFilter.logic === 'OR' ? 'selected' : ''}>OR (하나라도 만족)</option>`;
+                filterHTML += `</select>`;
+                filterHTML += '</div>';
+
+                filterHTML += '</div>';
+            }
+
+            // 새 조건 추가 섹션
+            filterHTML += '<div style="padding: 15px; border: 2px dashed #ccc; border-radius: 6px; background: #fefefe;">';
+            filterHTML += '<div style="font-weight: bold; margin-bottom: 12px; color: #667eea; font-size: 14px;">새 조건 추가</div>';
+
+            // 연산자 선택
+            filterHTML += `<div style="margin-bottom: 12px;">`;
+            filterHTML += `<label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555;">조건:</label>`;
+            filterHTML += `<select id="filterOperator_${columnKey}" onchange="updateFilterOperator('${columnKey}')" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px; background: white;">`;
+            operators.forEach(op => {
+                filterHTML += `<option value="${op.value}">${op.label}</option>`;
+            });
+            filterHTML += `</select></div>`;
+
+            // 값 입력 영역
+            filterHTML += `<div id="filterValueContainer_${columnKey}"></div>`;
+
+            filterHTML += '</div>';
+            filterHTML += '</div>';
+
+            showModal(COLUMN_DEFINITIONS[columnKey].label + ' 필터', filterHTML, [
+                { text: '조건 추가', type: 'primary', onclick: `addCondition('${columnKey}')` },
+                { text: '모두 초기화', type: 'danger', onclick: `clearColumnFilter('${columnKey}')` },
+                { text: '닫기', type: 'default', onclick: 'closeModal()' }
+            ]);
+
+            updateFilterOperator(columnKey);
+        }
+
+        // 필터 연산자 변경 시 입력 필드 업데이트
+        function updateFilterOperator(columnKey) {
+            const operator = document.getElementById('filterOperator_' + columnKey).value;
+            const container = document.getElementById('filterValueContainer_' + columnKey);
+            const columnType = COLUMN_TYPES[columnKey] || 'text';
+
+            let html = '';
+
+            if (operator === 'is_empty' || operator === 'not_empty') {
+                // 값 입력 불필요
+                html = '<p style="color: #888; font-size: 13px; padding: 10px; text-align: center;">이 조건은 값이 필요 없습니다.</p>';
+            } else if (operator === 'between') {
+                // 범위 입력 (두 개의 값)
+                html += '<div style="margin-bottom: 8px;">';
+                html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555;">시작:</label>';
+                if (columnType === 'date') {
+                    html += `<input type="date" id="filterValue1_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                } else {
+                    html += `<input type="number" id="filterValue1_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                }
+                html += '</div>';
+                html += '<div>';
+                html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555;">끝:</label>';
+                if (columnType === 'date') {
+                    html += `<input type="date" id="filterValue2_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                } else {
+                    html += `<input type="number" id="filterValue2_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                }
+                html += '</div>';
+            } else if (operator === 'in' || operator === 'not_in') {
+                // IN/NOT IN: 콤마로 구분된 여러 값 입력
+                html += '<div>';
+                html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555;">값 (콤마로 구분):</label>';
+                html += `<textarea id="filterValue_${columnKey}" rows="3" placeholder="예: 값1, 값2, 값3" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px; resize: vertical;"></textarea>`;
+                html += '<p style="color: #888; font-size: 11px; margin-top: 4px;">쉼표(,)로 구분하여 여러 값을 입력하세요.</p>';
+                html += '</div>';
+            } else {
+                // 단일 값 입력
+                html += '<div>';
+                html += '<label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #555;">값:</label>';
+                if (columnType === 'date') {
+                    html += `<input type="date" id="filterValue_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                } else if (columnType === 'number') {
+                    html += `<input type="number" id="filterValue_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                } else {
+                    html += `<input type="text" id="filterValue_${columnKey}" style="width: 100%; padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 13px;">`;
+                }
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // 조건 추가
+        function addCondition(columnKey) {
+            const operator = document.getElementById('filterOperator_' + columnKey).value;
+
+            let condition = { operator };
+
+            if (operator === 'is_empty' || operator === 'not_empty') {
+                // 값 없음
+            } else if (operator === 'between') {
+                const value1 = document.getElementById('filterValue1_' + columnKey).value;
+                const value2 = document.getElementById('filterValue2_' + columnKey).value;
+                if (!value1 || !value2) {
+                    alert('시작과 끝 값을 모두 입력해주세요.');
+                    return;
+                }
+                condition.value = value1;
+                condition.value2 = value2;
+            } else if (operator === 'in' || operator === 'not_in') {
+                const valueText = document.getElementById('filterValue_' + columnKey).value;
+                if (!valueText.trim()) {
+                    alert('값을 입력해주세요.');
+                    return;
+                }
+                condition.values = valueText.split(',').map(v => v.trim()).filter(v => v);
+                if (condition.values.length === 0) {
+                    alert('유효한 값을 입력해주세요.');
+                    return;
+                }
+            } else {
+                const value = document.getElementById('filterValue_' + columnKey).value;
+                if (!value && value !== 0) {
+                    alert('값을 입력해주세요.');
+                    return;
+                }
+                condition.value = value;
+            }
+
+            if (!columnFilters[columnKey]) {
+                columnFilters[columnKey] = { logic: 'AND', conditions: [] };
+            }
+
+            // AND/OR 로직 업데이트 (기존 조건이 있을 때만)
+            const logicSelect = document.getElementById('filterLogic_' + columnKey);
+            if (logicSelect) {
+                columnFilters[columnKey].logic = logicSelect.value;
+            }
+
+            columnFilters[columnKey].conditions.push(condition);
+
+            closeModal();
+            applyFilters();
+        }
+
+        // 조건 삭제
+        function removeCondition(columnKey, index) {
+            if (columnFilters[columnKey] && columnFilters[columnKey].conditions) {
+                columnFilters[columnKey].conditions.splice(index, 1);
+
+                if (columnFilters[columnKey].conditions.length === 0) {
+                    delete columnFilters[columnKey];
+                }
+
+                closeModal();
+                applyFilters();
+
+                // 필터 다이얼로그 다시 열기
+                setTimeout(() => toggleColumnFilter(columnKey), 100);
+            }
+        }
+
+        // 컬럼 필터 전체 초기화
+        function clearColumnFilter(columnKey) {
+            delete columnFilters[columnKey];
+            closeModal();
+            applyFilters();
+        }
+
+        // 당일 예약 배너 체크
+        async function checkTodayReminders() {
+            try {
+                const response = await fetch('/api/reminders?show_completed=false');
+                const reminders = await response.json();
+
+                const today = new Date().toISOString().split('T')[0];
+                const todayReminders = reminders.filter(r => r.scheduled_date === today);
+
+                if (todayReminders.length > 0) {
+                    const banner = document.getElementById('reminderBanner');
+                    const bannerText = document.getElementById('bannerText');
+                    bannerText.textContent = `오늘 예약 ${todayReminders.length}건이 있습니다!`;
+                    banner.classList.add('show');
+                    document.body.classList.add('has-banner');
+                }
+            } catch (error) {
+                console.log('예약 체크 실패:', error);
+            }
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('reminderBanner');
+            banner.classList.remove('show');
+            document.body.classList.remove('has-banner');
+        }
+
+        // 페이지 로드 시 마지막 레이아웃 복원 (사용자별)
+        window.addEventListener('DOMContentLoaded', () => {
+            // 당일 예약 체크
+            checkTodayReminders();
+
+            // 커스텀 레이아웃 셀렉터 업데이트
+            updateLayoutSelector();
+
+            const lastPreset = localStorage.getItem(getStorageKey('lastLayoutPreset'));
+
+            // 기본 프리셋인 경우
+            if (lastPreset && LAYOUT_PRESETS[lastPreset]) {
+                document.getElementById('layoutPreset').value = lastPreset;
+                currentLayout = LAYOUT_PRESETS[lastPreset];
+            }
+            // 커스텀 레이아웃인 경우 (custom:layoutId 형식)
+            else if (lastPreset && lastPreset.startsWith('custom:')) {
+                const layoutId = lastPreset.split(':')[1];
+                const customLayouts = getCustomLayouts();
+
+                if (customLayouts[layoutId]) {
+                    document.getElementById('layoutPreset').value = lastPreset;
+                    currentLayout = customLayouts[layoutId].layout;
+                } else {
+                    // 저장된 커스텀 레이아웃이 삭제된 경우 기본으로 복원
+                    currentLayout = LAYOUT_PRESETS.default;
+                }
+            }
+            // 기존 단일 커스텀 레이아웃 마이그레이션 (하위 호환성)
+            else if (lastPreset === 'custom') {
+                const oldCustomLayout = localStorage.getItem(getStorageKey('customLayout'));
+                if (oldCustomLayout) {
+                    // 기존 단일 커스텀 레이아웃을 새 다중 레이아웃 시스템으로 마이그레이션
+                    const layoutId = `layout_${Date.now()}`;
+                    const customLayouts = getCustomLayouts();
+                    customLayouts[layoutId] = {
+                        name: '마이그레이션된 레이아웃',
+                        layout: JSON.parse(oldCustomLayout),
+                        createdAt: new Date().toISOString()
+                    };
+                    setCustomLayouts(customLayouts);
+
+                    // 마이그레이션 후 선택
+                    const newPresetValue = `custom:${layoutId}`;
+                    document.getElementById('layoutPreset').value = newPresetValue;
+                    localStorage.setItem(getStorageKey('lastLayoutPreset'), newPresetValue);
+                    currentLayout = customLayouts[layoutId].layout;
+
+                    // 기존 단일 레이아웃 제거
+                    localStorage.removeItem(getStorageKey('customLayout'));
+
+                    updateLayoutSelector();
+                } else {
+                    currentLayout = LAYOUT_PRESETS.default;
+                }
+            }
+            else {
+                currentLayout = LAYOUT_PRESETS.default;
+            }
+        });
+
         loadItems();
         setInterval(loadItems, 5000);
 
@@ -1272,6 +2809,101 @@
                     console.log('Service Worker 등록 실패:', error);
                 });
         }
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 모달 외부 클릭 시 닫기
+        document.addEventListener('DOMContentLoaded', () => {
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
     </script>
+
+    <!-- 도움말 버튼 -->
+    <button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+        ❓
+    </button>
+
+    <!-- 도움말 모달 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <div class="help-modal-title">
+                    📖 할일관리 사용법
+                </div>
+                <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📝 할일 추가하기</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>"+ 새 할일 추가"</strong> 버튼을 클릭합니다</li>
+                        <li><strong>제목</strong>: 할일의 제목을 입력합니다</li>
+                        <li><strong>담당자</strong>: 할일을 배정할 팀원을 선택합니다</li>
+                        <li><strong>우선순위</strong>: 높음/중간/낮음 중 선택합니다</li>
+                        <li><strong>상태</strong>: 대기중/진행중/완료 중 선택합니다</li>
+                        <li><strong>마감일</strong>: 할일의 마감일을 설정합니다 (선택사항)</li>
+                        <li><strong>내용</strong>: 할일의 상세 내용을 입력합니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">🔍 할일 필터링</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>담당자별 필터</strong>: 특정 담당자의 할일만 조회</li>
+                        <li><strong>우선순위별 필터</strong>: 높음/중간/낮음 우선순위로 필터링</li>
+                        <li><strong>상태별 필터</strong>: 대기중/진행중/완료 상태로 필터링</li>
+                        <li><strong>검색</strong>: 제목이나 내용으로 할일 검색</li>
+                        <li><strong>완료 항목 숨김</strong>: 체크하면 완료된 할일을 목록에서 제외</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">✏️ 할일 수정 및 삭제</div>
+                <div class="help-content">
+                    <ul>
+                        <li>각 할일 카드를 클릭하면 <strong>상세 모달</strong>이 열립니다</li>
+                        <li>상세 모달에서 <strong>"수정"</strong> 버튼을 클릭하여 내용 변경</li>
+                        <li><strong>"삭제"</strong> 버튼으로 할일을 삭제할 수 있습니다</li>
+                        <li><strong>"완료로 변경"</strong> 버튼으로 빠르게 상태 변경 가능</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">🎨 우선순위 색상</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong style="color: #dc3545;">빨간색</strong>: 높음 우선순위</li>
+                        <li><strong style="color: #ffc107;">노란색</strong>: 중간 우선순위</li>
+                        <li><strong style="color: #28a745;">초록색</strong>: 낮음 우선순위</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <strong>💡 Tip:</strong> 마감일이 임박한 할일은 상단에 표시되며, 완료된 할일은 회색으로 표시됩니다. 필터를 조합하여 원하는 할일만 빠르게 찾을 수 있습니다!
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/today_reminders.html' %}
 </body>
 </html>

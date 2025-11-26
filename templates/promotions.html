@@ -7,29 +7,8 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; font-size: 16px; }
-        .header {
-            background: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 { font-size: 24px; color: #333; }
-        .nav { display: flex; gap: 10px; }
-        .nav a {
-            padding: 8px 16px;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        .nav a:hover { background: #5568d3; }
-        .nav a.secondary { background: #6c757d; }
-        .nav a.secondary:hover { background: #5a6268; }
-        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; font-size: 16px; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
 
         .controls {
             background: white;
@@ -392,28 +371,201 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* 클립보드 복사 버튼 */
+        .copy-btn {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 4px 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+            vertical-align: middle;
+        }
+        .copy-btn:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+        .copy-btn.copied {
+            background: #28a745;
+        }
+
+        /* 당일 예약 배너 */
+        #reminderBanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9998;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 12px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        #reminderBanner.show { display: flex; align-items: center; justify-content: space-between; }
+        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        body.has-banner { padding-top: 60px; }
+        #reminderBanner .banner-content { flex: 1; display: flex; align-items: center; gap: 12px; font-weight: bold; }
+        #reminderBanner .banner-icon { font-size: 20px; }
+        #reminderBanner .banner-close { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px; }
+        #reminderBanner .banner-close:hover { background: rgba(255,255,255,0.3); }
+        #reminderBanner .banner-link { background: white; color: #dc3545; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-left: 10px; }
+        #reminderBanner .banner-link:hover { background: #f8f9fa; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 9997;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.3s ease-out;
+        }
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>
-            프로모션 게시판
-            {% if is_admin %}
-            <span class="admin-badge">관리자</span>
-            {% endif %}
-        </h1>
-        <div class="nav">
-            {% if is_admin %}
-            <a href="/admin">할일관리</a>
-            {% endif %}
-            <a href="/promotions">프로모션게시판</a>
-            <a href="/chats">채팅</a>
-            <a href="/">홈으로</a>
-            <a href="/logout" class="secondary">로그아웃</a>
+    <div id="reminderBanner">
+        <div class="banner-content">
+            <span class="banner-icon">🔴</span>
+            <span id="bannerText">오늘 예약이 있습니다!</span>
         </div>
+        <a href="/reminders" class="banner-link">예약 확인</a>
+        <button class="banner-close" onclick="closeBanner()">닫기</button>
     </div>
 
     <div class="container">
+        {% include 'includes/header.html' %}
         <div class="controls">
             <div class="controls-row">
                 <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력...">
@@ -429,6 +581,10 @@
                 <select id="promotionFilter">
                     <option value="">전체 프로모션</option>
                 </select>
+                <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f8f9fa; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                    <input type="checkbox" id="showEndedPromotions" onchange="applyStatusFilter()" style="cursor: pointer; width: 18px; height: 18px;">
+                    <span style="font-size: 15px; color: #555;">종료된 프로모션 포함</span>
+                </label>
                 <button class="btn btn-secondary" onclick="clearFilters()">필터 초기화</button>
                 {% if is_admin %}
                 <button class="btn btn-primary" onclick="openCreateModal()">+ 새 프로모션</button>
@@ -545,6 +701,44 @@
         let allFilterData = {}; // 전체 필터 데이터 저장
         let categoryProductMap = {}; // 대분류별 상품 매핑
 
+        // 당일 + 지난 예약 배너 체크
+        async function checkTodayReminders() {
+            try {
+                const response = await fetch('/api/reminders/banner-check');
+                const data = await response.json();
+
+                if (data.has_reminders) {
+                    const banner = document.getElementById('reminderBanner');
+                    const bannerText = document.getElementById('bannerText');
+
+                    // 배너 메시지 구성
+                    let message = '';
+                    if (data.overdue_count > 0 && data.today_count > 0) {
+                        message = `⚠️ 지난 예약 ${data.overdue_count}건, 오늘 예약 ${data.today_count}건이 있습니다!`;
+                    } else if (data.overdue_count > 0) {
+                        message = `⚠️ 지난 예약 ${data.overdue_count}건이 있습니다!`;
+                    } else {
+                        message = `오늘 예약 ${data.today_count}건이 있습니다!`;
+                    }
+
+                    bannerText.textContent = message;
+                    banner.classList.add('show');
+                    document.body.classList.add('has-banner');
+                }
+            } catch (error) {
+                console.log('예약 체크 실패:', error);
+            }
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('reminderBanner');
+            banner.classList.remove('show');
+            document.body.classList.remove('has-banner');
+        }
+
+        // 페이지 로드 시 당일 예약 체크
+        checkTodayReminders();
+
         // 프로모션 목록 로드
         function loadPromotions() {
             const params = new URLSearchParams();
@@ -564,10 +758,34 @@
                 .then(res => res.json())
                 .then(data => {
                     allPromotions = data;
-                    filteredPromotions = data;
-                    renderGroupTabs();
-                    renderPromotions();
+                    applyStatusFilter();
                 });
+        }
+
+        // 상태 필터 적용 (종료된 프로모션 제외/포함)
+        function applyStatusFilter() {
+            const showEnded = document.getElementById('showEndedPromotions').checked;
+
+            if (showEnded) {
+                // 체크된 경우: 모든 프로모션 표시
+                filteredPromotions = allPromotions;
+            } else {
+                // 체크 안된 경우 (기본값): 종료된 프로모션 제외
+                const today = new Date();
+                filteredPromotions = allPromotions.filter(promo => {
+                    // 무기한인 경우 포함
+                    if (promo.end_date === '무기한') {
+                        return true;
+                    }
+
+                    // 종료일이 오늘 이후면 포함 (진행중)
+                    const endDate = new Date(promo.end_date);
+                    return endDate >= today;
+                });
+            }
+
+            renderGroupTabs();
+            renderPromotions();
         }
 
         // 필터 옵션 로드
@@ -714,19 +932,31 @@
                                                         <div class="info-value highlight">${p.category || '분류없음'}</div>
 
                                                         <div class="info-label">상품:</div>
-                                                        <div class="info-value highlight">${p.product_name}</div>
+                                                        <div class="info-value highlight" onclick="event.stopPropagation();">
+                                                            ${p.product_name}
+                                                            <button class="copy-btn" onclick="copyToClipboard('${p.product_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
+                                                        </div>
 
                                                         <div class="info-label">채널:</div>
                                                         <div class="info-value">${p.channel}</div>
 
                                                         <div class="info-label">프로모션:</div>
-                                                        <div class="info-value highlight">${p.promotion_name}</div>
+                                                        <div class="info-value highlight" onclick="event.stopPropagation();">
+                                                            ${p.promotion_name}
+                                                            <button class="copy-btn" onclick="copyToClipboard('${p.promotion_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
+                                                        </div>
 
-                                                        <div class="info-label">금액할인:</div>
-                                                        <div class="info-value highlight">${p.discount_amount || '-'}</div>
+                                                        <div class="info-label">프로모션 코드:</div>
+                                                        <div class="info-value" onclick="event.stopPropagation();">
+                                                            ${p.promotion_code || '-'}
+                                                            ${p.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${p.promotion_code.replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
+                                                        </div>
 
                                                         <div class="info-label">기간:</div>
                                                         <div class="info-value">${p.start_date} ~ ${p.end_date}</div>
+
+                                                        <div class="info-label">금액할인:</div>
+                                                        <div class="info-value highlight">${p.discount_amount || '-'}</div>
 
                                                         <div class="info-label">회차면제:</div>
                                                         <div class="info-value">${p.session_exemption || '-'}</div>
@@ -786,13 +1016,22 @@
                     document.getElementById('detailContent').innerHTML = `
                         <div style="line-height: 1.8;">
                             <p><strong>대분류:</strong> ${promo.category || '-'}</p>
-                            <p><strong>상품명:</strong> ${promo.product_name}</p>
+                            <p>
+                                <strong>상품명:</strong> ${promo.product_name}
+                                <button class="copy-btn" onclick="copyToClipboard('${promo.product_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
+                            </p>
                             <p><strong>채널:</strong> ${promo.channel}</p>
-                            <p><strong>프로모션명:</strong> ${promo.promotion_name}</p>
+                            <p>
+                                <strong>프로모션명:</strong> ${promo.promotion_name}
+                                <button class="copy-btn" onclick="copyToClipboard('${promo.promotion_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
+                            </p>
+                            <p>
+                                <strong>프로모션 코드:</strong> ${promo.promotion_code || '-'}
+                                ${promo.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${promo.promotion_code.replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
+                            </p>
                             <p><strong>금액할인:</strong> ${promo.discount_amount || '-'}</p>
                             <p><strong>회차면제:</strong> ${promo.session_exemption || '-'}</p>
                             <p><strong>중복여부:</strong> ${(promo.subscription_types || []).join(', ') || '-'}</p>
-                            <p><strong>프로모션 코드:</strong> ${promo.promotion_code || '-'}</p>
                             <p><strong>내용:</strong></p>
                             <p style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px;">${promo.content}</p>
                             <p><strong>기간:</strong> ${promo.start_date} ~ ${promo.end_date}</p>
@@ -813,6 +1052,53 @@
             currentPromoId = null;
         }
 
+        // 클립보드 복사 함수
+        function copyToClipboard(text, button) {
+            if (navigator.clipboard && window.isSecureContext) {
+                // 최신 Clipboard API 사용 (HTTPS 환경)
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopyFeedback(button);
+                }).catch(err => {
+                    console.error('복사 실패:', err);
+                    fallbackCopyToClipboard(text, button);
+                });
+            } else {
+                // Fallback: 구형 브라우저 또는 HTTP 환경
+                fallbackCopyToClipboard(text, button);
+            }
+        }
+
+        // Fallback 복사 방법
+        function fallbackCopyToClipboard(text, button) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showCopyFeedback(button);
+            } catch (err) {
+                console.error('복사 실패:', err);
+                showSimpleToast('복사 실패', '수동으로 복사해주세요.', 'warning');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // 복사 성공 피드백
+        function showCopyFeedback(button) {
+            const originalText = button.innerHTML;
+            button.classList.add('copied');
+            button.innerHTML = '✓ 복사됨';
+            setTimeout(() => {
+                button.classList.remove('copied');
+                button.innerHTML = originalText;
+            }, 2000);
+        }
+
         function editFromDetail() {
             const promoId = currentPromoId;  // closeDetailModal 전에 ID 저장
             console.log('editFromDetail - currentPromoId:', currentPromoId, 'promoId:', promoId);
@@ -824,7 +1110,7 @@
             if (promoId) {
                 editPromotion(promoId);
             } else {
-                alert('프로모션 ID를 찾을 수 없습니다. 다시 시도해주세요.');
+                showSimpleToast('오류', '프로모션 ID를 찾을 수 없습니다.', 'error');
             }
         }
 
@@ -841,7 +1127,7 @@
             // ID 유효성 검사
             if (!id) {
                 console.error('editPromotion: 유효하지 않은 ID:', id);
-                alert('프로모션 ID가 유효하지 않습니다.');
+                showSimpleToast('오류', '프로모션 ID가 유효하지 않습니다.', 'error');
                 return;
             }
 
@@ -870,7 +1156,7 @@
                 })
                 .catch(error => {
                     console.error('editPromotion 에러:', error);
-                    alert('프로모션 정보를 불러오는 중 오류가 발생했습니다.');
+                    showSimpleToast('오류', '프로모션 정보를 불러올 수 없습니다.', 'error');
                 });
         }
 
@@ -918,17 +1204,17 @@
                 });
 
                 if (response.ok) {
-                    alert(id ? '프로모션이 수정되었습니다.' : '프로모션이 등록되었습니다.');
+                    showSimpleToast('성공', id ? '프로모션이 수정되었습니다.' : '프로모션이 등록되었습니다.', 'success');
                     closeModal();
                     loadPromotions();
                     loadFilters();
                 } else {
                     const error = await response.json();
-                    alert(error.error || '오류가 발생했습니다.');
+                    showSimpleToast('오류', error.error || '오류가 발생했습니다.', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('오류가 발생했습니다.');
+                showSimpleToast('오류', '오류가 발생했습니다.', 'error');
             }
         });
 
@@ -951,16 +1237,16 @@
                 });
 
                 if (response.ok) {
-                    alert('프로모션이 삭제되었습니다.');
+                    showSimpleToast('성공', '프로모션이 삭제되었습니다.', 'success');
                     closeDetailModal();
                     loadPromotions();
                     loadFilters();
                 } else {
-                    alert('삭제에 실패했습니다.');
+                    showSimpleToast('오류', '삭제에 실패했습니다.', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('오류가 발생했습니다.');
+                showSimpleToast('오류', '오류가 발생했습니다.', 'error');
             }
         }
 
@@ -971,6 +1257,7 @@
             document.getElementById('productFilter').value = '';
             document.getElementById('channelFilter').value = '';
             document.getElementById('promotionFilter').value = '';
+            document.getElementById('showEndedPromotions').checked = false;
             loadPromotions();
         }
 
@@ -1040,7 +1327,38 @@
             document.title = originalTitle;
         });
 
-        // 토스트 알림 표시
+        // 범용 토스트 알림 표시
+        function showSimpleToast(title, message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            // 타입별 아이콘 및 색상
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️',
+                'info': 'ℹ️'
+            };
+            const icon = icons[type] || icons['info'];
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('slide-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 채팅 토스트 알림 표시
         function showToast(chatTitle, message, chatId) {
             if (!notificationsEnabled) return;
 
@@ -1289,6 +1607,28 @@
 
         // 초기 토글 버튼 상태 설정
         updateToggleButton();
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 모달 외부 클릭 시 닫기
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
     </script>
 
     <!-- 토스트 알림 컨테이너 -->
@@ -1296,5 +1636,103 @@
 
     <!-- 알림 토글 버튼 -->
     <button id="notificationToggle" class="notification-toggle" onclick="toggleNotifications()" title="알림 끄기">🔔</button>
+
+    <!-- 도움말 버튼 -->
+    <button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+        ❓
+    </button>
+
+    <!-- 도움말 모달 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <div class="help-modal-title">
+                    📖 프로모션 게시판 사용법
+                </div>
+                <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">🔍 프로모션 검색 및 필터</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>검색창</strong>: 키워드로 프로모션 검색</li>
+                        <li><strong>대분류 필터</strong>: 상품 대분류별 필터링</li>
+                        <li><strong>상품 필터</strong>: 특정 상품의 프로모션만 조회</li>
+                        <li><strong>채널 필터</strong>: 판매 채널별 필터링 (전사, 온라인, 라운지 등)</li>
+                        <li><strong>프로모션명 필터</strong>: 프로모션명으로 필터링</li>
+                        <li><strong>종료된 프로모션 포함</strong>: 체크하면 종료된 프로모션도 함께 표시 (기본값: 제외)</li>
+                        <li><strong>필터 초기화</strong>: 모든 필터를 한 번에 초기화</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📂 그룹별 보기</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>전체 목록</strong>: 모든 프로모션을 한 번에 표시</li>
+                        <li><strong>상품별</strong>: 동일 상품끼리 그룹화</li>
+                        <li><strong>채널별</strong>: 동일 채널끼리 그룹화</li>
+                        <li><strong>프로모션별</strong>: 동일 프로모션명끼리 그룹화</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📋 복사 기능</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>상품명, 프로모션명, 코드</strong> 옆 📋 복사 버튼 클릭</li>
+                        <li>클릭 한 번으로 클립보드에 복사됩니다</li>
+                        <li>상담 시 빠르게 정보를 붙여넣을 수 있습니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            {% if is_admin %}
+            <div class="help-section">
+                <div class="help-section-title">✏️ 프로모션 관리 (관리자)</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>"+ 새 프로모션"</strong>: 새로운 프로모션 등록</li>
+                        <li><strong>"수정"</strong>: 기존 프로모션 내용 수정 (다른 관리자가 수정 중이면 잠금)</li>
+                        <li><strong>"삭제"</strong>: 프로모션 삭제</li>
+                        <li>수정 중에는 다른 관리자가 수정할 수 없도록 자동 잠금</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="help-section">
+                <div class="help-section-title">🏷️ 프로모션 상태</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong style="color: #28a745;">진행중</strong>: 현재 사용 가능한 프로모션</li>
+                        <li><strong style="color: #dc3545;">종료</strong>: 기간이 만료된 프로모션</li>
+                        <li><strong style="color: #0c5460;">무기한</strong>: 종료일 없이 계속 진행</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📅 종료된 프로모션 관리</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>기본 동작</strong>: 종료된 프로모션은 자동으로 숨겨집니다</li>
+                        <li><strong>히스토리 보기</strong>: "종료된 프로모션 포함" 체크박스를 체크하면 과거 프로모션 이력까지 모두 확인 가능</li>
+                        <li><strong>활용</strong>: 프로모션 개수가 많아질수록 현재 진행 중인 프로모션만 보는 것이 편리합니다</li>
+                        <li><strong>무기한 프로모션</strong>: 종료일이 없는 프로모션은 항상 표시됩니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <strong>💡 Tip:</strong> 대분류를 선택하면 해당 대분류의 상품만 상품 필터에 표시됩니다. 필터를 조합하여 원하는 프로모션을 빠르게 찾을 수 있습니다! 프로모션이 많아지면 종료된 프로모션을 숨겨서 깔끔하게 관리하세요.
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/today_reminders.html' %}
 </body>
 </html>

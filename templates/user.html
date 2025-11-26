@@ -18,21 +18,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        h1 { color: #333; }
-        .username { font-size: 18px; color: #667eea; font-weight: bold; }
-        .logout { padding: 8px 16px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; }
-        .logout:hover { background: #c82333; }
+        .container { max-width: 1200px; margin: 0 auto; }
         .items { display: grid; gap: 20px; }
         .item {
             background: white;
@@ -72,35 +58,215 @@
         .toast-message { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .toast-close { background: none; border: none; font-size: 20px; color: #999; cursor: pointer; padding: 0; width: 24px; height: 24px; flex-shrink: 0; }
         .toast-close:hover { color: #333; }
+
+        /* 당일 예약 배너 */
+        #reminderBanner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9998;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 12px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        #reminderBanner.show { display: flex; align-items: center; justify-content: space-between; }
+        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        body.has-banner { padding-top: 60px; }
+        #reminderBanner .banner-content { flex: 1; display: flex; align-items: center; gap: 12px; font-weight: bold; }
+        #reminderBanner .banner-icon { font-size: 20px; }
+        #reminderBanner .banner-close { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px; }
+        #reminderBanner .banner-close:hover { background: rgba(255,255,255,0.3); }
+        #reminderBanner .banner-link { background: white; color: #dc3545; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-left: 10px; }
+        #reminderBanner .banner-link:hover { background: #f8f9fa; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 9997;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.3s ease-out;
+        }
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
+    <div id="reminderBanner">
+        <div class="banner-content">
+            <span class="banner-icon">🔴</span>
+            <span id="bannerText">오늘 예약이 있습니다!</span>
+        </div>
+        <a href="/reminders" class="banner-link">예약 확인</a>
+        <button class="banner-close" onclick="closeBanner()">닫기</button>
+    </div>
     <div class="toast-container" id="toastContainer"></div>
     <div class="container">
-        <div class="header">
-            <div>
-                <h1>내 할당 목록</h1>
-                <div class="username">{{ username }}님</div>
-            </div>
-            <div class="nav" style="display: flex; gap: 10px;">
-                {% if is_admin %}
-                <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">할일관리</a>
-                {% endif %}
-                <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">프로모션게시판</a>
-                <a href="/chats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅</a>
-                <a href="/" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">홈으로</a>
-                <a href="/logout" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">로그아웃</a>
-            </div>
-        </div>
+        {% include 'includes/header.html' %}
 
+        <!-- 검색 및 필터 영역 -->
         <div style="padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <label style="margin-right: 10px; font-weight: bold; color: #333;">상태 필터:</label>
-            <select id="statusFilter" onchange="loadItems()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                <option value="all">전체</option>
-                <option value="대기중">대기중</option>
-                <option value="진행중">진행중</option>
-                <option value="완료">완료</option>
-            </select>
+            <!-- 검색바 -->
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="searchInput" placeholder="🔍 제목 또는 내용 검색..." onkeyup="applyFilters()" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s;" onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#ddd'">
+            </div>
+
+            <!-- 필터 및 정렬 -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="margin-right: 8px; font-weight: bold; color: #333; font-size: 14px;">상태:</label>
+                    <select id="statusFilter" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                        <option value="all">전체</option>
+                        <option value="대기중">대기중</option>
+                        <option value="진행중">진행중</option>
+                        <option value="완료">완료</option>
+                    </select>
+                </div>
+
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="margin-right: 8px; font-weight: bold; color: #333; font-size: 14px;">정렬:</label>
+                    <select id="sortOrder" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                        <option value="newest">최신순</option>
+                        <option value="oldest">오래된 순</option>
+                        <option value="status">상태별</option>
+                    </select>
+                </div>
+
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="display: flex; align-items: center; cursor: pointer; font-size: 14px;">
+                        <input type="checkbox" id="hideCompleted" onchange="applyFilters()" style="margin-right: 6px; width: 16px; height: 16px; cursor: pointer;">
+                        <span style="color: #333; font-weight: bold;">완료 항목 숨기기</span>
+                    </label>
+                </div>
+
+                <div style="flex: 1; min-width: 150px; text-align: right;">
+                    <span id="itemCount" style="font-weight: bold; color: #667eea; font-size: 15px;">전체 0건</span>
+                </div>
+            </div>
         </div>
 
         <div id="itemsContainer"></div>
@@ -114,6 +280,45 @@
         let unreadCount = 0;
         let originalTitle = '내 할당 목록';
         let titleBlinkInterval = null;
+        let allItemsData = [];  // 전체 데이터 저장
+
+        // 당일 + 지난 예약 배너 체크
+        async function checkTodayReminders() {
+            try {
+                const response = await fetch('/api/reminders/banner-check');
+                const data = await response.json();
+
+                if (data.has_reminders) {
+                    const banner = document.getElementById('reminderBanner');
+                    const bannerText = document.getElementById('bannerText');
+
+                    // 배너 메시지 구성
+                    let message = '';
+                    if (data.overdue_count > 0 && data.today_count > 0) {
+                        message = `⚠️ 지난 예약 ${data.overdue_count}건, 오늘 예약 ${data.today_count}건이 있습니다!`;
+                    } else if (data.overdue_count > 0) {
+                        message = `⚠️ 지난 예약 ${data.overdue_count}건이 있습니다!`;
+                    } else {
+                        message = `오늘 예약 ${data.today_count}건이 있습니다!`;
+                    }
+
+                    bannerText.textContent = message;
+                    banner.classList.add('show');
+                    document.body.classList.add('has-banner');
+                }
+            } catch (error) {
+                console.log('예약 체크 실패:', error);
+            }
+        }
+
+        function closeBanner() {
+            const banner = document.getElementById('reminderBanner');
+            banner.classList.remove('show');
+            document.body.classList.remove('has-banner');
+        }
+
+        // 페이지 로드 시 당일 예약 체크
+        checkTodayReminders();
 
         // 알림 권한 요청 (즉시 실행)
         if ('Notification' in window) {
@@ -166,8 +371,6 @@
             fetch('/api/items')
                 .then(res => res.json())
                 .then(data => {
-                    const container = document.getElementById('itemsContainer');
-
                     // 새 항목 알림
                     if (previousItemCount > 0 && data.length > previousItemCount) {
                         const newItemsCount = data.length - previousItemCount;
@@ -179,50 +382,134 @@
                     }
                     previousItemCount = data.length;
 
-                    // 상태 필터 적용
-                    const statusFilter = document.getElementById('statusFilter').value;
-                    let filteredData = data;
-                    if (statusFilter !== 'all') {
-                        filteredData = data.filter(item => (item.status || '대기중') === statusFilter);
-                    }
-
-                    if (filteredData.length === 0) {
-                        container.innerHTML = `
-                            <div class="empty">
-                                <div class="empty-icon">📭</div>
-                                <p>${statusFilter === 'all' ? '할당된 항목이 없습니다.' : statusFilter + ' 상태의 항목이 없습니다.'}</p>
-                            </div>
-                        `;
-                        return;
-                    }
-
-                    container.innerHTML = '<div class="items">' +
-                        filteredData.map(item => {
-                            const status = item.status || '대기중';
-                            let nextStatus = '';
-                            let nextStatusLabel = '';
-
-                            if (status === '대기중') {
-                                nextStatus = '진행중';
-                                nextStatusLabel = '진행중으로 변경';
-                            } else if (status === '진행중') {
-                                nextStatus = '완료';
-                                nextStatusLabel = '완료로 변경';
-                            }
-
-                            return `
-                                <div class="item">
-                                    <h3>${item.title || '제목 없음'}</h3>
-                                    <div class="item-content">${item.content || ''}</div>
-                                    <div class="item-status">
-                                        <span class="status-badge status-${status}">${status}</span>
-                                        ${nextStatus ? `<button class="status-button" onclick="changeStatus(${item.id}, '${nextStatus}')">${nextStatusLabel}</button>` : '<span style="color: #28a745; font-weight: bold;">✓ 완료됨</span>'}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') +
-                        '</div>';
+                    allItemsData = data;  // 전체 데이터 저장
+                    applyFilters();  // 필터 적용
                 });
+        }
+
+        // 필터 및 검색 적용
+        function applyFilters() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const sortOrder = document.getElementById('sortOrder').value;
+            const hideCompleted = document.getElementById('hideCompleted').checked;
+            const container = document.getElementById('itemsContainer');
+
+            // 필터 적용
+            let filteredData = allItemsData;
+
+            // 검색 필터
+            if (searchText) {
+                filteredData = filteredData.filter(item => {
+                    const title = (item.title || '').toLowerCase();
+                    const content = (item.content || '').toLowerCase();
+                    return title.includes(searchText) || content.includes(searchText);
+                });
+            }
+
+            // 상태 필터
+            if (statusFilter !== 'all') {
+                filteredData = filteredData.filter(item => (item.status || '대기중') === statusFilter);
+            }
+
+            // 완료 항목 숨기기
+            if (hideCompleted) {
+                filteredData = filteredData.filter(item => (item.status || '대기중') !== '완료');
+            }
+
+            // 정렬
+            filteredData = [...filteredData];  // 복사본 생성
+            if (sortOrder === 'newest') {
+                filteredData.reverse();
+            } else if (sortOrder === 'status') {
+                const statusOrder = { '대기중': 1, '진행중': 2, '완료': 3 };
+                filteredData.sort((a, b) => {
+                    const statusA = statusOrder[a.status || '대기중'] || 0;
+                    const statusB = statusOrder[b.status || '대기중'] || 0;
+                    return statusA - statusB;
+                });
+            }
+
+            // 개수 업데이트
+            const totalCount = allItemsData.length;
+            const filteredCount = filteredData.length;
+            const waitingCount = filteredData.filter(item => (item.status || '대기중') === '대기중').length;
+            const progressCount = filteredData.filter(item => item.status === '진행중').length;
+            const completedCount = filteredData.filter(item => item.status === '완료').length;
+
+            document.getElementById('itemCount').innerHTML = `
+                <span style="color: #667eea;">진행중 ${progressCount}건</span> /
+                <span style="color: #999;">전체 ${filteredCount}건</span>
+                ${filteredCount !== totalCount ? ` (총 ${totalCount}건 중)` : ''}
+            `;
+
+            // 렌더링
+            if (filteredData.length === 0) {
+                container.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">📭</div>
+                        <p>조건에 맞는 항목이 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<div class="items">' +
+                filteredData.map(item => {
+                    const status = item.status || '대기중';
+                    let nextStatus = '';
+                    let nextStatusLabel = '';
+
+                    if (status === '대기중') {
+                        nextStatus = '진행중';
+                        nextStatusLabel = '진행중으로 변경';
+                    } else if (status === '진행중') {
+                        nextStatus = '완료';
+                        nextStatusLabel = '완료로 변경';
+                    }
+
+                    return `
+                        <div class="item">
+                            <h3>${item.title || '제목 없음'}</h3>
+                            <div class="item-content">${item.content || ''}</div>
+                            <div class="item-status">
+                                <span class="status-badge status-${status}">${status}</span>
+                                ${nextStatus ? `<button class="status-button" onclick="changeStatus(${item.id}, '${nextStatus}')">${nextStatusLabel}</button>` : '<span style="color: #28a745; font-weight: bold;">✓ 완료됨</span>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('') +
+                '</div>';
+        }
+
+        // 범용 토스트 함수
+        function showSimpleToast(title, message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️',
+                'info': 'ℹ️'
+            };
+            const icon = icons[type] || icons['info'];
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('slide-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function changeStatus(id, newStatus) {
@@ -233,10 +520,11 @@
             })
             .then(res => res.json())
             .then(() => {
+                showSimpleToast('성공', `상태가 "${newStatus}"(으)로 변경되었습니다.`, 'success');
                 loadItems();
             })
             .catch(err => {
-                alert('상태 변경에 실패했습니다: ' + err.message);
+                showSimpleToast('오류', '상태 변경에 실패했습니다.', 'error');
             });
         }
 
@@ -353,7 +641,7 @@
                 loadItems();
             });
 
-        setInterval(loadItems, 3000);
+        setInterval(loadItems, 5000);  // 5초로 변경 (서버 부하 감소)
     
         // PWA 서비스 워커 등록
         if ('serviceWorker' in navigator) {
@@ -365,6 +653,94 @@
                     console.log('Service Worker 등록 실패:', error);
                 });
         }
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 모달 외부 클릭 시 닫기
+        document.addEventListener('DOMContentLoaded', () => {
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
 </script>
+
+    <!-- 도움말 버튼 -->
+    <button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+        ❓
+    </button>
+
+    <!-- 도움말 모달 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <div class="help-modal-title">
+                    📖 내 할당 목록 사용법
+                </div>
+                <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📋 할일 확인하기</div>
+                <div class="help-content">
+                    <ul>
+                        <li>나에게 배정된 할일만 표시됩니다</li>
+                        <li>각 할일 카드를 클릭하면 <strong>상세 정보</strong>를 볼 수 있습니다</li>
+                        <li><strong>우선순위</strong>에 따라 색상이 다르게 표시됩니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">✅ 할일 완료 처리</div>
+                <div class="help-content">
+                    <ul>
+                        <li>할일 카드의 <strong>"완료로 변경"</strong> 버튼을 클릭합니다</li>
+                        <li>완료된 할일은 회색으로 표시되며 줄 표시됩니다</li>
+                        <li>관리자에게 완료 알림이 전송됩니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">🎨 우선순위 색상</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong style="color: #dc3545;">빨간색</strong>: 높음 - 긴급한 할일</li>
+                        <li><strong style="color: #ffc107;">노란색</strong>: 중간 - 중요한 할일</li>
+                        <li><strong style="color: #28a745;">초록색</strong>: 낮음 - 여유있는 할일</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">💬 실시간 알림</div>
+                <div class="help-content">
+                    <ul>
+                        <li>새로운 할일이 배정되면 <strong>실시간 알림</strong>이 표시됩니다</li>
+                        <li>우측 하단의 토스트 알림으로 확인할 수 있습니다</li>
+                        <li>채팅 메시지도 실시간으로 알림을 받을 수 있습니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <strong>💡 Tip:</strong> 마감일이 가까운 할일부터 처리하세요! 완료된 할일은 자동으로 관리자에게 보고되므로 따로 연락할 필요가 없습니다.
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/today_reminders.html' %}
 </body>
 </html>

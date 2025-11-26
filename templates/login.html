@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인</title>
+    <title>로그인 - CRM 시스템</title>
 
     <!-- PWA 메타 태그 -->
     <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
@@ -21,121 +21,289 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
-        .login-box {
+
+        .login-container {
             background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            animation: slideUp 0.5s ease-out;
         }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
         h1 {
             text-align: center;
-            margin-bottom: 30px;
             color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 35px;
+        }
+
+        .error-message {
+            background: #fee;
+            border-left: 4px solid #e53e3e;
+            color: #c53030;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
+
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #555;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
         }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #999;
+        }
+
         input {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
+            padding: 15px 15px 15px 50px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
             font-size: 16px;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
         }
+
         input:focus {
             outline: none;
             border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
-        button {
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 20px;
+            color: #999;
+            user-select: none;
+        }
+
+        .password-toggle:hover {
+            color: #667eea;
+        }
+
+        .btn-login {
             width: 100%;
-            padding: 12px;
-            background: #667eea;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
+            margin-top: 10px;
         }
-        button:hover {
-            background: #5568d3;
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
         }
-        .info {
-            margin-top: 20px;
-            padding: 15px;
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .info-box {
+            margin-top: 30px;
+            padding: 18px;
             background: #f8f9fa;
-            border-radius: 5px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .info-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
             font-size: 14px;
+        }
+
+        .info-text {
+            font-size: 13px;
             color: #666;
-            text-align: center;
+            line-height: 1.6;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 40px 30px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .logo-icon {
+                font-size: 48px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="login-box">
-        <h1>이름 입력</h1>
+    <div class="login-container">
+        <div class="logo">
+            <div class="logo-icon">🔐</div>
+            <h1>로그인</h1>
+            <div class="subtitle">CRM 관리 시스템</div>
+        </div>
+
         {% if error %}
-        <div style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #f5c6cb;">
-            {{ error }}
+        <div class="error-message">
+            ⚠️ {{ error }}
         </div>
         {% endif %}
+
         <form method="POST">
             <div class="form-group">
-                <label for="username">이름:</label>
-                <input type="text" id="username" name="username" required autofocus placeholder="이름을 입력하세요" value="{{ username or '' }}">
+                <label for="username">이름</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">👤</span>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        required
+                        autofocus
+                        placeholder="이름을 입력하세요"
+                        value="{{ username or '' }}"
+                        autocomplete="username"
+                    >
+                </div>
             </div>
-            <div class="form-group" id="passwordGroup" style="display: none;">
-                <label for="password">비밀번호:</label>
-                <input type="password" id="password" name="password" placeholder="관리자 비밀번호">
+
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        placeholder="비밀번호를 입력하세요"
+                        autocomplete="current-password"
+                    >
+                    <span class="password-toggle" onclick="togglePassword()">👁️</span>
+                </div>
+                <div class="password-hint">초기 비밀번호를 모르시면 관리자에게 문의하세요</div>
             </div>
-            <button type="submit">입장</button>
+
+            <button type="submit" class="btn-login">로그인</button>
         </form>
-        <div class="info">
-            이름을 입력하면 할당된 항목을 확인할 수 있습니다.<br>
-            <small style="color: #999;">관리자 계정은 비밀번호가 필요합니다.</small>
+
+        <div class="info-box">
+            <div class="info-title">📌 안내사항</div>
+            <div class="info-text">
+                • 모든 사용자는 비밀번호가 필요합니다<br>
+                • 최초 로그인 후 마이페이지에서 비밀번호를 변경할 수 있습니다<br>
+                • 계정 문의: 관리자에게 연락하세요
+            </div>
         </div>
     </div>
 
     <script>
-        const adminNames = ['김은아', '김지원', '민건희', '홍민지', '안병민'];
-        const usernameInput = document.getElementById('username');
-        const passwordGroup = document.getElementById('passwordGroup');
-        const passwordInput = document.getElementById('password');
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggle = document.querySelector('.password-toggle');
 
-        usernameInput.addEventListener('input', function() {
-            const username = this.value.trim();
-            if (adminNames.includes(username)) {
-                passwordGroup.style.display = 'block';
-                passwordInput.required = true;
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggle.textContent = '🙈';
             } else {
-                passwordGroup.style.display = 'none';
-                passwordInput.required = false;
+                passwordInput.type = 'password';
+                toggle.textContent = '👁️';
+            }
+        }
+
+        // Enter 키 처리
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('password').focus();
             }
         });
-
-        // 페이지 로드시 체크 (에러 발생시 username이 채워져 있을 수 있음)
-        if (usernameInput.value && adminNames.includes(usernameInput.value.trim())) {
-            passwordGroup.style.display = 'block';
-            passwordInput.required = true;
-        }
 
         // PWA 서비스 워커 등록
         if ('serviceWorker' in navigator) {
@@ -147,6 +315,13 @@
                     console.log('Service Worker 등록 실패:', error);
                 });
         }
+
+        // 폼 제출 시 애니메이션
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const button = document.querySelector('.btn-login');
+            button.textContent = '로그인 중...';
+            button.disabled = true;
+        });
     </script>
 </body>
 </html>

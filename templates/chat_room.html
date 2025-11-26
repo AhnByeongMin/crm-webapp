@@ -422,9 +422,174 @@
             border-radius: 8px;
             font-size: 14px;
         }
+
+        /* 당일 예약 배너 */
+        #reminderBanner { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: none; animation: slideDown 0.3s ease-out; }
+        #reminderBanner.show { display: flex; }
+        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        #reminderBanner .banner-content { flex: 1; display: flex; align-items: center; gap: 12px; font-weight: bold; }
+        #reminderBanner .banner-icon { font-size: 20px; }
+        #reminderBanner .banner-close { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-left: 10px; }
+        #reminderBanner .banner-close:hover { background: rgba(255,255,255,0.3); }
+        #reminderBanner .banner-link { background: white; color: #dc3545; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-left: 10px; }
+        #reminderBanner .banner-link:hover { background: #f8f9fa; }
+        body.has-banner #notificationBanner { margin-top: 50px; }
+        body.has-banner .header { margin-top: 50px; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 9997;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.3s ease-out;
+        }
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
+
+        .nav-badge {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            min-width: 18px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <div id="reminderBanner">
+        <div class="banner-content">
+            <span class="banner-icon">🔴</span>
+            <span id="bannerText">오늘 예약이 있습니다!</span>
+        </div>
+        <a href="/reminders" class="banner-link">예약 확인</a>
+        <button class="banner-close" onclick="closeReminderBanner()">닫기</button>
+    </div>
     <div id="notificationBanner" class="notification-banner">
         <div class="notification-banner-text">
             <strong>💡 알림 안내</strong>
@@ -440,7 +605,8 @@
             <a href="/admin" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">할일관리</a>
             {% endif %}
             <a href="/promotions" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">프로모션게시판</a>
-            <a href="/chats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅</a>
+            <a href="/chats" id="navChats" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">채팅<span id="navChatsBadge" class="nav-badge" style="display: none;"></span></a>
+            <a href="/reminders" id="navReminders" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">내 예약<span id="navRemindersBadge" class="nav-badge" style="display: none;"></span></a>
             <a href="/" style="padding: 8px 16px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">홈으로</a>
             <a href="/logout" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">로그아웃</a>
         </div>
@@ -485,6 +651,36 @@
         let unreadCount = 0;
         let originalTitle = '{{ chat_title }}';
         let titleBlinkInterval = null;
+
+        // 당일 예약 배너 체크
+        async function checkTodayReminders() {
+            try {
+                const response = await fetch('/api/reminders?show_completed=false');
+                const reminders = await response.json();
+
+                const today = new Date().toISOString().split('T')[0];
+                const todayReminders = reminders.filter(r => r.scheduled_date === today);
+
+                if (todayReminders.length > 0) {
+                    const banner = document.getElementById('reminderBanner');
+                    const bannerText = document.getElementById('bannerText');
+                    bannerText.textContent = `오늘 예약 ${todayReminders.length}건이 있습니다!`;
+                    banner.classList.add('show');
+                    document.body.classList.add('has-banner');
+                }
+            } catch (error) {
+                console.log('예약 체크 실패:', error);
+            }
+        }
+
+        function closeReminderBanner() {
+            const banner = document.getElementById('reminderBanner');
+            banner.classList.remove('show');
+            document.body.classList.remove('has-banner');
+        }
+
+        // 페이지 로드 시 당일 예약 체크
+        checkTodayReminders();
 
         // 알림 권한 요청 (명확한 요청)
         if ('Notification' in window) {
@@ -1093,6 +1289,69 @@
                     console.log('Service Worker 등록 실패:', error);
                 });
         }
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.addEventListener('DOMContentLoaded', () => {
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
+
+        // 네비게이션 뱃지 업데이트
+        function updateNavBadges(counts) {
+            const chatsBadge = document.getElementById('navChatsBadge');
+            const remindersBadge = document.getElementById('navRemindersBadge');
+
+            if (chatsBadge) {
+                if (counts.unread_chats > 0) {
+                    chatsBadge.textContent = counts.unread_chats;
+                    chatsBadge.style.display = 'inline-block';
+                } else {
+                    chatsBadge.style.display = 'none';
+                }
+            }
+
+            if (remindersBadge) {
+                if (counts.today_reminders > 0) {
+                    remindersBadge.textContent = counts.today_reminders;
+                    remindersBadge.style.display = 'inline-block';
+                } else {
+                    remindersBadge.style.display = 'none';
+                }
+            }
+        }
+
+        function fetchNavCounts() {
+            fetch('/api/nav-counts')
+                .then(res => res.json())
+                .then(counts => {
+                    updateNavBadges(counts);
+                })
+                .catch(err => console.error('Failed to fetch nav counts:', err));
+        }
+
+        socket.on('nav_counts_update', (counts) => {
+            updateNavBadges(counts);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchNavCounts();
+            setInterval(fetchNavCounts, 30000);
+        });
 </script>
 
 <!-- 이미지 모달 팝업 -->
@@ -1102,6 +1361,87 @@
         <img id="imageModalImg" src="" alt="">
     </div>
     <div class="image-modal-filename" id="imageModalFilename"></div>
+</div>
+
+<!-- 도움말 버튼 -->
+<button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+    ❓
+</button>
+
+<!-- 도움말 모달 -->
+<div class="help-modal" id="helpModal">
+    <div class="help-modal-content">
+        <div class="help-modal-header">
+            <div class="help-modal-title">
+                📖 채팅방 사용법
+            </div>
+            <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">💬 메시지 보내기</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>텍스트 입력</strong>: 하단 입력창에 메시지 작성</li>
+                    <li><strong>Enter</strong>: 메시지 전송</li>
+                    <li><strong>Shift + Enter</strong>: 줄바꿈</li>
+                    <li><strong>이모지 버튼 (😊)</strong>: 이모지 선택 및 전송</li>
+                    <li><strong>파일 첨부 (📎)</strong>: 이미지, 문서 등 파일 첨부</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">📎 파일 공유</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>파일 첨부</strong>: 📎 버튼 클릭 또는 드래그 앤 드롭</li>
+                    <li><strong>이미지</strong>: 채팅창에서 바로 미리보기, 클릭하면 크게 보기</li>
+                    <li><strong>문서 파일</strong>: 클릭하여 다운로드</li>
+                    <li><strong>여러 파일</strong>: 한 번에 여러 파일 첨부 가능</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">👁️ 읽음 표시</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>빨간 숫자</strong>: 아직 읽지 않은 사람 수 표시</li>
+                    <li><strong>0명</strong>: 모든 참여자가 읽음</li>
+                    <li><strong>자동 업데이트</strong>: 상대방이 읽으면 실시간 반영</li>
+                    <li><strong>채팅방 입장</strong>: 자동으로 읽음 처리됨</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">⌨️ 입력 중 표시</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>상대방이 입력 중</strong>: "OOO님이 입력 중..." 표시</li>
+                    <li><strong>실시간 반영</strong>: 상대방이 입력을 시작하면 즉시 표시</li>
+                    <li><strong>여러 명 입력</strong>: 여러 사람이 동시에 입력 중일 때 모두 표시</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">🔔 알림 기능</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>브라우저 알림</strong>: 채팅방 밖에서도 새 메시지 알림</li>
+                    <li><strong>읽지 않은 메시지</strong>: 채팅 목록에서 빨간 배지로 표시</li>
+                    <li><strong>당일 예약 배너</strong>: 오늘 예약이 있으면 상단 배너 표시</li>
+                    <li><strong>알림 권한</strong>: 브라우저에서 알림 권한 허용 필요</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-tip">
+            <strong>💡 팁:</strong> 이미지를 클릭하면 크게 볼 수 있으며, 파일명을 클릭하면 다운로드됩니다. Shift + Enter로 여러 줄 메시지를 작성할 수 있습니다.
+        </div>
+    </div>
 </div>
 
 </body>

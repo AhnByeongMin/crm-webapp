@@ -48,22 +48,31 @@ def is_localhost():
     return request.remote_addr in ['127.0.0.1', 'localhost', '::1']
 
 def is_admin():
-    """실제 관리자 권한 확인 (로컬호스트 또는 관리자 계정으로 로그인)"""
+    """실제 관리자 권한 확인 (로컬호스트 또는 관리자 역할)"""
     if is_localhost():
         return True
 
-    # 관리자 계정으로 로그인한 경우
+    # 세션에 role이 있고 관리자인 경우
+    if 'role' in session and session['role'] == '관리자':
+        return True
+
+    # 하위 호환성: ADMIN_ACCOUNTS에 있는 경우 (마이그레이션 중)
     if 'username' in session and session['username'] in ADMIN_ACCOUNTS:
         return True
 
     return False
 
 @app.after_request
-def add_no_cache_headers(response):
-    """모든 응답에 캐시 비활성화 헤더 추가"""
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
+def add_cache_headers(response):
+    """캐시 헤더 최적화: 정적 파일은 캐싱, 동적 콘텐츠는 no-cache"""
+    # 정적 파일 (CSS, JS, 이미지, 폰트 등)은 1시간 캐싱
+    if request.path.startswith('/static/') or request.path.startswith('/uploads/'):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+    # 동적 콘텐츠는 캐시 비활성화
+    else:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
     return response
 
 @app.route('/')
@@ -81,7 +90,11 @@ def index():
         return redirect(url_for('admin'))
 
     # 일반 사용자는 user 페이지로
-    return render_template('user.html', username=session['username'])
+    return render_template('user.html',
+                         username=session['username'],
+                         is_admin=False,
+                         page_title='내 할일',
+                         current_page='tasks')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -95,19 +108,20 @@ def login():
         if not username:
             return render_template('login.html', error='이름을 입력하세요.')
 
-        # 관리자 계정으로 로그인 시도
-        if username in ADMIN_ACCOUNTS:
-            # 비밀번호 확인
-            if not password:
-                return render_template('login.html', error='관리자 계정은 비밀번호가 필요합니다.', username=username)
+        if not password:
+            return render_template('login.html', error='비밀번호를 입력하세요.', username=username)
 
-            if password != ADMIN_ACCOUNTS[username]:
-                return render_template('login.html', error='비밀번호가 올바르지 않습니다.', username=username)
+        # 데이터베이스에서 사용자 검증
+        user = database.verify_user_login(username, password)
 
-        # 일반 사용자는 비밀번호 불필요
-        session['username'] = username
-        add_user(username)  # 사용자 목록에 추가
-        return redirect(url_for('index'))
+        if user:
+            # 로그인 성공
+            session['username'] = user['username']
+            session['role'] = user['role']
+            return redirect(url_for('index'))
+        else:
+            # 로그인 실패 (잘못된 이름/비밀번호 또는 비활성 계정)
+            return render_template('login.html', error='이름 또는 비밀번호가 올바르지 않거나 비활성 계정입니다.', username=username)
 
     return render_template('login.html')
 
@@ -117,22 +131,25 @@ def admin():
         return "Access Denied", 403
 
     username = session.get('username', 'Admin')
-    return render_template('admin.html', username=username)
+    return render_template('admin.html',
+                         username=username,
+                         is_admin=True,
+                         page_title='할일 관리',
+                         current_page='admin')
 
 @app.route('/api/items', methods=['GET'])
 def get_items():
-    data = load_data()
-
     if is_admin():
+        # 관리자는 전체 조회
+        data = load_data()
         return jsonify(data)
 
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    # 일반 사용자는 자신에게 할당된 항목만 조회
+    # 일반 사용자는 자신에게 할당된 항목만 조회 (최적화)
     username = session['username']
-    user_items = [item for item in data if item.get('assigned_to') == username]
-
+    user_items = database.load_data_by_assigned(username)
     return jsonify(user_items)
 
 @app.route('/api/items', methods=['POST'])
@@ -151,21 +168,28 @@ def create_item():
 
 @app.route('/api/items/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
+    """할일 수정 (제목, 내용) - 관리자 전용"""
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
-    data = load_data()
     updated_data = request.json
+    title = updated_data.get('title')
+    content = updated_data.get('content')
 
-    for i, item in enumerate(data):
-        if item.get('id') == item_id:
-            data[i].update(updated_data)
-            data[i]['id'] = item_id
-            data[i]['updated_at'] = datetime.now().isoformat()
-            save_data(data)
-            return jsonify(data[i])
+    if not title or not content:
+        return jsonify({'error': 'Title and content required'}), 400
 
-    return jsonify({'error': 'Not found'}), 404
+    success = database.update_task(item_id, title, content)
+
+    if success:
+        # 업데이트된 항목 반환
+        data = database.load_data()
+        for item in data:
+            if item['id'] == item_id:
+                return jsonify(item)
+        return jsonify({'error': 'Not found'}), 404
+    else:
+        return jsonify({'error': 'Update failed'}), 500
 
 @app.route('/api/items/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):
@@ -201,14 +225,28 @@ def update_item_status(item_id):
 
     # 일반 사용자는 자신에게 배정된 항목만 변경 가능
     if not is_admin():
-        data = load_data()
-        item = next((item for item in data if item.get('id') == item_id), None)
-        if not item:
-            return jsonify({'error': 'Not found'}), 404
-        if item.get('assigned_to') != session['username']:
-            return jsonify({'error': 'Forbidden'}), 403
+        # 최적화: 단일 항목만 조회
+        with database.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT assigned_to FROM tasks WHERE id = ?', (item_id,))
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({'error': 'Not found'}), 404
+            if row['assigned_to'] != session['username']:
+                return jsonify({'error': 'Forbidden'}), 403
 
     database.update_task_status(item_id, status)
+
+    # Socket.IO로 할당자에게 배지 업데이트 전송
+    with database.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT assigned_to FROM tasks WHERE id = ?', (item_id,))
+        row = cursor.fetchone()
+        if row and row['assigned_to']:
+            assignee = row['assigned_to']
+            counts = calculate_nav_counts(assignee)
+            socketio.emit('nav_counts_update', counts, room=f'user_{assignee}')
+
     return jsonify({'success': True, 'status': status})
 
 @app.route('/api/items/<int:item_id>/assign', methods=['PUT'])
@@ -218,7 +256,26 @@ def update_item_assignment(item_id):
         return jsonify({'error': 'Forbidden'}), 403
 
     assigned_to = request.json.get('assigned_to')  # None이면 회수
+
+    # 이전 할당자 확인 (배지 업데이트용)
+    old_assignee = None
+    with database.get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT assigned_to FROM tasks WHERE id = ?', (item_id,))
+        row = cursor.fetchone()
+        if row:
+            old_assignee = row['assigned_to']
+
     database.update_task_assignment(item_id, assigned_to)
+
+    # Socket.IO로 배지 업데이트 전송 (이전 할당자 + 새 할당자)
+    if old_assignee:
+        counts = calculate_nav_counts(old_assignee)
+        socketio.emit('nav_counts_update', counts, room=f'user_{old_assignee}')
+    if assigned_to:
+        counts = calculate_nav_counts(assigned_to)
+        socketio.emit('nav_counts_update', counts, room=f'user_{assigned_to}')
+
     return jsonify({'success': True, 'assigned_to': assigned_to})
 
 @app.route('/api/items/bulk-assign', methods=['POST'])
@@ -236,14 +293,46 @@ def bulk_assign_items():
 
     try:
         if assign_mode == 'random':
-            # 랜덤 배정: 각 할일마다 무작위 사용자 배정
-            for task_id in task_ids:
-                user = random.choice(users)
+            # 랜덤 배정:
+            # 1. 먼저 항목 순서를 랜덤하게 섞음
+            # 2. 나누어떨어지는 수만큼 균등 분배 (모두에게 최소 보장)
+            # 3. 나머지는 랜덤하게 추가 분배
+            shuffled_tasks = task_ids.copy()
+            random.shuffle(shuffled_tasks)
+
+            items_per_person = len(shuffled_tasks) // len(users)
+            base_count = items_per_person * len(users)
+            remainder = len(shuffled_tasks) - base_count
+
+            print(f"[랜덤배정] 전체: {len(shuffled_tasks)}개, 인원: {len(users)}명")
+            print(f"[랜덤배정] 1인당: {items_per_person}개, 균등배정: {base_count}개, 나머지: {remainder}개")
+
+            # 1단계: 균등 분배 (모두에게 동일하게)
+            for i, task_id in enumerate(shuffled_tasks[:base_count]):
+                user = users[i % len(users)]
                 database.update_task_assignment(task_id, user)
 
+            print(f"[랜덤배정] 1단계 완료: {base_count}개 균등 배정")
+
+            # 2단계: 나머지를 랜덤하게 선정된 사람들에게 1개씩 분배
+            remainder_tasks = shuffled_tasks[base_count:]
+            print(f"[랜덤배정] 2단계 시작: {len(remainder_tasks)}개 나머지 랜덤 배정")
+
+            if remainder_tasks:
+                # 나머지 개수만큼 사람을 랜덤하게 선정 (중복 없이)
+                selected_users = random.sample(users, len(remainder_tasks))
+                for task_id, user in zip(remainder_tasks, selected_users):
+                    database.update_task_assignment(task_id, user)
+                    print(f"[랜덤배정] 나머지 task_id={task_id} -> {user}")
+
+            print(f"[랜덤배정] 완료: 총 {len(shuffled_tasks)}개 배정")
+
         elif assign_mode == 'sequential':
-            # 순차 배정: 사용자 순서대로 돌아가며 배정
-            for i, task_id in enumerate(task_ids):
+            # 순차 배정: 딱 나누어떨어지는 수만큼만 순차 분배, 나머지는 미배정
+            items_per_person = len(task_ids) // len(users)
+            assignable_count = items_per_person * len(users)
+
+            for i, task_id in enumerate(task_ids[:assignable_count]):
                 user = users[i % len(users)]
                 database.update_task_assignment(task_id, user)
 
@@ -460,7 +549,12 @@ def chat_list():
     username = session.get('username', 'Admin')
     admin = is_admin()
     localhost = is_localhost()
-    return render_template('chat_list.html', username=username, is_admin=admin, is_localhost=localhost)
+    return render_template('chat_list.html',
+                         username=username,
+                         is_admin=admin,
+                         is_localhost=localhost,
+                         page_title='채팅 목록',
+                         current_page='chats')
 
 @app.route('/chats/all')
 def chat_list_admin():
@@ -686,6 +780,11 @@ def handle_message(data):
                     'participants': chat_info['participants']
                 }, room=f'user_{participant}')
 
+                # 네비게이션 배지 실시간 업데이트 (읽지 않은 채팅 +1)
+                with app.app_context():
+                    participant_counts = calculate_nav_counts(participant)
+                    emit('nav_counts_update', participant_counts, room=f'user_{participant}')
+
 @socketio.on('typing_start')
 def handle_typing_start(data):
     chat_id = data['chat_id']
@@ -734,6 +833,11 @@ def handle_mark_as_read(data):
             'username': username,
             'message_index': message_index
         }, room=chat_id, include_self=False)
+
+        # 네비게이션 배지 실시간 업데이트 (메시지 읽음 처리 후)
+        with app.app_context():
+            user_counts = calculate_nav_counts(username)
+            emit('nav_counts_update', user_counts, room=f'user_{username}')
 
 # ============== 프로모션 게시판 ==============
 
@@ -787,7 +891,9 @@ def promotions_page():
         return redirect(url_for('login'))
     return render_template('promotions.html',
                          username=session['username'],
-                         is_admin=is_admin())
+                         is_admin=is_admin(),
+                         page_title='프로모션 게시판',
+                         current_page='promotions')
 
 @app.route('/api/promotions', methods=['GET'])
 def get_promotions():
@@ -958,6 +1064,448 @@ def get_promotion_filters():
         'promotion_names': sorted(promo_names),
         'category_products': category_products  # 대분류별 상품 매핑 추가
     })
+
+# ==================== 개인 예약 관리 ====================
+
+@app.route('/reminders')
+def reminders_page():
+    """예약 관리 페이지"""
+    if 'username' not in session and not is_localhost():
+        return redirect(url_for('login'))
+
+    username = session.get('username', 'Admin')
+    return render_template('reminders.html',
+                         username=username,
+                         is_admin=is_admin(),
+                         page_title='내 예약 관리',
+                         current_page='reminders')
+
+# ==================== 마이페이지 ====================
+
+@app.route('/mypage')
+def mypage():
+    """마이페이지"""
+    if 'username' not in session and not is_localhost():
+        return redirect(url_for('login'))
+
+    username = session.get('username', 'Admin')
+    user_info = database.get_user_info(username) if not is_localhost() else {
+        'username': 'Admin',
+        'role': '관리자',
+        'team': None,
+        'status': 'active',
+        'created_at': None
+    }
+
+    return render_template('mypage.html',
+                         username=username,
+                         user_info=user_info,
+                         is_admin=is_admin(),
+                         page_title='마이페이지',
+                         current_page='mypage')
+
+@app.route('/api/change-password', methods=['POST'])
+def change_password():
+    """비밀번호 변경"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if is_localhost():
+        return jsonify({'error': '로컬호스트에서는 비밀번호 변경이 불가능합니다.'}), 400
+
+    data = request.json
+    current_password = data.get('current_password', '').strip()
+    new_password = data.get('new_password', '').strip()
+    confirm_password = data.get('confirm_password', '').strip()
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({'error': '모든 필드를 입력해주세요.'}), 400
+
+    if new_password != confirm_password:
+        return jsonify({'error': '새 비밀번호가 일치하지 않습니다.'}), 400
+
+    if len(new_password) < 4:
+        return jsonify({'error': '비밀번호는 최소 4자 이상이어야 합니다.'}), 400
+
+    username = session.get('username')
+    success, message = database.change_user_password(username, current_password, new_password)
+
+    if success:
+        return jsonify({'success': True, 'message': message})
+    else:
+        return jsonify({'error': message}), 400
+
+@app.route('/api/reminders', methods=['GET'])
+def get_reminders():
+    """예약 목록 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    show_completed = request.args.get('show_completed', 'false').lower() == 'true'
+
+    reminders = database.load_reminders(username, show_completed)
+    return jsonify(reminders)
+
+@app.route('/api/reminders', methods=['POST'])
+def create_reminder():
+    """새 예약 생성"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    scheduled_date = data.get('scheduled_date', '').strip()
+    scheduled_time = data.get('scheduled_time', '').strip()
+
+    if not title or not scheduled_date or not scheduled_time:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    reminder_id = database.add_reminder(username, title, content, scheduled_date, scheduled_time)
+
+    # Socket.IO로 배지 업데이트 전송
+    counts = calculate_nav_counts(username)
+    socketio.emit('nav_counts_update', counts, room=f'user_{username}')
+
+    return jsonify({'id': reminder_id, 'success': True}), 201
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['PUT'])
+def update_reminder(reminder_id):
+    """예약 수정"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    scheduled_date = data.get('scheduled_date', '').strip()
+    scheduled_time = data.get('scheduled_time', '').strip()
+
+    if not title or not scheduled_date or not scheduled_time:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    success = database.update_reminder(reminder_id, username, title, content, scheduled_date, scheduled_time)
+
+    if not success:
+        return jsonify({'error': 'Reminder not found or unauthorized'}), 404
+
+    return jsonify({'success': True})
+
+@app.route('/api/reminders/<int:reminder_id>', methods=['DELETE'])
+def delete_reminder(reminder_id):
+    """예약 삭제"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    success = database.delete_reminder(reminder_id, username)
+
+    if not success:
+        return jsonify({'error': 'Reminder not found or unauthorized'}), 404
+
+    return jsonify({'success': True})
+
+@app.route('/api/reminders/<int:reminder_id>/complete', methods=['PATCH'])
+def toggle_reminder_complete(reminder_id):
+    """예약 완료 상태 토글"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    success = database.toggle_reminder_complete(reminder_id, username)
+
+    if not success:
+        return jsonify({'error': 'Reminder not found or unauthorized'}), 404
+
+    # Socket.IO로 배지 업데이트 전송
+    counts = calculate_nav_counts(username)
+    socketio.emit('nav_counts_update', counts, room=f'user_{username}')
+
+    return jsonify({'success': True})
+
+@app.route('/api/reminders/notifications', methods=['GET'])
+def get_pending_notifications():
+    """알림 필요한 예약 목록 (30분 전 알림용)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    reminders = database.get_pending_notifications(username)
+    return jsonify(reminders)
+
+@app.route('/api/reminders/<int:reminder_id>/notify', methods=['POST'])
+def mark_reminder_notified(reminder_id):
+    """30분 전 알림 발송 완료 표시"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    database.mark_reminder_notified(reminder_id)
+    return jsonify({'success': True})
+
+@app.route('/api/reminders/banner-check', methods=['GET'])
+def check_reminder_banner():
+    """배너 표시용 예약 체크 (당일 + 지난 미완료 예약)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    from datetime import date
+    today = str(date.today())
+
+    reminders = database.load_reminders(username)
+
+    # 당일 + 지난 미완료 예약 필터링
+    today_count = 0
+    overdue_count = 0
+
+    for r in reminders:
+        if r.get('completed'):
+            continue
+
+        reminder_date = r.get('scheduled_date', '')
+        if reminder_date == today:
+            today_count += 1
+        elif reminder_date < today:
+            overdue_count += 1
+
+    return jsonify({
+        'has_reminders': today_count > 0 or overdue_count > 0,
+        'today_count': today_count,
+        'overdue_count': overdue_count,
+        'total_count': today_count + overdue_count
+    })
+
+@app.route('/api/reminders/today', methods=['GET'])
+def get_today_reminders():
+    """당일 예약 목록 (시간순 정렬)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    from datetime import date
+    today = str(date.today())
+
+    reminders = database.load_reminders(username)
+
+    # 당일 미완료 예약 필터링
+    today_reminders = []
+    for r in reminders:
+        if r.get('completed'):
+            continue
+        if r.get('scheduled_date', '') == today:
+            today_reminders.append(r)
+
+    # 시간순 정렬
+    today_reminders.sort(key=lambda x: x.get('scheduled_time', ''))
+
+    return jsonify(today_reminders)
+
+# ==================== 사용자 관리 API ====================
+
+@app.route('/users')
+def users_page():
+    """사용자 관리 페이지 (관리자 전용)"""
+    if not is_admin():
+        return redirect(url_for('login'))
+
+    username = session.get('username', 'Admin')
+    return render_template('users.html',
+                         username=username,
+                         is_admin=is_admin(),
+                         page_title='사용자 관리',
+                         current_page='users')
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    """모든 사용자 목록 조회 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    users = database.load_all_users_detail()
+    return jsonify(users)
+
+@app.route('/api/users', methods=['POST'])
+def create_user_account():
+    """새 사용자 생성 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    username = data.get('username', '').strip()
+    role = data.get('role', '상담사')
+    status = data.get('status', 'active')
+    team = data.get('team', '').strip() or None
+
+    if not username or not role:
+        return jsonify({'error': 'Username and role are required'}), 400
+
+    # 초기 비밀번호 설정
+    password = 'admin1234' if role == '관리자' else 'body123!'
+
+    success = database.create_user(username, password, role, status, team)
+
+    if success:
+        return jsonify({'success': True, 'message': 'User created successfully'})
+    else:
+        return jsonify({'error': 'Username already exists'}), 400
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user_account(user_id):
+    """사용자 삭제 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    success = database.delete_user(user_id)
+
+    if success:
+        return jsonify({'success': True, 'message': 'User deleted successfully'})
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<int:user_id>/status', methods=['PATCH'])
+def update_user_status_api(user_id):
+    """사용자 상태 변경 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    status = data.get('status')
+
+    if status not in ['active', 'inactive']:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    success = database.update_user_status(user_id, status)
+
+    if success:
+        return jsonify({'success': True, 'message': 'Status updated successfully'})
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<int:user_id>/team', methods=['PATCH'])
+def update_user_team_api(user_id):
+    """사용자 팀 변경 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    team_value = data.get('team')
+    # None이거나 빈 문자열이면 None으로 처리
+    team = team_value.strip() if team_value and isinstance(team_value, str) else None
+    if team == '':
+        team = None
+
+    success = database.update_user_team(user_id, team)
+
+    if success:
+        return jsonify({'success': True, 'message': 'Team updated successfully'})
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<int:user_id>/role', methods=['PATCH'])
+def update_user_role_api(user_id):
+    """사용자 권한 변경 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    role = data.get('role')
+
+    if role not in ['상담사', '관리자']:
+        return jsonify({'error': 'Invalid role'}), 400
+
+    success = database.update_user_role(user_id, role)
+
+    if success:
+        return jsonify({'success': True, 'message': 'Role updated successfully'})
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<int:user_id>/reset-password', methods=['POST'])
+def reset_user_password_api(user_id):
+    """사용자 비밀번호 초기화 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    role = data.get('role')
+
+    if role not in ['상담사', '관리자']:
+        return jsonify({'error': 'Invalid role'}), 400
+
+    success = database.reset_user_password(user_id, role)
+
+    if success:
+        return jsonify({'success': True, 'message': 'Password reset successfully'})
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/teams', methods=['GET'])
+def get_teams_api():
+    """팀 목록 조회 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    teams = database.load_teams()
+    return jsonify(teams)
+
+def calculate_nav_counts(username):
+    """네비게이션 바 카운트 계산 (헬퍼 함수)"""
+    counts = {
+        'pending_tasks': 0,
+        'unread_chats': 0,
+        'today_reminders': 0
+    }
+
+    try:
+        # 읽지 않은 채팅 메시지 개수 계산
+        chats = database.load_chats()
+        for chat_id, chat in chats.items():
+            if username in chat['participants']:
+                for msg in chat.get('messages', []):
+                    if msg.get('username') != username:
+                        read_by = msg.get('read_by', [])
+                        if username not in read_by:
+                            counts['unread_chats'] += 1
+
+        # 상담사: 내게 할당된 미완료 할일 개수 (assigned_to 사용)
+        if username not in ADMIN_ACCOUNTS:
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT COUNT(*) as count
+                    FROM tasks
+                    WHERE assigned_to = ? AND status != '완료'
+                ''', (username,))
+                row = cursor.fetchone()
+                counts['pending_tasks'] = row['count'] if row else 0
+
+        # 당일 예약 개수
+        from datetime import date
+        today = str(date.today())
+        reminders = database.load_reminders(username)
+        today_reminders = [r for r in reminders if r.get('scheduled_date') == today and not r.get('completed')]
+        counts['today_reminders'] = len(today_reminders)
+
+    except Exception as e:
+        print(f"Error calculating nav counts for {username}: {e}")
+
+    return counts
+
+@app.route('/api/nav-counts', methods=['GET'])
+def get_nav_counts():
+    """네비게이션 바 카운트 조회 (할일, 읽지 않은 채팅, 당일 예약)"""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session['username']
+    counts = calculate_nav_counts(username)
+    print(f"[DEBUG] Final nav-counts for {username}: {counts}")
+    return jsonify(counts)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

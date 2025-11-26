@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자 관리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { margin-bottom: 20px; color: #333; }
+
+
+        /* 필터 & 검색 영역 */
+        .filter-section { margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .filter-section select, .filter-section input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .filter-section button { padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .filter-section button:hover { background: #0056b3; }
+        .filter-section .btn-team-manage { background: #6c757d; margin-left: auto; }
+        .filter-section .btn-team-manage:hover { background: #5a6268; }
+
+        /* 버튼 */
+        .btn-primary { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-success { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-warning { padding: 6px 12px; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-secondary { padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-secondary:hover { background: #5a6268; }
+
+        /* 테이블 */
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; color: #333; }
+        tr:hover { background: #f8f9fa; }
+
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .badge-active { background: #28a745; color: white; }
+        .badge-inactive { background: #6c757d; color: white; }
+        .badge-admin { background: #dc3545; color: white; }
+        .badge-user { background: #007bff; color: white; }
+
+        .actions { display: flex; gap: 5px; flex-wrap: wrap; }
+
+        /* 모달 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 8px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        .form-group label .required { color: #dc3545; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        /* 팀 목록 */
+        .team-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+        .team-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+        .team-item:hover { background: #e9ecef; }
+
+        /* 토스트 */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; max-width: 350px; }
+        .toast { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateX(400px); animation: slideIn 0.3s forwards; border-left: 4px solid #667eea; }
+        .toast.slide-out { animation: slideOut 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 9997;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.3s ease-out;
+        }
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        {% include 'includes/header.html' %}
+
+        <!-- 필터 & 검색 영역 -->
+        <div class="filter-section">
+            <select id="filterRole" onchange="filterAndRenderUsers()">
+                <option value="">전체 권한</option>
+                <option value="상담사">상담사</option>
+                <option value="관리자">관리자</option>
+            </select>
+
+            <select id="filterStatus" onchange="filterAndRenderUsers()">
+                <option value="">전체 상태</option>
+                <option value="active">활성</option>
+                <option value="inactive">비활성</option>
+            </select>
+
+            <select id="filterTeam" onchange="filterAndRenderUsers()">
+                <option value="">전체 팀</option>
+            </select>
+
+            <input type="text" id="searchKeyword" placeholder="이름 검색..." onkeyup="filterAndRenderUsers()" style="flex: 1; min-width: 200px;">
+
+            <button class="btn-primary" onclick="openAddModal()">+ 사용자 추가</button>
+            <button class="btn-team-manage" onclick="openTeamManageModal()">팀 관리</button>
+        </div>
+
+        <!-- 사용자 목록 테이블 -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>이름</th>
+                        <th>권한</th>
+                        <th>상태</th>
+                        <th>팀</th>
+                        <th>생성일</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTable">
+                    <tr>
+                        <td colspan="7" class="empty-state">로딩 중...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 사용자 추가 모달 -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-box">
+            <h2 class="modal-title">새 사용자 추가</h2>
+            <div class="form-group">
+                <label>이름 <span class="required">*</span></label>
+                <input type="text" id="newUsername" placeholder="이름을 입력하세요">
+            </div>
+            <div class="form-group">
+                <label>권한 <span class="required">*</span></label>
+                <select id="newRole" onchange="handleRoleChange()">
+                    <option value="상담사">상담사</option>
+                    <option value="관리자">관리자</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>상태 <span class="required">*</span></label>
+                <select id="newStatus">
+                    <option value="active">활성</option>
+                    <option value="inactive">비활성</option>
+                </select>
+            </div>
+            <div class="form-group" id="teamSelectGroup">
+                <label>팀 (선택)</label>
+                <select id="newTeam">
+                    <option value="">선택 안 함</option>
+                </select>
+            </div>
+            <p style="color: #666; font-size: 13px; margin-top: 10px;">
+                초기 비밀번호: <strong>상담사는 body123!</strong>, <strong>관리자는 admin1234</strong>
+            </p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeAddModal()">취소</button>
+                <button class="btn-primary" onclick="addUser()">추가</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 팀 변경 모달 -->
+    <div class="modal-overlay" id="editTeamModal">
+        <div class="modal-box">
+            <h2 class="modal-title">팀 변경</h2>
+            <div class="form-group">
+                <label>팀 선택</label>
+                <select id="editTeamSelect">
+                    <option value="">팀 없음</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeEditTeamModal()">취소</button>
+                <button class="btn-primary" onclick="saveTeamChange()">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 권한 변경 모달 -->
+    <div class="modal-overlay" id="editRoleModal">
+        <div class="modal-box">
+            <h2 class="modal-title">권한 변경</h2>
+            <div class="form-group">
+                <label>권한 선택</label>
+                <select id="editRoleSelect">
+                    <option value="상담사">상담사</option>
+                    <option value="관리자">관리자</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeEditRoleModal()">취소</button>
+                <button class="btn-primary" onclick="saveRoleChange()">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 팀 관리 모달 -->
+    <div class="modal-overlay" id="teamManageModal">
+        <div class="modal-box">
+            <h2 class="modal-title">팀 관리</h2>
+            <div class="form-group">
+                <label>새 팀 추가</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newTeamName" placeholder="팀 이름 입력" style="flex: 1;">
+                    <button class="btn-primary" onclick="addTeam()">추가</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>현재 팀 목록</label>
+                <div class="team-list" id="teamList">
+                    <p class="empty-state">로딩 중...</p>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeTeamManageModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상태 변경 확인 모달 -->
+    <div class="modal-overlay" id="toggleStatusModal">
+        <div class="modal-box">
+            <h2 class="modal-title">상태 변경 확인</h2>
+            <p id="toggleStatusMessage" style="margin-bottom: 20px; color: #666;"></p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeToggleStatusModal()">취소</button>
+                <button class="btn-primary" id="confirmToggleStatus">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 비밀번호 초기화 확인 모달 -->
+    <div class="modal-overlay" id="resetPasswordModal">
+        <div class="modal-box">
+            <h2 class="modal-title">비밀번호 초기화 확인</h2>
+            <p id="resetPasswordMessage" style="margin-bottom: 20px; color: #666;"></p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeResetPasswordModal()">취소</button>
+                <button class="btn-warning" id="confirmResetPassword">초기화</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 삭제 확인 모달 -->
+    <div class="modal-overlay" id="deleteUserModal">
+        <div class="modal-box">
+            <h2 class="modal-title">사용자 삭제 확인</h2>
+            <p id="deleteUserMessage" style="margin-bottom: 20px; color: #dc3545; font-weight: bold;"></p>
+            <p style="margin-bottom: 20px; color: #666;">이 작업은 되돌릴 수 없습니다.</p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeDeleteUserModal()">취소</button>
+                <button class="btn-danger" id="confirmDeleteUser">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allUsers = [];
+        let allTeams = [];
+        let currentEditingUserId = null;
+
+        // 페이지 로드 시 사용자 목록 조회
+        window.onload = () => {
+            loadUsers();
+            loadTeams();
+        };
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                allUsers = await response.json();
+                filterAndRenderUsers();
+            } catch (error) {
+                console.error('사용자 목록 조회 실패:', error);
+                showToast('사용자 목록을 불러오는데 실패했습니다.');
+            }
+        }
+
+        async function loadTeams() {
+            try {
+                const response = await fetch('/api/teams');
+                allTeams = await response.json();
+                updateTeamSelects();
+            } catch (error) {
+                console.error('팀 목록 조회 실패:', error);
+            }
+        }
+
+        function updateTeamSelects() {
+            // 필터 팀 선택
+            const filterTeam = document.getElementById('filterTeam');
+            filterTeam.innerHTML = '<option value="">전체 팀</option>' +
+                allTeams.map(team => `<option value="${team}">${team}</option>`).join('');
+
+            // 새 사용자 팀 선택 (관리자 팀 제외)
+            const newTeam = document.getElementById('newTeam');
+            newTeam.innerHTML = '<option value="">선택 안 함</option>' +
+                allTeams.filter(team => team !== '관리자').map(team => `<option value="${team}">${team}</option>`).join('');
+
+            // 팀 변경 선택
+            const editTeam = document.getElementById('editTeamSelect');
+            editTeam.innerHTML = '<option value="">팀 없음</option>' +
+                allTeams.map(team => `<option value="${team}">${team}</option>`).join('');
+        }
+
+        // 권한 변경 시 팀 선택 처리
+        function handleRoleChange() {
+            const role = document.getElementById('newRole').value;
+            const teamSelectGroup = document.getElementById('teamSelectGroup');
+            const teamSelect = document.getElementById('newTeam');
+
+            if (role === '관리자') {
+                // 관리자는 팀 선택 비활성화 및 자동으로 "관리자"로 설정
+                teamSelectGroup.style.display = 'none';
+                teamSelect.value = '';
+            } else {
+                // 상담사는 팀 선택 가능
+                teamSelectGroup.style.display = 'block';
+            }
+        }
+
+        function filterAndRenderUsers() {
+            const role = document.getElementById('filterRole').value;
+            const status = document.getElementById('filterStatus').value;
+            const team = document.getElementById('filterTeam').value;
+            const keyword = document.getElementById('searchKeyword').value.toLowerCase();
+
+            let filtered = allUsers;
+
+            if (role) filtered = filtered.filter(u => u.role === role);
+            if (status) filtered = filtered.filter(u => u.status === status);
+            if (team) filtered = filtered.filter(u => u.team === team);
+            if (keyword) filtered = filtered.filter(u => u.username.toLowerCase().includes(keyword));
+
+            renderUsers(filtered);
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersTable');
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">사용자가 없습니다.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td><span class="badge ${user.role === '관리자' ? 'badge-admin' : 'badge-user'}">${user.role}</span></td>
+                    <td><span class="badge ${user.status === 'active' ? 'badge-active' : 'badge-inactive'}">${user.status === 'active' ? '활성' : '비활성'}</span></td>
+                    <td>${user.team || '-'}</td>
+                    <td>${user.created_at ? user.created_at.split(' ')[0] : '-'}</td>
+                    <td class="actions">
+                        <button class="btn-secondary" onclick="toggleStatus(${user.id}, '${user.status}')">
+                            ${user.status === 'active' ? '비활성화' : '활성화'}
+                        </button>
+                        <button class="btn-success" onclick="openEditTeamModal(${user.id}, '${user.team || ''}')">팀 변경</button>
+                        <button class="btn-success" onclick="openEditRoleModal(${user.id}, '${user.role}')">권한 변경</button>
+                        <button class="btn-warning" onclick="resetPassword(${user.id}, '${user.role}')">비밀번호 초기화</button>
+                        <button class="btn-danger" onclick="deleteUser(${user.id}, '${user.username}')">삭제</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 사용자 추가 모달
+        function openAddModal() {
+            document.getElementById('addModal').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('active');
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newRole').value = '상담사';
+            document.getElementById('newStatus').value = 'active';
+            document.getElementById('newTeam').value = '';
+            // 팀 선택 필드 다시 표시
+            document.getElementById('teamSelectGroup').style.display = 'block';
+        }
+
+        async function addUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const role = document.getElementById('newRole').value;
+            const status = document.getElementById('newStatus').value;
+
+            // 관리자는 자동으로 "관리자" 팀, 상담사는 선택한 팀
+            let team;
+            if (role === '관리자') {
+                team = '관리자';
+            } else {
+                const teamValue = document.getElementById('newTeam').value;
+                team = teamValue === '' ? null : teamValue;
+            }
+
+            if (!username) {
+                showToast('이름을 입력해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, role, status, team })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('사용자가 추가되었습니다.');
+                    closeAddModal();
+                    loadUsers();
+                    loadTeams();  // 팀 목록 새로고침
+                } else {
+                    showToast(result.error || '사용자 추가에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('사용자 추가 실패:', error);
+                showToast('사용자 추가에 실패했습니다.');
+            }
+        }
+
+        // 팀 변경 모달
+        function openEditTeamModal(userId, currentTeam) {
+            currentEditingUserId = userId;
+            document.getElementById('editTeamSelect').value = currentTeam;
+            document.getElementById('editTeamModal').classList.add('active');
+        }
+
+        function closeEditTeamModal() {
+            document.getElementById('editTeamModal').classList.remove('active');
+            currentEditingUserId = null;
+        }
+
+        async function saveTeamChange() {
+            const newTeamValue = document.getElementById('editTeamSelect').value;
+            const newTeam = newTeamValue === '' ? null : newTeamValue;
+
+            try {
+                const response = await fetch(`/api/users/${currentEditingUserId}/team`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ team: newTeam })
+                });
+
+                if (response.ok) {
+                    showToast('팀이 변경되었습니다.');
+                    closeEditTeamModal();
+                    loadUsers();
+                    loadTeams();  // 팀 목록 새로고침
+                } else {
+                    showToast('팀 변경에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('팀 변경 실패:', error);
+                showToast('팀 변경에 실패했습니다.');
+            }
+        }
+
+        // 권한 변경 모달
+        function openEditRoleModal(userId, currentRole) {
+            currentEditingUserId = userId;
+            document.getElementById('editRoleSelect').value = currentRole;
+            document.getElementById('editRoleModal').classList.add('active');
+        }
+
+        function closeEditRoleModal() {
+            document.getElementById('editRoleModal').classList.remove('active');
+            currentEditingUserId = null;
+        }
+
+        async function saveRoleChange() {
+            const newRole = document.getElementById('editRoleSelect').value;
+
+            try {
+                const response = await fetch(`/api/users/${currentEditingUserId}/role`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                if (response.ok) {
+                    showToast('권한이 변경되었습니다.');
+                    closeEditRoleModal();
+                    loadUsers();
+                } else {
+                    showToast('권한 변경에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('권한 변경 실패:', error);
+                showToast('권한 변경에 실패했습니다.');
+            }
+        }
+
+        // 팀 관리 모달
+        function openTeamManageModal() {
+            renderTeamList();
+            document.getElementById('teamManageModal').classList.add('active');
+        }
+
+        function closeTeamManageModal() {
+            document.getElementById('teamManageModal').classList.remove('active');
+            document.getElementById('newTeamName').value = '';
+        }
+
+        function renderTeamList() {
+            const teamList = document.getElementById('teamList');
+
+            if (allTeams.length === 0) {
+                teamList.innerHTML = '<p class="empty-state">팀이 없습니다.</p>';
+                return;
+            }
+
+            teamList.innerHTML = allTeams.map(team => `
+                <div class="team-item">
+                    <span>${team}</span>
+                    <button class="btn-danger" onclick="deleteTeam('${team}')">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        async function addTeam() {
+            const teamName = document.getElementById('newTeamName').value.trim();
+
+            if (!teamName) {
+                showToast('팀 이름을 입력해주세요.');
+                return;
+            }
+
+            if (allTeams.includes(teamName)) {
+                showToast('이미 존재하는 팀입니다.');
+                return;
+            }
+
+            // 팀 추가는 더미 사용자를 생성하거나 직접 추가할 수 없으므로
+            // 사용자가 팀을 선택할 때 자동으로 추가되도록 안내
+            showToast('팀은 사용자 추가/수정 시 자동으로 생성됩니다.');
+            document.getElementById('newTeamName').value = '';
+        }
+
+        async function deleteTeam(teamName) {
+            if (!confirm(`"${teamName}" 팀을 삭제하시겠습니까?\n\n이 팀에 속한 모든 사용자의 팀이 제거됩니다.`)) {
+                return;
+            }
+
+            try {
+                // 해당 팀의 모든 사용자를 팀 없음으로 변경
+                const usersInTeam = allUsers.filter(u => u.team === teamName);
+
+                for (const user of usersInTeam) {
+                    await fetch(`/api/users/${user.id}/team`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ team: null })
+                    });
+                }
+
+                showToast(`"${teamName}" 팀이 삭제되었습니다.`);
+                loadUsers();
+                loadTeams();
+                renderTeamList();
+            } catch (error) {
+                console.error('팀 삭제 실패:', error);
+                showToast('팀 삭제에 실패했습니다.');
+            }
+        }
+
+        // 상태 변경 모달
+        function toggleStatus(userId, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+            const message = `이 사용자를 ${newStatus === 'active' ? '활성화' : '비활성화'}하시겠습니까?`;
+
+            document.getElementById('toggleStatusMessage').textContent = message;
+            document.getElementById('toggleStatusModal').classList.add('active');
+
+            document.getElementById('confirmToggleStatus').onclick = async () => {
+                try {
+                    const response = await fetch(`/api/users/${userId}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+
+                    if (response.ok) {
+                        showToast('상태가 변경되었습니다.');
+                        loadUsers();
+                        closeToggleStatusModal();
+                    } else {
+                        showToast('상태 변경에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('상태 변경 실패:', error);
+                    showToast('상태 변경에 실패했습니다.');
+                }
+            };
+        }
+
+        function closeToggleStatusModal() {
+            document.getElementById('toggleStatusModal').classList.remove('active');
+        }
+
+        // 비밀번호 초기화 모달
+        function resetPassword(userId, role) {
+            const defaultPassword = role === '관리자' ? 'admin1234' : 'body123!';
+            const message = `비밀번호를 초기화하시겠습니까?\n초기 비밀번호: ${defaultPassword}`;
+
+            document.getElementById('resetPasswordMessage').textContent = message;
+            document.getElementById('resetPasswordModal').classList.add('active');
+
+            document.getElementById('confirmResetPassword').onclick = async () => {
+                try {
+                    const response = await fetch(`/api/users/${userId}/reset-password`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role })
+                    });
+
+                    if (response.ok) {
+                        showToast(`비밀번호가 ${defaultPassword}로 초기화되었습니다.`);
+                        closeResetPasswordModal();
+                    } else {
+                        showToast('비밀번호 초기화에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('비밀번호 초기화 실패:', error);
+                    showToast('비밀번호 초기화에 실패했습니다.');
+                }
+            };
+        }
+
+        function closeResetPasswordModal() {
+            document.getElementById('resetPasswordModal').classList.remove('active');
+        }
+
+        // 삭제 확인 모달
+        function deleteUser(userId, username) {
+            const message = `"${username}" 사용자를 삭제하시겠습니까?`;
+
+            document.getElementById('deleteUserMessage').textContent = message;
+            document.getElementById('deleteUserModal').classList.add('active');
+
+            document.getElementById('confirmDeleteUser').onclick = async () => {
+                try {
+                    const response = await fetch(`/api/users/${userId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        showToast('사용자가 삭제되었습니다.');
+                        loadUsers();
+                        closeDeleteUserModal();
+                    } else {
+                        showToast('사용자 삭제에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('사용자 삭제 실패:', error);
+                    showToast('사용자 삭제에 실패했습니다.');
+                }
+            };
+        }
+
+        function closeDeleteUserModal() {
+            document.getElementById('deleteUserModal').classList.remove('active');
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('slide-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 모달 외부 클릭 시 닫기
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 도움말 모달 외부 클릭 시 닫기
+        window.addEventListener('DOMContentLoaded', () => {
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- 도움말 버튼 -->
+    <button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+        ❓
+    </button>
+
+    <!-- 도움말 모달 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <div class="help-modal-title">
+                    📖 사용자 관리 사용법
+                </div>
+                <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">👤 사용자 추가</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>"+ 사용자 추가"</strong> 버튼을 클릭합니다</li>
+                        <li><strong>이름</strong>: 사용자 이름을 입력합니다 (필수)</li>
+                        <li><strong>권한</strong>: 상담사 또는 관리자 선택</li>
+                        <li><strong>상태</strong>: 활성/비활성 선택 (기본: 활성)</li>
+                        <li><strong>팀</strong>: 팀 배정 (선택사항)</li>
+                        <li><strong>초기 비밀번호</strong>: 상담사는 body123!, 관리자는 admin1234</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">🔍 사용자 검색 및 필터</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>권한 필터</strong>: 상담사/관리자별 조회</li>
+                        <li><strong>상태 필터</strong>: 활성/비활성 사용자 필터링</li>
+                        <li><strong>팀 필터</strong>: 특정 팀 소속 사용자만 조회</li>
+                        <li><strong>이름 검색</strong>: 사용자 이름으로 검색</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">⚙️ 사용자 관리</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>활성화/비활성화</strong>: 사용자의 로그인 가능 여부 설정</li>
+                        <li><strong>팀 변경</strong>: 사용자의 소속 팀 변경</li>
+                        <li><strong>권한 변경</strong>: 상담사 ↔ 관리자 권한 변경</li>
+                        <li><strong>비밀번호 초기화</strong>: 기본 비밀번호로 리셋</li>
+                        <li><strong>삭제</strong>: 사용자 계정 완전 삭제 (복구 불가)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">👥 팀 관리</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>"팀 관리"</strong> 버튼을 클릭합니다</li>
+                        <li>새 팀은 사용자 추가/수정 시 자동 생성됩니다</li>
+                        <li>팀 삭제 시 해당 팀원의 팀 정보가 모두 제거됩니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-tip">
+                <strong>💡 Tip:</strong> 비활성화된 사용자는 로그인할 수 없지만 데이터는 보존됩니다. 일시적으로 접근을 차단하려면 삭제 대신 비활성화를 사용하세요!
+            </div>
+        </div>
+    </div>
+
+    {% include 'includes/today_reminders.html' %}
+</body>
+</html>

@@ -100,6 +100,137 @@
         }
         .selected-users { min-height: 50px; }
         .hidden { display: none; }
+
+        /* 도움말 버튼 */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            z-index: 9997;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+        }
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* 도움말 모달 */
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+        }
+        .help-modal.active {
+            display: flex;
+        }
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.3s ease-out;
+        }
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+        .help-modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .help-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .help-modal-close:hover {
+            color: #333;
+        }
+        .help-section {
+            margin-bottom: 25px;
+        }
+        .help-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .help-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .help-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .help-content li {
+            margin: 8px 0;
+        }
+        .help-content strong {
+            color: #333;
+            font-weight: 600;
+        }
+        .help-tip {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .help-tip strong {
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -236,7 +367,7 @@
         }
 
         updateSelectedUsers();
-    
+
         // PWA 서비스 워커 등록
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/service-worker.js')
@@ -247,6 +378,97 @@
                     console.log('Service Worker 등록 실패:', error);
                 });
         }
+
+        // 도움말 모달 제어
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.addEventListener('DOMContentLoaded', () => {
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        closeHelpModal();
+                    }
+                });
+            }
+        });
 </script>
+
+<!-- 도움말 버튼 -->
+<button class="help-button" onclick="openHelpModal()" title="사용법 도움말">
+    ❓
+</button>
+
+<!-- 도움말 모달 -->
+<div class="help-modal" id="helpModal">
+    <div class="help-modal-content">
+        <div class="help-modal-header">
+            <div class="help-modal-title">
+                📖 채팅방 만들기 사용법
+            </div>
+            <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">👥 참여자 선택</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>검색창</strong>에 사용자 이름 입력</li>
+                    <li><strong>검색 결과</strong>에서 원하는 사용자 클릭</li>
+                    <li><strong>선택된 참여자</strong> 영역에 추가됨</li>
+                    <li><strong>제거</strong>: 사용자 태그의 × 버튼 클릭</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">💬 1:1 채팅</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>참여자 1명</strong>만 선택</li>
+                    <li><strong>채팅방 제목</strong>은 자동으로 상대방 이름으로 설정</li>
+                    <li>제목 입력란이 자동으로 숨겨집니다</li>
+                    <li>기존 1:1 채팅이 있으면 해당 채팅방으로 이동</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">👥 그룹 채팅</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>참여자 2명 이상</strong> 선택</li>
+                    <li><strong>채팅방 제목</strong>을 반드시 입력해야 함</li>
+                    <li>제목은 그룹 채팅의 주제나 목적을 나타냄</li>
+                    <li>나중에 채팅 목록에서 쉽게 구분 가능</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <div class="help-section-title">✅ 채팅방 생성</div>
+            <div class="help-content">
+                <ul>
+                    <li><strong>"채팅방 만들기"</strong> 버튼 클릭</li>
+                    <li>참여자가 없으면 경고 메시지 표시</li>
+                    <li>그룹 채팅인데 제목이 없으면 경고 메시지 표시</li>
+                    <li>생성 완료 후 자동으로 채팅방으로 이동</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="help-tip">
+            <strong>💡 팁:</strong> 1:1 채팅은 제목을 입력할 필요가 없으며, 상대방 이름이 자동으로 채팅방 제목이 됩니다. 그룹 채팅은 명확한 제목을 지정하면 나중에 쉽게 찾을 수 있습니다.
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

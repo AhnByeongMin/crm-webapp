@@ -1,0 +1,165 @@
+<!-- 통합 헤더 컴포넌트 -->
+<style>
+    .header {
+        background: white;
+        padding: 15px 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .header h1 {
+        font-size: 24px;
+        color: #333;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .admin-badge {
+        background: #667eea;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: normal;
+    }
+    .nav {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .nav a {
+        padding: 8px 16px;
+        background: #667eea;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 16px;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+    }
+    .nav a:hover {
+        background: #5568d3;
+    }
+    .nav a.active {
+        background: #5568d3;
+        font-weight: bold;
+    }
+    .nav a.secondary {
+        background: #6c757d;
+    }
+    .nav a.secondary:hover {
+        background: #5a6268;
+    }
+    .nav-badge {
+        display: inline-block;
+        background: #dc3545;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 5px;
+        min-width: 18px;
+        text-align: center;
+    }
+</style>
+
+<div class="header">
+    <h1>
+        {{ page_title }}
+        {% if is_admin %}
+        <span class="admin-badge">관리자</span>
+        {% endif %}
+    </h1>
+    <div class="nav">
+        {% if is_admin %}
+        <a href="/admin" {% if current_page == 'admin' %}class="active"{% endif %}>할일관리</a>
+        <a href="/users" {% if current_page == 'users' %}class="active"{% endif %}>사용자관리</a>
+        {% else %}
+        <a href="/" id="navTasks" {% if current_page == 'tasks' %}class="active"{% endif %}>
+            할일
+            <span id="navTasksBadge" class="nav-badge" style="display: none;"></span>
+        </a>
+        {% endif %}
+        <a href="/promotions" {% if current_page == 'promotions' %}class="active"{% endif %}>프로모션게시판</a>
+        <a href="/chats" id="navChats" {% if current_page == 'chats' %}class="active"{% endif %}>
+            채팅
+            <span id="navChatsBadge" class="nav-badge" style="display: none;"></span>
+        </a>
+        <a href="/reminders" id="navReminders" {% if current_page == 'reminders' %}class="active"{% endif %}>
+            내 예약
+            <span id="navRemindersBadge" class="nav-badge" style="display: none;"></span>
+        </a>
+        <a href="/mypage" {% if current_page == 'mypage' %}class="active"{% endif %}>마이페이지</a>
+        <a href="/logout" class="secondary">로그아웃</a>
+    </div>
+</div>
+
+<!-- 배지 업데이트 스크립트 -->
+<script>
+    // 네비게이션 배지 업데이트
+    function updateNavBadges(counts) {
+        const tasksBadge = document.getElementById('navTasksBadge');
+        const chatsBadge = document.getElementById('navChatsBadge');
+        const remindersBadge = document.getElementById('navRemindersBadge');
+
+        if (tasksBadge) {
+            if (counts.pending_tasks > 0) {
+                tasksBadge.textContent = counts.pending_tasks;
+                tasksBadge.style.display = 'inline-block';
+            } else {
+                tasksBadge.style.display = 'none';
+            }
+        }
+
+        if (chatsBadge) {
+            if (counts.unread_chats > 0) {
+                chatsBadge.textContent = counts.unread_chats;
+                chatsBadge.style.display = 'inline-block';
+            } else {
+                chatsBadge.style.display = 'none';
+            }
+        }
+
+        if (remindersBadge) {
+            if (counts.today_reminders > 0) {
+                remindersBadge.textContent = counts.today_reminders;
+                remindersBadge.style.display = 'inline-block';
+            } else {
+                remindersBadge.style.display = 'none';
+            }
+        }
+    }
+
+    // 네비게이션 카운트 조회
+    function fetchNavCounts() {
+        fetch('/api/nav-counts')
+            .then(res => res.json())
+            .then(counts => {
+                updateNavBadges(counts);
+            })
+            .catch(err => console.error('Failed to fetch nav counts:', err));
+    }
+
+    // Socket.IO 실시간 업데이트
+    if (typeof io !== 'undefined') {
+        const socket = io();
+
+        // 사용자 room 입장
+        socket.emit('join_user_room', { username: '{{ username }}' });
+
+        // 실시간 배지 업데이트 수신
+        socket.on('nav_counts_update', (counts) => {
+            updateNavBadges(counts);
+        });
+    }
+
+    // 페이지 로드 시 초기 배지 조회 및 주기적 업데이트
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchNavCounts();
+        setInterval(fetchNavCounts, 30000); // 30초마다 폴링 (백업)
+    });
+</script>

@@ -1,0 +1,45 @@
+[Unit]
+Description=CRM Web Application (Flask + SocketIO)
+After=network.target
+
+[Service]
+Type=notify
+User=root
+Group=root
+WorkingDirectory=/svc/was/crm/crm-webapp
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+# 시작: Gunicorn 실행
+ExecStart=/usr/local/bin/gunicorn -c gunicorn_config.py app:app
+
+# 중지: 5000번 포트만 안전하게 종료
+ExecStop=/svc/was/crm/crm-webapp/scripts/stop.sh
+
+# 리로드: HUP 시그널 전송 (무중단 재배포)
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# 프로세스 종료 방식
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# 자동 재시작 설정
+Restart=always
+RestartSec=3
+
+PrivateTmp=true
+
+# 로그
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=crm-webapp
+
+# 보안 강화
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/svc/was/crm/crm-webapp
+PrivateDevices=true
+
+[Install]
+WantedBy=multi-user.target

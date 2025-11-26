@@ -28,10 +28,17 @@ def get_db_connection():
 # ==================== 할일 관리 ====================
 
 def load_data():
-    """할일 목록 조회"""
+    """할일 목록 조회 (users와 JOIN하여 team 정보 포함)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM tasks ORDER BY id')
+        cursor.execute('''
+            SELECT
+                t.*,
+                u.team as team
+            FROM tasks t
+            LEFT JOIN users u ON t.assigned_to = u.username
+            ORDER BY t.id
+        ''')
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
@@ -70,7 +77,22 @@ def update_task_status(task_id, status):
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('UPDATE tasks SET status = ? WHERE id = ?', (status, task_id))
+            # 완료일 업데이트 (완료 상태로 변경 시)
+            if status == '완료':
+                cursor.execute('''
+                    UPDATE tasks
+                    SET status = ?,
+                        updated_at = datetime('now', 'localtime'),
+                        completed_at = datetime('now', 'localtime')
+                    WHERE id = ?
+                ''', (status, task_id))
+            else:
+                cursor.execute('''
+                    UPDATE tasks
+                    SET status = ?,
+                        updated_at = datetime('now', 'localtime')
+                    WHERE id = ?
+                ''', (status, task_id))
             conn.commit()
 
 def update_task_assignment(task_id, assigned_to):
@@ -78,7 +100,13 @@ def update_task_assignment(task_id, assigned_to):
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('UPDATE tasks SET assigned_to = ? WHERE id = ?', (assigned_to, task_id))
+            cursor.execute('''
+                UPDATE tasks
+                SET assigned_to = ?,
+                    assigned_at = datetime('now', 'localtime'),
+                    updated_at = datetime('now', 'localtime')
+                WHERE id = ?
+            ''', (assigned_to, task_id))
             conn.commit()
 
 def add_task(assigned_to, title, content, status='대기중'):
@@ -86,12 +114,34 @@ def add_task(assigned_to, title, content, status='대기중'):
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO tasks (assigned_to, title, content, status, created_at)
-                VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
-            ''', (assigned_to, title, content, status))
+            # assigned_to가 있으면 배정일도 함께 저장
+            if assigned_to:
+                cursor.execute('''
+                    INSERT INTO tasks (assigned_to, title, content, status, created_at, assigned_at)
+                    VALUES (?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
+                ''', (assigned_to, title, content, status))
+            else:
+                cursor.execute('''
+                    INSERT INTO tasks (assigned_to, title, content, status, created_at)
+                    VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
+                ''', (assigned_to, title, content, status))
             conn.commit()
             return cursor.lastrowid
+
+def update_task(task_id, title, content):
+    """할일 수정 (제목, 내용)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE tasks
+                SET title = ?,
+                    content = ?,
+                    updated_at = datetime('now', 'localtime')
+                WHERE id = ?
+            ''', (title, content, task_id))
+            conn.commit()
+            return cursor.rowcount > 0
 
 def delete_task(task_id):
     """할일 삭제"""
@@ -151,7 +201,7 @@ def load_teams():
     """팀 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT DISTINCT team FROM users WHERE team IS NOT NULL ORDER BY team')
+        cursor.execute('SELECT DISTINCT team FROM users WHERE team IS NOT NULL AND team != "" ORDER BY team')
         return [row['team'] for row in cursor.fetchall()]
 
 def load_users_with_team():
@@ -160,6 +210,142 @@ def load_users_with_team():
         cursor = conn.cursor()
         cursor.execute('SELECT username, team FROM users ORDER BY team, username')
         return [{'username': row['username'], 'team': row['team']} for row in cursor.fetchall()]
+
+def load_all_users_detail():
+    """모든 사용자 정보 조회 (관리자용)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, username, role, status, team, created_at
+            FROM users
+            ORDER BY created_at DESC
+        ''')
+        return [dict(row) for row in cursor.fetchall()]
+
+def create_user(username, password, role, status='active', team=None):
+    """새 사용자 생성 (관리자용)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute('''
+                    INSERT INTO users (username, password, role, status, team)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (username, password, role, status, team))
+                conn.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False  # 중복 username
+
+def delete_user(user_id):
+    """사용자 삭제 (관리자용)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def update_user_status(user_id, status):
+    """사용자 활성/비활성 상태 변경"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users
+                SET status = ?
+                WHERE id = ?
+            ''', (status, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def update_user_team(user_id, team):
+    """사용자 팀 변경"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users
+                SET team = ?
+                WHERE id = ?
+            ''', (team, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def update_user_role(user_id, role):
+    """사용자 권한 변경"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users
+                SET role = ?
+                WHERE id = ?
+            ''', (role, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def reset_user_password(user_id, role):
+    """사용자 비밀번호 초기화"""
+    default_password = 'admin1234' if role == '관리자' else 'body123!'
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users
+                SET password = ?
+                WHERE id = ?
+            ''', (default_password, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def verify_user_login(username, password):
+    """사용자 로그인 검증 (비밀번호 확인 + 활성 상태 확인)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT username, role, status
+            FROM users
+            WHERE username = ? AND password = ? AND status = 'active'
+        ''', (username, password))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+def get_user_info(username):
+    """사용자 정보 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, username, role, status, team, created_at
+            FROM users
+            WHERE username = ?
+        ''', (username,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+def change_user_password(username, current_password, new_password):
+    """사용자 비밀번호 변경 (본인만 가능)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # 현재 비밀번호 확인
+            cursor.execute('''
+                SELECT id FROM users
+                WHERE username = ? AND password = ?
+            ''', (username, current_password))
+
+            if not cursor.fetchone():
+                return False, '현재 비밀번호가 일치하지 않습니다.'
+
+            # 비밀번호 업데이트
+            cursor.execute('''
+                UPDATE users
+                SET password = ?
+                WHERE username = ?
+            ''', (new_password, username))
+            conn.commit()
+
+            return True, '비밀번호가 변경되었습니다.'
 
 # ==================== 채팅 관리 (최적화) ====================
 
@@ -438,6 +624,98 @@ def save_promotions(promotions):
             except Exception as e:
                 conn.rollback()
                 raise e
+
+# ==================== 개인 예약 관리 ====================
+
+def load_reminders(user_id, show_completed=False):
+    """개인 예약 목록 조회 (사용자별)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if show_completed:
+            cursor.execute('''
+                SELECT * FROM reminders
+                WHERE user_id = ?
+                ORDER BY scheduled_date ASC, scheduled_time ASC
+            ''', (user_id,))
+        else:
+            cursor.execute('''
+                SELECT * FROM reminders
+                WHERE user_id = ? AND is_completed = 0
+                ORDER BY scheduled_date ASC, scheduled_time ASC
+            ''', (user_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+def add_reminder(user_id, title, content, scheduled_date, scheduled_time):
+    """새 예약 추가"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO reminders (user_id, title, content, scheduled_date, scheduled_time)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, title, content, scheduled_date, scheduled_time))
+            conn.commit()
+            return cursor.lastrowid
+
+def update_reminder(reminder_id, user_id, title, content, scheduled_date, scheduled_time):
+    """예약 수정 (본인 것만 수정 가능)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE reminders
+                SET title = ?, content = ?, scheduled_date = ?, scheduled_time = ?,
+                    updated_at = datetime('now', 'localtime')
+                WHERE id = ? AND user_id = ?
+            ''', (title, content, scheduled_date, scheduled_time, reminder_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def delete_reminder(reminder_id, user_id):
+    """예약 삭제 (본인 것만 삭제 가능)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM reminders WHERE id = ? AND user_id = ?', (reminder_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def toggle_reminder_complete(reminder_id, user_id):
+    """예약 완료 상태 토글"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE reminders
+                SET is_completed = CASE WHEN is_completed = 0 THEN 1 ELSE 0 END,
+                    updated_at = datetime('now', 'localtime')
+                WHERE id = ? AND user_id = ?
+            ''', (reminder_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def mark_reminder_notified(reminder_id):
+    """30분 전 알림 발송 완료 표시"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE reminders
+                SET notified_30min = 1
+                WHERE id = ?
+            ''', (reminder_id,))
+            conn.commit()
+
+def get_pending_notifications(user_id):
+    """알림이 필요한 예약 목록 (30분 전, 아직 알림 안 보낸 것)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM reminders
+            WHERE user_id = ? AND is_completed = 0 AND notified_30min = 0
+            ORDER BY scheduled_date ASC, scheduled_time ASC
+        ''', (user_id,))
+        return [dict(row) for row in cursor.fetchall()]
 
 # ==================== 유틸리티 ====================
 

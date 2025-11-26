@@ -46,7 +46,20 @@
       "Bash(cmd /c \"taskkill /PID 609988 /F & taskkill /PID 487332 /F\")",
       "Bash(wmic process where \"ProcessId=487332\" delete)",
       "Bash(git checkout:*)",
-      "Bash(cmd /c \"taskkill /PID 83240 /F\")"
+      "Bash(cmd /c \"taskkill /PID 83240 /F\")",
+      "Bash(chmod:*)",
+      "Bash(test:*)",
+      "Bash(./scripts/stop.sh:*)",
+      "Bash(lsof:*)",
+      "Bash(./scripts/status.sh:*)",
+      "Bash(./scripts/restart.sh:*)",
+      "Bash(./scripts/start.sh:*)",
+      "Bash(sqlite3:*)",
+      "Bash(/svc/web/nginx/sbin/nginx:*)",
+      "Bash(sudo /svc/web/nginx/sbin/nginx:*)",
+      "Bash(journalctl:*)",
+      "Bash(pkill:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

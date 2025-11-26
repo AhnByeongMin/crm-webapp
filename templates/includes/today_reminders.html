@@ -1,0 +1,391 @@
+<style>
+/* 당일 예약 버튼 */
+.today-reminders-button {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    z-index: 9998;
+    transition: all 0.3s ease;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+.today-reminders-button.has-reminders {
+    display: flex;
+}
+.today-reminders-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.6);
+}
+.today-reminders-button:active {
+    transform: scale(0.95);
+}
+.reminder-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+/* 당일 예약 모달 */
+.today-reminders-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    align-items: center;
+    justify-content: center;
+}
+.today-reminders-modal.active {
+    display: flex;
+}
+.today-reminders-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: slideUpModal 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.today-reminders-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-bottom: 2px solid #ff6b6b;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+.today-reminders-modal-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.today-reminders-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.today-reminders-modal-close:hover {
+    color: #fff3cd;
+}
+.today-reminders-modal-body {
+    padding: 20px 30px;
+    overflow-y: auto;
+    flex: 1;
+}
+.reminder-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+.reminder-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.reminder-item.urgent {
+    border-left-color: #dc3545;
+    background: #fff5f5;
+}
+.reminder-item.warning {
+    border-left-color: #ff9800;
+    background: #fff9f0;
+}
+.reminder-item.overdue {
+    border-left-color: #6c757d;
+    background: #f8f9fa;
+}
+.reminder-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+.reminder-time {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+.reminder-time.urgent {
+    color: #dc3545;
+}
+.reminder-time.warning {
+    color: #ff9800;
+}
+.reminder-time.overdue {
+    color: #6c757d;
+}
+.reminder-urgency {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+.reminder-urgency.urgent {
+    background: #dc3545;
+    color: white;
+}
+.reminder-urgency.warning {
+    background: #ff9800;
+    color: white;
+}
+.reminder-urgency.overdue {
+    background: #6c757d;
+    color: white;
+}
+.reminder-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+.reminder-content {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+.reminder-actions {
+    display: flex;
+    gap: 8px;
+}
+.btn-complete {
+    padding: 6px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.btn-complete:hover {
+    background: #218838;
+}
+.btn-view {
+    padding: 6px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+}
+.btn-view:hover {
+    background: #5568d3;
+}
+.no-reminders {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-size: 16px;
+}
+</style>
+
+<!-- 당일 예약 버튼 -->
+<button class="today-reminders-button" id="todayRemindersButton" onclick="openTodayRemindersModal()" title="당일 예약 확인">
+    📅
+    <span class="reminder-badge" id="reminderBadge">0</span>
+</button>
+
+<!-- 당일 예약 모달 -->
+<div class="today-reminders-modal" id="todayRemindersModal">
+    <div class="today-reminders-modal-content">
+        <div class="today-reminders-modal-header">
+            <div class="today-reminders-modal-title">
+                📅 오늘의 예약
+            </div>
+            <button class="today-reminders-modal-close" onclick="closeTodayRemindersModal()">&times;</button>
+        </div>
+        <div class="today-reminders-modal-body" id="todayRemindersBody">
+            <div class="no-reminders">로딩 중...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 당일 예약 모달 제어
+function openTodayRemindersModal() {
+    document.getElementById('todayRemindersModal').classList.add('active');
+    loadTodayReminders();
+}
+
+function closeTodayRemindersModal() {
+    document.getElementById('todayRemindersModal').classList.remove('active');
+}
+
+// 모달 외부 클릭 시 닫기
+window.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('todayRemindersModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeTodayRemindersModal();
+            }
+        });
+    }
+
+    // 초기 로드
+    checkTodayReminders();
+});
+
+// 당일 예약 확인 (버튼 표시/숨김)
+async function checkTodayReminders() {
+    try {
+        const response = await fetch('/api/reminders/banner-check');
+        const data = await response.json();
+
+        const button = document.getElementById('todayRemindersButton');
+        const badge = document.getElementById('reminderBadge');
+
+        if (data.today_count > 0) {
+            button.classList.add('has-reminders');
+            badge.textContent = data.today_count;
+        } else {
+            button.classList.remove('has-reminders');
+        }
+    } catch (error) {
+        console.error('예약 확인 실패:', error);
+    }
+}
+
+// 당일 예약 목록 로드
+async function loadTodayReminders() {
+    try {
+        const response = await fetch('/api/reminders/today');
+        const reminders = await response.json();
+
+        const body = document.getElementById('todayRemindersBody');
+
+        if (reminders.length === 0) {
+            body.innerHTML = '<div class="no-reminders">오늘 예약이 없습니다</div>';
+            return;
+        }
+
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+
+        body.innerHTML = reminders.map(reminder => {
+            const [hours, minutes] = reminder.scheduled_time.split(':').map(Number);
+            const reminderTime = hours * 60 + minutes;
+            const diffMinutes = reminderTime - currentTime;
+
+            let urgencyClass = '';
+            let urgencyLabel = '';
+
+            if (diffMinutes < 0) {
+                urgencyClass = 'overdue';
+                urgencyLabel = '지남';
+            } else if (diffMinutes <= 60) {
+                urgencyClass = 'urgent';
+                urgencyLabel = '긴급';
+            } else if (diffMinutes <= 120) {
+                urgencyClass = 'warning';
+                urgencyLabel = '주의';
+            }
+
+            return `
+                <div class="reminder-item ${urgencyClass}">
+                    <div class="reminder-header">
+                        <div class="reminder-time ${urgencyClass}">${reminder.scheduled_time}</div>
+                        ${urgencyLabel ? `<span class="reminder-urgency ${urgencyClass}">${urgencyLabel}</span>` : ''}
+                    </div>
+                    <div class="reminder-title">${escapeHtml(reminder.title)}</div>
+                    <div class="reminder-content">${escapeHtml(reminder.content || '')}</div>
+                    <div class="reminder-actions">
+                        <button class="btn-complete" onclick="completeReminder(${reminder.id})">완료</button>
+                        <a href="/reminders" class="btn-view">상세보기</a>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('예약 로드 실패:', error);
+        document.getElementById('todayRemindersBody').innerHTML =
+            '<div class="no-reminders">예약 로드 실패</div>';
+    }
+}
+
+// 예약 완료 처리
+async function completeReminder(reminderId) {
+    try {
+        const response = await fetch(`/api/reminders/${reminderId}/complete`, {
+            method: 'PATCH'
+        });
+
+        if (response.ok) {
+            // 목록 새로고침
+            loadTodayReminders();
+            checkTodayReminders();
+        }
+    } catch (error) {
+        console.error('예약 완료 처리 실패:', error);
+    }
+}
+
+// HTML 이스케이프
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Socket.IO 이벤트 리스너 (배지 업데이트)
+if (typeof socket !== 'undefined') {
+    socket.on('nav_counts_update', (counts) => {
+        checkTodayReminders();
+    });
+}
+</script>
