@@ -494,7 +494,7 @@ def get_users_by_team():
         users = [user for user in users if user not in ADMIN_ACCOUNTS]
     else:
         # 팀 파라미터 없으면 전체 사용자 (관리자 제외)
-        users = database.load_users()
+        users = database.load_all_users_detail()
         users = [user for user in users if user not in ADMIN_ACCOUNTS]
 
     return jsonify(users)
@@ -1296,25 +1296,38 @@ def check_reminder_banner():
     if 'username' not in session and not is_localhost():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    username = session.get('username', 'Admin')
+    username = session.get('username')
     from datetime import date
     today = str(date.today())
-
-    reminders = database.load_reminders(username, show_completed=True)
 
     # 당일 + 지난 미완료 예약 필터링
     today_count = 0
     overdue_count = 0
 
-    for r in reminders:
-        if r.get('is_completed'):
-            continue
-
-        reminder_date = r.get('scheduled_date', '')
-        if reminder_date == today:
-            today_count += 1
-        elif reminder_date < today:
-            overdue_count += 1
+    # 로컬호스트 또는 로그인하지 않은 경우: 모든 사용자의 예약 확인
+    if is_localhost() or not username:
+        users = database.load_all_users_detail()
+        for user in users:
+            user_reminders = database.load_reminders(user['username'], show_completed=True)
+            for r in user_reminders:
+                if r.get('is_completed'):
+                    continue
+                reminder_date = r.get('scheduled_date', '')
+                if reminder_date == today:
+                    today_count += 1
+                elif reminder_date < today:
+                    overdue_count += 1
+    else:
+        # 로그인된 사용자: 본인 예약만 확인
+        reminders = database.load_reminders(username, show_completed=True)
+        for r in reminders:
+            if r.get('is_completed'):
+                continue
+            reminder_date = r.get('scheduled_date', '')
+            if reminder_date == today:
+                today_count += 1
+            elif reminder_date < today:
+                overdue_count += 1
 
     return jsonify({
         'has_reminders': today_count > 0 or overdue_count > 0,
@@ -1329,19 +1342,31 @@ def get_today_reminders():
     if 'username' not in session and not is_localhost():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    username = session.get('username', 'Admin')
+    username = session.get('username')
     from datetime import date
     today = str(date.today())
 
-    reminders = database.load_reminders(username)
-
     # 당일 미완료 예약 필터링
     today_reminders = []
-    for r in reminders:
-        if r.get('completed'):
-            continue
-        if r.get('scheduled_date', '') == today:
-            today_reminders.append(r)
+
+    # 로컬호스트 또는 로그인하지 않은 경우: 모든 사용자의 예약 확인
+    if is_localhost() or not username:
+        users = database.load_all_users_detail()
+        for user in users:
+            user_reminders = database.load_reminders(user['username'])
+            for r in user_reminders:
+                if r.get('is_completed'):
+                    continue
+                if r.get('scheduled_date', '') == today:
+                    today_reminders.append(r)
+    else:
+        # 로그인된 사용자: 본인 예약만 확인
+        reminders = database.load_reminders(username)
+        for r in reminders:
+            if r.get('is_completed'):
+                continue
+            if r.get('scheduled_date', '') == today:
+                today_reminders.append(r)
 
     # 시간순 정렬
     today_reminders.sort(key=lambda x: x.get('scheduled_time', ''))
