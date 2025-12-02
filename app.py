@@ -1300,14 +1300,14 @@ def check_reminder_banner():
     from datetime import date
     today = str(date.today())
 
-    reminders = database.load_reminders(username)
+    reminders = database.load_reminders(username, show_completed=True)
 
     # 당일 + 지난 미완료 예약 필터링
     today_count = 0
     overdue_count = 0
 
     for r in reminders:
-        if r.get('completed'):
+        if r.get('is_completed'):
             continue
 
         reminder_date = r.get('scheduled_date', '')

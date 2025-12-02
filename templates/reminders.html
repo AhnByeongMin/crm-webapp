@@ -269,22 +269,24 @@
 
     <script>
         let currentEditingId = null;
-        let notificationPermission = false;
+        // let notificationPermission = false;
 
         // 페이지 로드 시 실행
         document.addEventListener('DOMContentLoaded', () => {
-            requestNotificationPermission();
+            // requestNotificationPermission();
             loadReminders();
-            startNotificationChecker();
+            // startNotificationChecker();
         });
 
-        // 브라우저 알림 권한 요청
+        // 브라우저 알림 권한 요청 (도메인 미사용으로 주석 처리)
+        /*
         async function requestNotificationPermission() {
             if ('Notification' in window) {
                 const permission = await Notification.requestPermission();
                 notificationPermission = permission === 'granted';
             }
         }
+        */
 
         // 상담주문번호 예외 패턴 (예: CO2511111669339)
         function isExceptionOrderNumber(text) {
@@ -504,7 +506,8 @@
             container.innerHTML = html;
         }
 
-        // 30분 전 알림 체크 (1분마다)
+        // 30분 전 알림 체크 (도메인 미사용으로 주석 처리)
+        /*
         function startNotificationChecker() {
             setInterval(async () => {
                 const response = await fetch('/api/reminders/notifications');
@@ -537,6 +540,7 @@
 
             showToast(title, body);
         }
+        */
 
         // 모달 열기 (추가)
         function openAddModal() {
