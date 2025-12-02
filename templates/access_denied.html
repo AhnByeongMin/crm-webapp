@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>접근 권한 없음</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .modal-message {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .modal-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            font-size: 16px;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .modal-button:hover {
+            background: #0056b3;
+        }
+
+        .countdown {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">🔒</div>
+            <div class="modal-title">접근 권한 없음</div>
+            <div class="modal-message">{{ message }}</div>
+            <button class="modal-button" onclick="redirectNow()">확인</button>
+            <div class="countdown">
+                <span id="countdown">3</span>초 후 자동으로 이동합니다.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const redirectUrl = "{{ redirect_url }}";
+        let countdown = 3;
+
+        // 카운트다운
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            const countdownEl = document.getElementById('countdown');
+            if (countdownEl) {
+                countdownEl.textContent = countdown;
+            }
+
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                redirectNow();
+            }
+        }, 1000);
+
+        // 즉시 리다이렉트
+        function redirectNow() {
+            clearInterval(countdownInterval);
+            window.location.href = redirectUrl;
+        }
+
+        // ESC 키로도 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                redirectNow();
+            }
+        });
+    </script>
+</body>
+</html>
