@@ -10,6 +10,7 @@ from datetime import datetime
 import database  # SQLite 데이터베이스 헬퍼
 import pandas as pd
 import random
+from cache_manager import app_cache, cached, invalidate_cache, generate_etag
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production'
@@ -1495,8 +1496,9 @@ def get_teams_api():
     teams = database.load_teams()
     return jsonify(teams)
 
+@cached(ttl=30, key_prefix='nav_counts')
 def calculate_nav_counts(username):
-    """네비게이션 바 카운트 계산 (헬퍼 함수)"""
+    """네비게이션 바 카운트 계산 (헬퍼 함수) - 30초 캐시"""
     counts = {
         'pending_tasks': 0,
         'unread_chats': 0,
