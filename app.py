@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_compress import Compress
 from werkzeug.utils import secure_filename
 import json
 import os
@@ -14,8 +15,19 @@ app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 최대 파일 크기
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 캐시 비활성화
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1년 캐시 (asset versioning으로 제어)
 app.config['TEMPLATES_AUTO_RELOAD'] = True  # 템플릿 자동 리로드
+
+# Compression 설정
+app.config['COMPRESS_MIMETYPES'] = [
+    'text/html', 'text/css', 'text/javascript',
+    'application/json', 'application/javascript'
+]
+app.config['COMPRESS_LEVEL'] = 6
+app.config['COMPRESS_MIN_SIZE'] = 500
+
+Compress(app)
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
 
@@ -61,6 +73,36 @@ def is_admin():
         return True
 
     return False
+
+# Asset versioning for cache busting
+_asset_manifest = None
+def load_asset_manifest():
+    """Load asset manifest with file hashes"""
+    global _asset_manifest
+    if _asset_manifest is None:
+        manifest_path = os.path.join(app.root_path, 'static', 'asset_manifest.json')
+        if os.path.exists(manifest_path):
+            with open(manifest_path, 'r') as f:
+                _asset_manifest = json.load(f)
+        else:
+            _asset_manifest = {}
+    return _asset_manifest
+
+@app.context_processor
+def utility_processor():
+    """템플릿에서 asset_version 함수 사용 가능하게"""
+    def asset_version(filename):
+        manifest = load_asset_manifest()
+        # Extract base name without extension
+        base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
+        # Common.css → common_css 형식으로 변환
+        key = base_name.replace('.', '_').replace('/', '_').replace('-', '_')
+
+        if key in manifest:
+            return f"{filename}?v={manifest[key]}"
+        return filename
+
+    return dict(asset_version=asset_version)
 
 @app.after_request
 def add_cache_headers(response):
