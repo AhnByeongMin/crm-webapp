@@ -290,16 +290,16 @@
                 <!-- 날짜 필터 영역 -->
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 15px; border-top: 1px solid #eee;">
                     <div style="display: flex; gap: 5px; align-items: center;">
-                        <label style="font-size: 14px; font-weight: 600; color: #555; white-space: nowrap;">등록일:</label>
+                        <label for="createdFromDate" style="font-size: 14px; font-weight: 600; color: #555; white-space: nowrap;">등록일:</label>
                         <input type="date" id="createdFromDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
                         <span style="color: #999;">~</span>
-                        <input type="date" id="createdToDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        <input type="date" id="createdToDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;" aria-label="등록일 종료">
                     </div>
                     <div style="display: flex; gap: 5px; align-items: center;">
-                        <label style="font-size: 14px; font-weight: 600; color: #555; white-space: nowrap;">배정일:</label>
+                        <label for="assignedFromDate" style="font-size: 14px; font-weight: 600; color: #555; white-space: nowrap;">배정일:</label>
                         <input type="date" id="assignedFromDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
                         <span style="color: #999;">~</span>
-                        <input type="date" id="assignedToDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                        <input type="date" id="assignedToDate" onchange="applyFilters()" style="padding: 6px 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;" aria-label="배정일 종료">
                     </div>
                     <button onclick="clearDateFilters()" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">초기화</button>
                 </div>
@@ -400,15 +400,15 @@
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
                     <h3 style="margin-bottom: 15px; color: #667eea;">📝 단일 항목 추가</h3>
                     <div class="form-group">
-                        <label>대상자 (선택)</label>
+                        <label for="taskRegModalAssignedTo">대상자 (선택)</label>
                         <input type="text" id="taskRegModalAssignedTo" placeholder="배정할 사용자 이름 (선택사항)">
                     </div>
                     <div class="form-group">
-                        <label>제목 <span style="color: red;">*</span></label>
+                        <label for="taskRegModalTitle">제목 <span style="color: red;">*</span></label>
                         <input type="text" id="taskRegModalTitle" placeholder="할일 제목을 입력하세요">
                     </div>
                     <div class="form-group">
-                        <label>내용 <span style="color: red;">*</span></label>
+                        <label for="taskRegModalContent">내용 <span style="color: red;">*</span></label>
                         <textarea id="taskRegModalContent" placeholder="할일 내용을 입력하세요"></textarea>
                     </div>
                     <button onclick="addSingleItemFromModal()" style="width: 100%; background: #667eea; padding: 12px; font-size: 15px; font-weight: bold;">추가</button>
@@ -418,7 +418,7 @@
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
                     <h3 style="margin-bottom: 15px; color: #28a745;">📊 엑셀 일괄 등록</h3>
                     <div class="form-group">
-                        <label>엑셀 파일 선택 (.xlsx, .xls)</label>
+                        <label for="taskRegModalExcelFile">엑셀 파일 선택 (.xlsx, .xls)</label>
                         <input type="file" id="taskRegModalExcelFile" accept=".xlsx,.xls" style="padding: 8px;">
                     </div>
                     <div style="background: #fff; padding: 12px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px;">

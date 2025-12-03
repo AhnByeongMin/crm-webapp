@@ -635,11 +635,22 @@ def chat_room(chat_id):
 
 @app.route('/api/chats', methods=['GET'])
 def get_chats():
+    """채팅 목록 조회 API (최적화: 최신 메시지 1개만 반환)"""
     chats = load_chats()
+
+    # limit 파라미터: 각 채팅방당 반환할 메시지 개수 (기본값: 1)
+    message_limit = request.args.get('limit', 1, type=int)
 
     # 로컬호스트(진짜 서버 관리자)만 모든 채팅방 조회 가능
     if is_localhost():
-        return jsonify(chats)
+        # 로컬호스트도 메시지 제한 적용
+        optimized_chats = {}
+        for chat_id, chat_info in chats.items():
+            chat_data = chat_info.copy()
+            if message_limit > 0 and 'messages' in chat_data:
+                chat_data['messages'] = chat_data['messages'][-message_limit:]  # 최신 N개만
+            optimized_chats[chat_id] = chat_data
+        return jsonify(optimized_chats)
 
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
@@ -662,9 +673,14 @@ def get_chats():
             if unread_count > 0:
                 print(f"[DEBUG] 채팅방 {chat_id} ({chat_info.get('title')}): 사용자 {username}의 안 읽은 메시지 = {unread_count}")
 
-            # 채팅방 정보에 unread_count 추가
+            # 채팅방 정보에 unread_count 추가 + 메시지 제한
             chat_data = chat_info.copy()
             chat_data['unread_count'] = unread_count
+
+            # 최적화: 채팅 목록용으로는 최신 N개 메시지만 반환
+            if message_limit > 0 and 'messages' in chat_data:
+                chat_data['messages'] = chat_data['messages'][-message_limit:]
+
             user_chats[chat_id] = chat_data
 
     return jsonify(user_chats)
@@ -731,6 +747,78 @@ def delete_chat(chat_id):
         save_chats(chats)
 
     return jsonify({'success': True})
+
+@app.route('/api/chats/<chat_id>/messages', methods=['GET'])
+def get_chat_messages(chat_id):
+    """
+    채팅방 메시지 페이지네이션 API
+
+    Query Parameters:
+        - limit: 반환할 메시지 개수 (기본값: 50)
+        - offset: 건너뛸 메시지 개수 (기본값: 0)
+        - before_id: 특정 메시지 ID 이전의 메시지만 가져오기 (무한 스크롤용)
+
+    Returns:
+        {
+            'messages': [...],
+            'total': 전체 메시지 개수,
+            'has_more': 더 가져올 메시지가 있는지 여부
+        }
+    """
+    # 로그인 확인
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    chats = load_chats()
+
+    if chat_id not in chats:
+        return jsonify({'error': 'Chat not found'}), 404
+
+    chat_info = chats[chat_id]
+
+    # 권한 확인: 참여자만 메시지 조회 가능
+    if not is_localhost():
+        username = session['username']
+        if username not in chat_info['participants']:
+            return jsonify({'error': 'Forbidden'}), 403
+
+    # 파라미터 파싱
+    limit = request.args.get('limit', 50, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    before_id = request.args.get('before_id', type=int)  # 무한 스크롤용
+
+    messages = chat_info.get('messages', [])
+    total = len(messages)
+
+    # before_id가 있으면 해당 메시지 이전의 메시지만 가져오기
+    if before_id is not None:
+        # 메시지에 ID가 없으면 인덱스를 ID로 사용
+        before_index = None
+        for idx, msg in enumerate(messages):
+            msg_id = msg.get('id', idx)
+            if msg_id == before_id:
+                before_index = idx
+                break
+
+        if before_index is not None:
+            # before_id 이전 메시지들만 선택
+            messages = messages[:before_index]
+            total = len(messages)
+
+    # 오프셋과 리밋 적용 (최신 메시지부터 가져오려면 역순으로)
+    start_idx = max(0, total - offset - limit)
+    end_idx = total - offset
+
+    paginated_messages = messages[start_idx:end_idx]
+    has_more = start_idx > 0
+
+    return jsonify({
+        'messages': paginated_messages,
+        'total': total,
+        'has_more': has_more,
+        'offset': offset,
+        'limit': limit
+    })
 
 @app.route('/api/search_users', methods=['GET'])
 def search_users():
@@ -814,13 +902,13 @@ def handle_message(data):
         chat_info = chats[chat_id]
         for participant in chat_info['participants']:
             if participant != username:  # 보낸 사람 제외
+                # 최적화: participants 배열 제거, 필요한 데이터만 전송
                 emit('global_new_message', {
                     'chat_id': chat_id,
                     'chat_title': chat_info['title'],
                     'sender': username,
-                    'message': message,
-                    'is_one_to_one': chat_info.get('is_one_to_one', False),
-                    'participants': chat_info['participants']
+                    'message': message[:100],  # 메시지 미리보기만 전송 (100자)
+                    'is_one_to_one': chat_info.get('is_one_to_one', False)
                 }, room=f'user_{participant}')
 
                 # 네비게이션 배지 실시간 업데이트 (읽지 않은 채팅 +1)
@@ -871,11 +959,22 @@ def handle_mark_as_read(data):
         save_chats(chats)
 
         # 같은 방의 다른 사용자들에게 읽음 상태 브로드캐스트
-        emit('read_receipt_update', {
-            'chat_id': chat_id,
-            'username': username,
-            'message_index': message_index
-        }, room=chat_id, include_self=False)
+        if message_index is not None and message_index >= 0:
+            # 특정 메시지 읽음 처리
+            emit('read_receipt_update', {
+                'chat_id': chat_id,
+                'username': username,
+                'message_index': message_index,
+                'read_by': messages[message_index]['read_by']
+            }, room=chat_id, include_self=False)
+        else:
+            # 모든 메시지 읽음 처리 - 전체 메시지 배열의 read_by 정보 전송
+            emit('read_receipt_update', {
+                'chat_id': chat_id,
+                'username': username,
+                'message_index': -1,
+                'all_messages_read': True
+            }, room=chat_id, include_self=False)
 
         # 네비게이션 배지 실시간 업데이트 (메시지 읽음 처리 후)
         with app.app_context():
@@ -1372,6 +1471,21 @@ def get_today_reminders():
     today_reminders.sort(key=lambda x: x.get('scheduled_time', ''))
 
     return jsonify(today_reminders)
+
+@app.route('/api/holidays', methods=['GET'])
+def get_holidays():
+    """공휴일 목록 조회 (년도별)"""
+    year = request.args.get('year', type=int)
+
+    holidays = database.load_holidays(year)
+
+    # 날짜를 키로 하는 딕셔너리로 변환
+    holidays_dict = {}
+    for h in holidays:
+        date_str = str(h['holiday_date'])
+        holidays_dict[date_str] = h['holiday_name']
+
+    return jsonify(holidays_dict)
 
 # ==================== 사용자 관리 API ====================
 

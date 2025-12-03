@@ -7,25 +7,68 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* 레이아웃 */
+        .main-layout { display: grid; grid-template-columns: 420px 1fr; gap: 20px; margin-top: 20px; align-items: start; }
+
+        /* 캘린더 영역 */
+        .calendar-section { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: fit-content; position: sticky; top: 20px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #667eea; }
+        .calendar-header h3 { font-size: 18px; color: #333; }
+        .calendar-nav { display: flex; gap: 10px; margin-bottom: 15px; }
+        .calendar-nav button { background: #667eea; color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .calendar-nav button:hover { background: #5568d3; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3); }
+        .calendar-month { font-size: 18px; font-weight: bold; color: #667eea; margin-bottom: 15px; text-align: center; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .calendar-day-header { text-align: center; font-size: 12px; font-weight: bold; color: #666; padding: 10px 0; background: #f8f9fa; border-radius: 4px; }
+        .calendar-day-header.sunday { color: #dc3545; }
+        .calendar-day-header.saturday { color: #0066ff; }
+        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; border-radius: 6px; cursor: pointer; position: relative; transition: all 0.2s; background: #f8f9fa; border: 2px solid transparent; }
+        .calendar-day:hover { background: #e9ecef; transform: translateY(-2px); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        .calendar-day.other-month { color: #ccc; opacity: 0.5; }
+        .calendar-day.sunday { color: #dc3545; }
+        .calendar-day.saturday { color: #0066ff; }
+        .calendar-day.holiday { color: #dc3545; font-weight: bold; }
+        .calendar-day.today { background: #667eea; color: white !important; font-weight: bold; border-color: #667eea; }
+        .calendar-day.has-reminder { background: #fff3cd; font-weight: bold; border: 2px solid #ffc107; }
+        .calendar-day.has-reminder.today { background: #dc3545; border-color: #dc3545; color: white !important; }
+        .calendar-day.selected { background: #667eea; color: white !important; border-color: #5568d3; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        .reminder-count { font-size: 10px; margin-top: 2px; padding: 2px 6px; background: rgba(220, 53, 69, 0.9); color: white; border-radius: 10px; font-weight: bold; min-width: 18px; text-align: center; }
+        .holiday-name { font-size: 9px; color: #dc3545; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        /* 통계 박스 */
+        .stats-box { background: #667eea; color: white; border-radius: 8px; padding: 15px; margin-top: 15px; }
+        .stats-box h4 { font-size: 14px; margin-bottom: 12px; }
+        .stats-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .stats-item:last-child { margin-bottom: 0; }
+        .stats-value { font-weight: bold; font-size: 16px; }
 
         /* 필터 영역 */
-        .filter-section { margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; gap: 20px; }
+        .filter-section { padding: 15px 20px; background: white; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e9ecef; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 0; }
         .filter-section label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
         /* 버튼 */
-        .btn-primary { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        .btn-primary:hover { background: #0056b3; }
-        .btn-success { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-success:hover { background: #218838; }
-        .btn-danger { padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-danger:hover { background: #c82333; }
-        .btn-secondary { padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-secondary:hover { background: #5a6268; }
+        .btn-primary { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2); }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3); }
+        .btn-success { padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(40, 167, 69, 0.2); }
+        .btn-success:hover { background: #218838; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3); }
+        .btn-danger { padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(220, 53, 69, 0.2); }
+        .btn-danger:hover { background: #c82333; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3); }
+        .btn-secondary { padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(108, 117, 125, 0.2); }
+        .btn-secondary:hover { background: #5a6268; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3); }
+
+        /* 예약 리스트 영역 */
+        .reminders-section { background: white; border-radius: 0 0 8px 8px; padding: 20px; height: calc(100vh - 130px); max-height: calc(100vh - 130px); overflow-y: auto; }
+        .reminders-wrapper { position: sticky; top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: white; }
+        .reminders-section::-webkit-scrollbar { width: 8px; }
+        .reminders-section::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .reminders-section::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .reminders-section::-webkit-scrollbar-thumb:hover { background: #555; }
 
         /* 예약 카드 */
-        .reminders-grid { display: grid; gap: 15px; margin-top: 20px; }
-        .reminder-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; transition: all 0.3s; position: relative; }
+        .reminders-grid { display: grid; gap: 15px; }
+        .reminder-card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; transition: all 0.3s; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .reminder-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
         .reminder-card.completed { opacity: 0.6; background: #f8f9fa; }
         .reminder-card.today { border-left: 4px solid #dc3545; background: #fff5f5; }
@@ -210,153 +253,264 @@
     <div class="container">
         {% include 'includes/header.html' %}
 
-        <div class="filter-section">
-            <button class="btn-primary" onclick="openAddModal()">+ 새 예약 추가</button>
-            <label>
-                <input type="checkbox" id="showCompleted" onchange="loadReminders()">
-                <span>완료된 항목 보기</span>
-            </label>
-            <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
-                <input type="date" id="filterStartDate" onchange="loadReminders()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                <span>~</span>
-                <input type="date" id="filterEndDate" onchange="loadReminders()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                <input type="text" id="searchKeyword" placeholder="검색..." onkeyup="loadReminders()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
-                <div id="statsInfo" style="color: #666; font-size: 14px; white-space: nowrap;"></div>
+        <div class="main-layout">
+            <!-- 캘린더 영역 -->
+            <div class="calendar-section">
+                <div class="calendar-header">
+                    <h3>📅 캘린더</h3>
+                    <div style="display: flex; gap: 6px;">
+                        <button style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(108, 117, 125, 0.2);" onmouseover="this.style.background='#5a6268'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(108, 117, 125, 0.3)';" onmouseout="this.style.background='#6c757d'; this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(108, 117, 125, 0.2)';" onclick="clearDateFilter()" id="clearFilterBtn" style="display: none;">전체</button>
+                        <button style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(102, 126, 234, 0.2);" onmouseover="this.style.background='#5568d3'; this.style.transform='translateY(-1px)'; this.style.boxShadow='0 2px 6px rgba(102, 126, 234, 0.3)';" onmouseout="this.style.background='#667eea'; this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(102, 126, 234, 0.2)';" onclick="goToToday()">오늘</button>
+                    </div>
+                </div>
+                <div class="calendar-nav">
+                    <button onclick="changeMonth(-1)">◀ 이전</button>
+                    <button onclick="changeMonth(1)">다음 ▶</button>
+                </div>
+                <div class="calendar-month" id="calendarMonth"></div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- 요일 헤더 -->
+                    <div class="calendar-day-header sunday">일</div>
+                    <div class="calendar-day-header">월</div>
+                    <div class="calendar-day-header">화</div>
+                    <div class="calendar-day-header">수</div>
+                    <div class="calendar-day-header">목</div>
+                    <div class="calendar-day-header">금</div>
+                    <div class="calendar-day-header saturday">토</div>
+                    <!-- 날짜는 JS로 생성 -->
+                </div>
+
+                <!-- 통계 박스 -->
+                <div class="stats-box">
+                    <h4>📊 예약 통계</h4>
+                    <div class="stats-item">
+                        <span>전체</span>
+                        <span class="stats-value" id="totalCount">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span>미완료</span>
+                        <span class="stats-value" id="pendingCount">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span>완료</span>
+                        <span class="stats-value" id="completedCount">0</span>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div id="alertBanners"></div>
-
-        <div id="remindersContainer">
-            <div class="empty-state">
-                <div class="empty-state-icon">📅</div>
-                <p>예약이 없습니다</p>
+            <!-- 예약 목록 영역 -->
+            <div class="reminders-wrapper">
+                <div class="filter-section">
+                    <button class="btn-primary" onclick="openAddModal()">+ 새 예약 추가</button>
+                    <label>
+                        <input type="checkbox" id="showCompleted" onchange="loadReminders()">
+                        <span>완료된 항목 보기</span>
+                    </label>
+                    <input type="text" id="searchKeyword" placeholder="검색..." onkeyup="loadReminders()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px; margin-left: auto;">
+                </div>
+                <div class="reminders-section">
+                    <div id="alertBanners"></div>
+                    <div id="remindersContainer">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📅</div>
+                            <p>예약이 없습니다</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 추가/수정 모달 -->
-    <div class="modal-overlay" id="reminderModal">
-        <div class="modal-box">
-            <div class="modal-title" id="modalTitle">새 예약 추가</div>
-            <div id="privacyWarning" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 4px; margin-bottom: 15px;">
-                <strong style="color: #856404;">⚠️ 개인정보 보호 안내</strong>
-                <p style="color: #856404; margin: 8px 0 0 0; font-size: 13px;">전화번호가 감지되었습니다. 개인정보 보호를 위해 전화번호 대신 <strong>상담번호, 고객번호, 또는 이름</strong>을 사용해주세요.</p>
-            </div>
-            <div class="form-group">
-                <label>제목 *</label>
-                <input type="text" id="reminderTitle" placeholder="예: CO2511082391109 상담, CU12215795 홍길동" oninput="checkPrivacy()">
-                <small style="color: #666; font-size: 12px;">권장: 상담번호(CO로 시작), 고객번호(CU로 시작), 이름 등</small>
-            </div>
-            <div class="form-group">
-                <label>내용</label>
-                <textarea id="reminderContent" placeholder="예약 내용을 입력하세요 (선택사항)" oninput="checkPrivacy()"></textarea>
-            </div>
-            <div class="form-group">
-                <label>날짜 *</label>
-                <input type="date" id="reminderDate">
-            </div>
-            <div class="form-group">
-                <label>시간 *</label>
-                <input type="time" id="reminderTime">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-secondary" onclick="closeModal()">취소</button>
-                <button class="btn-primary" id="saveBtn" onclick="saveReminder()">저장</button>
-            </div>
-        </div>
-    </div>
+    {% include 'includes/today_reminders.html' %}
 
     <script>
-        let currentEditingId = null;
-        // let notificationPermission = false;
+        // 전역 변수들은 reminder_modal.html에서 이미 선언됨
+        // let currentEditingId = null;
+        // let selectedDate = null;
+        let allReminders = []; // 전체 예약 데이터 (통계용)
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        let holidays = {}; // 공휴일 데이터 (API에서 로드)
+
+        // 공휴일 데이터 로드
+        async function loadHolidays(year) {
+            try {
+                const response = await fetch(`/api/holidays?year=${year}`);
+                const data = await response.json();
+                // 해당 년도의 공휴일 데이터 병합
+                Object.assign(holidays, data);
+            } catch (error) {
+                console.error('공휴일 로드 오류:', error);
+            }
+        }
 
         // 페이지 로드 시 실행
-        document.addEventListener('DOMContentLoaded', () => {
-            // requestNotificationPermission();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 현재 년도와 다음 년도 공휴일 로드
+            await loadHolidays(currentYear);
+            if (currentMonth === 11) {
+                await loadHolidays(currentYear + 1);
+            }
+
             loadReminders();
-            // startNotificationChecker();
+            renderCalendar();
         });
 
-        // 브라우저 알림 권한 요청 (도메인 미사용으로 주석 처리)
-        /*
-        async function requestNotificationPermission() {
-            if ('Notification' in window) {
-                const permission = await Notification.requestPermission();
-                notificationPermission = permission === 'granted';
+        // 캘린더 렌더링
+        function renderCalendar() {
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const prevLastDay = new Date(currentYear, currentMonth, 0);
+
+            const firstDayOfWeek = firstDay.getDay();
+            const lastDate = lastDay.getDate();
+            const prevLastDate = prevLastDay.getDate();
+
+            const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+            document.getElementById('calendarMonth').textContent = `${currentYear}년 ${monthNames[currentMonth]}`;
+
+            const grid = document.getElementById('calendarGrid');
+            const dayHeaders = grid.querySelectorAll('.calendar-day-header');
+            grid.innerHTML = '';
+            dayHeaders.forEach(header => grid.appendChild(header));
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            // 이전 달 날짜
+            for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+                const day = prevLastDate - i;
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day other-month';
+                dayEl.textContent = day;
+                grid.appendChild(dayEl);
             }
-        }
-        */
 
-        // 상담주문번호 예외 패턴 (예: CO2511111669339)
-        function isExceptionOrderNumber(text) {
-            const orderPattern = /[A-Za-z]{2}\d{8,}/; 
-            return orderPattern.test(text);
-        }
+            // 현재 달 날짜
+            for (let day = 1; day <= lastDate; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
 
+                // 요일 계산 (0=일요일, 6=토요일)
+                const dayOfWeek = new Date(currentYear, currentMonth, day).getDay();
 
-        // 전화번호 패턴 감지 (010-1234-5678, 01012345678, 010 1234 5678 등)
-        function detectPhoneNumber(text) {
+                // 날짜 숫자
+                const dateNum = document.createElement('div');
+                dateNum.textContent = day;
+                dayEl.appendChild(dateNum);
 
-                // 1) 상담주문번호 예외 먼저 체크
-            if (isExceptionOrderNumber(text)) {
-                return false;
-            }
-
-            const patterns = [
-                /01[016789]-?\d{3,4}-?\d{4}/g,  // 010-1234-5678 또는 01012345678
-                /01[016789]\s?\d{3,4}\s?\d{4}/g, // 010 1234 5678
-                /\d{3}-\d{3,4}-\d{4}/g,           // 일반 전화번호
-                /\d{10,11}/g                      // 연속된 10-11자리 숫자
-            ];
-
-            for (let pattern of patterns) {
-                if (pattern.test(text)) {
-                    return true;
+                // 요일별 색상
+                if (dayOfWeek === 0) {
+                    dayEl.classList.add('sunday');
+                } else if (dayOfWeek === 6) {
+                    dayEl.classList.add('saturday');
                 }
+
+                // 공휴일 표시
+                if (holidays[dateStr]) {
+                    dayEl.classList.add('holiday');
+                }
+
+                if (dateStr === todayStr) {
+                    dayEl.classList.add('today');
+                }
+
+                if (selectedDate === dateStr) {
+                    dayEl.classList.add('selected');
+                }
+
+                // 예약이 있는 날짜 표시 + 개수 표시
+                const remindersOnDate = allReminders.filter(r => r.scheduled_date === dateStr);
+                if (remindersOnDate.length > 0) {
+                    dayEl.classList.add('has-reminder');
+                    const countEl = document.createElement('div');
+                    countEl.className = 'reminder-count';
+                    countEl.textContent = remindersOnDate.length;
+                    dayEl.appendChild(countEl);
+                }
+
+                dayEl.onclick = () => selectDate(dateStr);
+                grid.appendChild(dayEl);
             }
-            return false;
+
+            // 다음 달 날짜
+            const remainingDays = 42 - (firstDayOfWeek + lastDate);
+            for (let day = 1; day <= remainingDays; day++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day other-month';
+                dayEl.textContent = day;
+                grid.appendChild(dayEl);
+            }
         }
 
-        // 개인정보 체크
-        function checkPrivacy() {
-            const title = document.getElementById('reminderTitle').value;
-            const content = document.getElementById('reminderContent').value;
-            const warning = document.getElementById('privacyWarning');
-            const saveBtn = document.getElementById('saveBtn');
+        // 월 변경
+        async function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+                await loadHolidays(currentYear);
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+                await loadHolidays(currentYear);
+            }
+            renderCalendar();
+        }
 
-            const hasPhoneNumber = detectPhoneNumber(title) || detectPhoneNumber(content);
+        // 오늘로 이동
+        function goToToday() {
+            const today = new Date();
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            selectedDate = todayStr;
+            updateClearFilterButton();
+            renderCalendar();
+            loadReminders();
+        }
 
-            if (hasPhoneNumber) {
-                warning.style.display = 'block';
-                saveBtn.disabled = true;
-                saveBtn.style.opacity = '0.5';
-                saveBtn.style.cursor = 'not-allowed';
+        // 날짜 선택
+        function selectDate(dateStr) {
+            selectedDate = dateStr;
+            updateClearFilterButton();
+            renderCalendar();
+            loadReminders();
+        }
+
+        // 날짜 필터 초기화
+        function clearDateFilter() {
+            selectedDate = null;
+            updateClearFilterButton();
+            renderCalendar();
+            loadReminders();
+        }
+
+        // "전체" 버튼 표시/숨김 업데이트
+        function updateClearFilterButton() {
+            const btn = document.getElementById('clearFilterBtn');
+            if (selectedDate) {
+                btn.style.display = 'block';
             } else {
-                warning.style.display = 'none';
-                saveBtn.disabled = false;
-                saveBtn.style.opacity = '1';
-                saveBtn.style.cursor = 'pointer';
+                btn.style.display = 'none';
             }
         }
 
         // 예약 목록 로드
         async function loadReminders() {
             const showCompleted = document.getElementById('showCompleted').checked;
+
+            // 항상 전체 데이터 가져오기 (통계용)
+            const allResponse = await fetch(`/api/reminders?show_completed=true`);
+            allReminders = await allResponse.json();
+
+            // 표시용 데이터
             const response = await fetch(`/api/reminders?show_completed=${showCompleted}`);
             let reminders = await response.json();
 
-            // 날짜 필터링
-            const startDate = document.getElementById('filterStartDate').value;
-            const endDate = document.getElementById('filterEndDate').value;
+            // 검색 필터링
             const keyword = document.getElementById('searchKeyword').value.toLowerCase();
-
-            if (startDate) {
-                reminders = reminders.filter(r => r.scheduled_date >= startDate);
-            }
-            if (endDate) {
-                reminders = reminders.filter(r => r.scheduled_date <= endDate);
-            }
             if (keyword) {
                 reminders = reminders.filter(r =>
                     r.title.toLowerCase().includes(keyword) ||
@@ -364,9 +518,15 @@
                 );
             }
 
+            // 날짜 필터링 (캘린더에서 선택한 날짜)
+            if (selectedDate) {
+                reminders = reminders.filter(r => r.scheduled_date === selectedDate);
+            }
+
             renderReminders(reminders);
-            updateStats(reminders);
+            updateStats(allReminders); // 항상 전체 데이터로 통계 계산
             updateAlertBanners(reminders);
+            renderCalendar(); // 캘린더 업데이트
         }
 
         // 예약 목록 렌더링
@@ -377,7 +537,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">📅</div>
-                        <p>예약이 없습니다</p>
+                        <p>${selectedDate ? selectedDate + '에 예약이 없습니다' : '예약이 없습니다'}</p>
                     </div>
                 `;
                 return;
@@ -386,7 +546,6 @@
             const today = new Date().toISOString().split('T')[0];
             const now = new Date();
 
-            // 분류: 당일, 다가오는 예약, 지난 예약
             const todayReminders = [];
             const upcomingReminders = [];
             const pastReminders = [];
@@ -406,19 +565,16 @@
 
             let html = '<div class="reminders-grid">';
 
-            // 당일 예약 (항상 최상단)
             if (todayReminders.length > 0) {
                 todayReminders.forEach(r => {
                     html += renderReminderCard(r, 'today');
                 });
             }
 
-            // 다가오는 예약
             upcomingReminders.forEach(r => {
                 html += renderReminderCard(r, 'upcoming');
             });
 
-            // 지난 예약
             pastReminders.forEach(r => {
                 html += renderReminderCard(r, 'past');
             });
@@ -462,15 +618,15 @@
             `;
         }
 
-        // 통계 업데이트
-        function updateStats(reminders) {
-            const total = reminders.length;
-            const completed = reminders.filter(r => r.is_completed === 1).length;
+        // 통계 업데이트 (항상 전체 데이터 기준)
+        function updateStats(allData) {
+            const total = allData.length;
+            const completed = allData.filter(r => r.is_completed === 1).length;
             const pending = total - completed;
 
-            document.getElementById('statsInfo').innerHTML = `
-                전체 ${total}건 | 미완료 ${pending}건 | 완료 ${completed}건
-            `;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('completedCount').textContent = completed;
         }
 
         // 알림 배너 업데이트
@@ -504,141 +660,6 @@
             }
 
             container.innerHTML = html;
-        }
-
-        // 30분 전 알림 체크 (도메인 미사용으로 주석 처리)
-        /*
-        function startNotificationChecker() {
-            setInterval(async () => {
-                const response = await fetch('/api/reminders/notifications');
-                const reminders = await response.json();
-
-                const now = new Date();
-
-                reminders.forEach(r => {
-                    const reminderDateTime = new Date(`${r.scheduled_date}T${r.scheduled_time}`);
-                    const diff = (reminderDateTime - now) / (1000 * 60); // 분 단위
-
-                    // 30분 전 ~ 25분 전 사이에 알림
-                    if (diff <= 30 && diff >= 25) {
-                        showNotification(r);
-                        // 알림 발송 완료 표시
-                        fetch(`/api/reminders/${r.id}/notify`, { method: 'POST' });
-                    }
-                });
-            }, 60000); // 1분마다 체크
-        }
-
-        // 브라우저 알림 표시
-        function showNotification(reminder) {
-            const title = `🔔 ${reminder.title}`;
-            const body = `${reminder.scheduled_time}에 예정된 일정이 30분 후 시작됩니다.`;
-
-            if (notificationPermission) {
-                new Notification(title, { body, icon: '/static/icon-192.png' });
-            }
-
-            showToast(title, body);
-        }
-        */
-
-        // 모달 열기 (추가)
-        function openAddModal() {
-            currentEditingId = null;
-            document.getElementById('modalTitle').textContent = '새 예약 추가';
-            document.getElementById('reminderTitle').value = '';
-            document.getElementById('reminderContent').value = '';
-            document.getElementById('reminderDate').value = '';
-            document.getElementById('reminderTime').value = '';
-
-            // 경고 숨김 및 버튼 활성화
-            document.getElementById('privacyWarning').style.display = 'none';
-            document.getElementById('saveBtn').disabled = false;
-            document.getElementById('saveBtn').style.opacity = '1';
-            document.getElementById('saveBtn').style.cursor = 'pointer';
-
-            document.getElementById('reminderModal').classList.add('active');
-        }
-
-        // 모달 열기 (수정)
-        async function openEditModal(id) {
-            const response = await fetch(`/api/reminders?show_completed=true`);
-            const reminders = await response.json();
-            const reminder = reminders.find(r => r.id === id);
-
-            if (!reminder) return;
-
-            currentEditingId = id;
-            document.getElementById('modalTitle').textContent = '예약 수정';
-            document.getElementById('reminderTitle').value = reminder.title;
-            document.getElementById('reminderContent').value = reminder.content || '';
-            document.getElementById('reminderDate').value = reminder.scheduled_date;
-            document.getElementById('reminderTime').value = reminder.scheduled_time;
-
-            // 개인정보 체크
-            checkPrivacy();
-
-            document.getElementById('reminderModal').classList.add('active');
-        }
-
-        // 모달 닫기
-        function closeModal() {
-            document.getElementById('reminderModal').classList.remove('active');
-
-            // 경고 초기화
-            document.getElementById('privacyWarning').style.display = 'none';
-            document.getElementById('saveBtn').disabled = false;
-            document.getElementById('saveBtn').style.opacity = '1';
-            document.getElementById('saveBtn').style.cursor = 'pointer';
-        }
-
-        // 예약 저장
-        async function saveReminder() {
-            const title = document.getElementById('reminderTitle').value.trim();
-            const content = document.getElementById('reminderContent').value.trim();
-            const date = document.getElementById('reminderDate').value;
-            const time = document.getElementById('reminderTime').value;
-
-            if (!title || !date || !time) {
-                alert('제목, 날짜, 시간은 필수 입력 항목입니다.');
-                return;
-            }
-
-            // 최종 개인정보 검증
-            if (detectPhoneNumber(title) || detectPhoneNumber(content)) {
-                alert('개인정보 보호를 위해 전화번호를 포함할 수 없습니다.\n\n상담주문번호, 고객번호, 또는 이름을 사용해주세요.');
-                return;
-            }
-
-            const data = {
-                title,
-                content,
-                scheduled_date: date,
-                scheduled_time: time
-            };
-
-            let response;
-            if (currentEditingId) {
-                response = await fetch(`/api/reminders/${currentEditingId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-            } else {
-                response = await fetch('/api/reminders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-            }
-
-            if (response.ok) {
-                showToast('성공', currentEditingId ? '예약이 수정되었습니다.' : '예약이 추가되었습니다.');
-                closeModal();
-                loadReminders();
-            } else {
-                alert('저장 중 오류가 발생했습니다.');
-            }
         }
 
         // 완료 상태 토글
@@ -727,55 +748,54 @@
             </div>
 
             <div class="help-section">
-                <div class="help-section-title">📅 예약 추가하기</div>
+                <div class="help-section-title">📅 캘린더 사용하기</div>
                 <div class="help-content">
                     <ul>
-                        <li><strong>"+ 새 예약 추가"</strong> 버튼을 클릭합니다</li>
-                        <li><strong>제목</strong>: 상담호(CO), 고객번호(CU), 이름 등을 입력</li>
-                        <li><strong>내용</strong>: 예약 상세 내용 (선택사항)</li>
-                        <li><strong>날짜/시간</strong>: 예약 일시를 설정합니다</li>
+                        <li><strong>날짜 클릭</strong>: 해당 날짜의 예약만 표시</li>
+                        <li><strong>다시 클릭</strong>: 필터 해제 (전체 예약 표시)</li>
+                        <li><strong>노란색 표시</strong>: 예약이 있는 날짜</li>
+                        <li><strong>빨간색 표시</strong>: 오늘 예약이 있는 날짜</li>
+                        <li><strong>오늘 버튼</strong>: 현재 월로 이동</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📊 통계 정보</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>전체</strong>: 모든 예약 개수</li>
+                        <li><strong>미완료</strong>: 아직 완료되지 않은 예약</li>
+                        <li><strong>완료</strong>: 완료 처리된 예약</li>
+                        <li>통계는 <strong>필터와 무관하게 항상 전체 데이터</strong> 기준입니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="help-section">
+                <div class="help-section-title">📝 예약 추가하기</div>
+                <div class="help-content">
+                    <ul>
+                        <li><strong>"+ 새 예약 추가"</strong> 버튼 클릭</li>
+                        <li>캘린더에서 날짜를 선택한 상태면 자동으로 날짜 입력됨</li>
                         <li><strong>개인정보 보호</strong>: 전화번호 입력 시 저장이 차단됩니다</li>
                     </ul>
                 </div>
             </div>
 
             <div class="help-section">
-                <div class="help-section-title">🔍 예약 검색 및 필터</div>
+                <div class="help-section-title">🔍 검색 및 필터</div>
                 <div class="help-content">
                     <ul>
-                        <li><strong>날짜 범위</strong>: 시작일~종료일로 기간 필터링</li>
                         <li><strong>검색창</strong>: 제목이나 내용으로 검색</li>
                         <li><strong>완료된 항목 보기</strong>: 체크하면 완료된 예약도 표시</li>
-                        <li><strong>통계</strong>: 전체/완료/미완료 예약 개수 확인</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="help-section">
-                <div class="help-section-title">🏷️ 예약 상태 표시</div>
-                <div class="help-content">
-                    <ul>
-                        <li><strong style="color: #dc3545;">빨간색 테두리 (오늘)</strong>: 오늘 예약된 항목</li>
-                        <li><strong style="color: #ffc107;">노란색 테두리 (예정)</strong>: 미래 예약</li>
-                        <li><strong style="color: #6c757d;">회색 테두리 (지난)</strong>: 지난 예약</li>
-                        <li><strong style="color: #28a745;">초록색 배지</strong>: 완료된 예약</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="help-section">
-                <div class="help-section-title">🔔 알림 기능</div>
-                <div class="help-content">
-                    <ul>
-                        <li><strong>당일 예약 알림</strong>: 오늘 예약이 있으면 상단 배너 표시</li>
-                        <li><strong>임박 알림</strong>: 1시간 이내 예약은 별도 배너 표시</li>
-                        <li><strong>지난 예약 알림</strong>: 미완료된 지난 예약 확인</li>
+                        <li><strong>캘린더 날짜 선택</strong>: 특정 날짜의 예약만 표시</li>
                     </ul>
                 </div>
             </div>
 
             <div class="help-tip">
-                <strong>💡 개인정보 보호:</strong> 전화번호 대신 상담번호(CO), 고객번호(CU), 또는 이름을 사용해주세요. 전화번호가 감지되면 저장이 차단됩니다.
+                <strong>💡 개인정보 보호:</strong> 전화번호 대신 상담번호(CO), 고객번호(CU), 또는 이름을 사용해주세요.
             </div>
         </div>
     </div>

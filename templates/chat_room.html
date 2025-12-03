@@ -637,7 +637,13 @@
     </div>
 
     <script>
-        const socket = io();
+        // Socket.IO 초기화 (자동 재연결 설정)
+        const socket = io({
+            reconnection: true,           // 자동 재연결 활성화
+            reconnectionDelay: 1000,      // 재연결 시도 간격 (1초)
+            reconnectionDelayMax: 5000,   // 최대 재연결 간격 (5초)
+            reconnectionAttempts: Infinity // 무한 재시도
+        });
         const chatId = '{{ chat_id }}';
         const username = '{{ username }}';
         const messagesDiv = document.getElementById('messages');
@@ -785,27 +791,231 @@
         // 방 입장
         socket.emit('join', { chat_id: chatId, username: username });
 
-        let chatParticipants = [];
+        // Socket.IO 재연결 이벤트 핸들러
+        socket.on('disconnect', (reason) => {
+            console.log('[Socket.IO] 연결 끊김:', reason);
+            // 사용자에게 재연결 중임을 알림 (선택적)
+        });
 
-        // 기존 메시지 로드
-        fetch('/api/chats')
-            .then(res => res.json())
-            .then(chats => {
+        socket.on('reconnect', (attemptNumber) => {
+            console.log('[Socket.IO] 재연결 성공 (시도 횟수:', attemptNumber + ')');
+            // 재연결 성공 시 채팅방에 다시 입장
+            socket.emit('join', { chat_id: chatId, username: username });
+            // 읽음 상태 다시 전송
+            socket.emit('mark_as_read', { chat_id: chatId, username: username });
+        });
+
+        socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('[Socket.IO] 재연결 시도 중... (' + attemptNumber + '번째)');
+        });
+
+        socket.on('reconnect_error', (error) => {
+            console.log('[Socket.IO] 재연결 실패:', error);
+        });
+
+        socket.on('reconnect_failed', () => {
+            console.log('[Socket.IO] 재연결 최종 실패 (페이지 새로고침 권장)');
+        });
+
+        let chatParticipants = [];
+        let isLoadingMessages = false;  // 메시지 로딩 중 플래그
+        let hasMoreMessages = true;      // 더 로드할 메시지가 있는지
+        let currentOffset = 0;            // 현재 오프셋
+        const messagesPerPage = 50;      // 한 번에 로드할 메시지 개수
+
+        // 초기 메시지 로드 (최신 50개)
+        async function loadInitialMessages() {
+            try {
+                // 참여자 정보 가져오기
+                const chatsRes = await fetch('/api/chats?limit=0');
+                const chats = await chatsRes.json();
                 const chat = chats[chatId];
-                if (chat && chat.messages) {
-                    chatParticipants = chat.participants || [];
-                    chat.messages.forEach(msg => {
+
+                if (!chat) {
+                    console.error('채팅방을 찾을 수 없습니다.');
+                    return;
+                }
+
+                chatParticipants = chat.participants || [];
+
+                // 최신 메시지 로드
+                const res = await fetch(`/api/chats/${chatId}/messages?limit=${messagesPerPage}`);
+                const data = await res.json();
+
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
                         displayMessage(msg, chatParticipants);
                     });
                     scrollToBottom();
 
-                    // 페이지 진입시 모든 메시지를 읽음 처리
-                    socket.emit('mark_as_read', {
-                        chat_id: chatId,
-                        username: username
-                    });
+                    currentOffset = data.messages.length;
+                    hasMoreMessages = data.has_more;
+
+                    console.log(`초기 로드: ${data.messages.length}개 메시지, 더보기: ${hasMoreMessages}`);
                 }
+
+                // 페이지 진입시 모든 메시지를 읽음 처리
+                socket.emit('mark_as_read', {
+                    chat_id: chatId,
+                    username: username
+                });
+            } catch (error) {
+                console.error('메시지 로드 실패:', error);
+            }
+        }
+
+        // 이전 메시지 로드 (무한 스크롤용)
+        async function loadMoreMessages() {
+            if (isLoadingMessages || !hasMoreMessages) {
+                return;
+            }
+
+            isLoadingMessages = true;
+            console.log(`이전 메시지 로드 시작 (offset: ${currentOffset})`);
+
+            try {
+                const res = await fetch(`/api/chats/${chatId}/messages?limit=${messagesPerPage}&offset=${currentOffset}`);
+                const data = await res.json();
+
+                if (data.messages && data.messages.length > 0) {
+                    // 스크롤 위치 저장 (메시지 추가 후 위치 유지를 위해)
+                    const oldScrollHeight = messagesDiv.scrollHeight;
+                    const oldScrollTop = messagesDiv.scrollTop;
+
+                    // 임시 컨테이너에 메시지 추가 (역순으로 추가하여 시간순 정렬 유지)
+                    const tempDiv = document.createElement('div');
+                    data.messages.forEach(msg => {
+                        const messageDiv = createMessageElementFromMsg(msg);
+                        tempDiv.appendChild(messageDiv);
+                    });
+
+                    // 메시지를 맨 위에 삽입
+                    messagesDiv.insertBefore(tempDiv, messagesDiv.firstChild);
+
+                    // tempDiv의 자식들을 messagesDiv로 이동
+                    while (tempDiv.firstChild) {
+                        messagesDiv.insertBefore(tempDiv.firstChild, tempDiv);
+                    }
+                    tempDiv.remove();
+
+                    // 스크롤 위치 복원 (추가된 메시지 높이만큼 아래로)
+                    const newScrollHeight = messagesDiv.scrollHeight;
+                    messagesDiv.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+
+                    currentOffset += data.messages.length;
+                    hasMoreMessages = data.has_more;
+
+                    console.log(`${data.messages.length}개 메시지 로드 완료, 더보기: ${hasMoreMessages}`);
+                } else {
+                    hasMoreMessages = false;
+                    console.log('더 이상 로드할 메시지가 없습니다.');
+                }
+            } catch (error) {
+                console.error('이전 메시지 로드 실패:', error);
+            } finally {
+                isLoadingMessages = false;
+            }
+        }
+
+        // 메시지 요소 생성 함수 (기존 displayMessage 로직 재사용)
+        function createMessageElementFromMsg(msg) {
+            const messageDiv = document.createElement('div');
+            const isOwn = msg.username === username;
+
+            // 이모지만 있는지 체크 (공백 제거 후 체크)
+            const trimmedMsg = msg.message.trim();
+            const emojiOnlyRegex = /^[\p{Emoji}\u200d]+$/u;
+            const isEmojiOnly = emojiOnlyRegex.test(trimmedMsg) && !msg.file_info;
+
+            messageDiv.className = `message ${isOwn ? 'own' : 'other'} ${isEmojiOnly ? 'emoji-only-message' : ''}`;
+            messageDiv.dataset.sender = msg.username; // 읽음 상태 업데이트를 위한 sender 정보 저장
+
+            const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit'
             });
+
+            // 읽지 않은 사람 수 계산
+            let unreadCount = 0;
+            if (isOwn && chatParticipants) {
+                const readBy = msg.read_by || [msg.username];
+                const totalParticipants = chatParticipants.length;
+                const readCount = readBy.length;
+                unreadCount = totalParticipants - readCount;
+            }
+
+            const unreadBadge = (isOwn && unreadCount > 0)
+                ? `<span class="read-count">${unreadCount}</span>`
+                : '';
+
+            // 파일 첨부 표시
+            let fileHtml = '';
+
+            // file_info 형식 (실시간 전송된 파일)
+            if (msg.file_info && msg.file_info.length > 0) {
+                fileHtml = msg.file_info.map(file => {
+                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.filename);
+                    if (isImage) {
+                        return `
+                            <div class="message-file" onclick="openImageModal('${file.url}', '${escapeHtml(file.filename)}')">
+                                <img src="${file.url}" alt="${escapeHtml(file.filename)}">
+                            </div>
+                        `;
+                    } else {
+                        const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                        return `
+                            <div class="message-file document" onclick="window.open('${file.url}', '_blank')">
+                                <span>📄</span>
+                                <div>
+                                    <div>${escapeHtml(file.filename)}</div>
+                                    <small style="opacity: 0.7;">${fileSize}</small>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+            }
+            // file_path 형식 (DB에서 로드된 파일)
+            else if (msg.file_path && msg.file_name) {
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(msg.file_name);
+                if (isImage) {
+                    fileHtml = `
+                        <div class="message-file" onclick="openImageModal('${msg.file_path}', '${escapeHtml(msg.file_name)}')">
+                            <img src="${msg.file_path}" alt="${escapeHtml(msg.file_name)}">
+                        </div>
+                    `;
+                } else {
+                    fileHtml = `
+                        <div class="message-file document" onclick="window.open('${msg.file_path}', '_blank')">
+                            <span>📄</span>
+                            <div>
+                                <div>${escapeHtml(msg.file_name)}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            messageDiv.innerHTML = `
+                ${!isOwn ? `<div class="message-header">${msg.username}</div>` : ''}
+                <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${escapeHtml(msg.message)}</div>
+                ${fileHtml}
+                <div class="message-time">${unreadBadge}${time}</div>
+            `;
+
+            return messageDiv;
+        }
+
+        // 스크롤 이벤트 리스너 (무한 스크롤)
+        messagesDiv.addEventListener('scroll', () => {
+            // 스크롤이 맨 위에 가까워지면 이전 메시지 로드
+            if (messagesDiv.scrollTop < 100 && hasMoreMessages && !isLoadingMessages) {
+                loadMoreMessages();
+            }
+        });
+
+        // 초기 메시지 로드 실행
+        loadInitialMessages();
 
         // 메시지 전송 (임시 - 나중에 sendMessageWithFiles로 대체됨)
         function sendMessage() {
@@ -923,6 +1133,7 @@
             const isEmojiOnly = emojiOnlyRegex.test(trimmedMsg) && !msg.file_info;
 
             messageDiv.className = `message ${isOwn ? 'own' : 'other'} ${isEmojiOnly ? 'emoji-only-message' : ''}`;
+            messageDiv.dataset.sender = msg.username; // 읽음 상태 업데이트를 위한 sender 정보 저장
 
             const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
                 hour: '2-digit',
@@ -1054,22 +1265,31 @@
             }
         });
 
-        // 읽음 상태 업데이트 수신
+        // 읽음 상태 업데이트 수신 (최적화: 간단한 카운트 감소 방식)
         socket.on('read_receipt_update', (data) => {
             console.log('읽음 상태 업데이트:', data);
-            // 메시지 목록을 다시 로드하여 읽음 표시 업데이트
-            fetch('/api/chats')
-                .then(res => res.json())
-                .then(chats => {
-                    const chat = chats[chatId];
-                    if (chat && chat.messages) {
-                        messagesDiv.innerHTML = '';
-                        chat.messages.forEach(msg => {
-                            displayMessage(msg, chatParticipants);
-                        });
-                        scrollToBottom();
+
+            if (data.chat_id !== chatId) return;
+
+            // 다른 사용자가 메시지를 읽었을 때, 현재 사용자가 보낸 모든 메시지의 읽지 않음 카운트를 1씩 감소
+            // 이는 read_by 배열을 다시 계산하지 않고도 실시간으로 읽음 상태를 반영
+            const messageElements = messagesDiv.querySelectorAll('.message');
+            messageElements.forEach(msgEl => {
+                // 현재 사용자가 보낸 메시지만 업데이트
+                if (msgEl.dataset.sender === username) {
+                    const readCountEl = msgEl.querySelector('.read-count');
+                    if (readCountEl && readCountEl.style.display !== 'none') {
+                        const currentCount = parseInt(readCountEl.textContent) || 0;
+                        const newCount = currentCount - 1;
+
+                        if (newCount > 0) {
+                            readCountEl.textContent = newCount;
+                        } else {
+                            readCountEl.style.display = 'none';
+                        }
                     }
-                });
+                }
+            });
         });
 
         // 페이지 포커스시 읽음 처리

@@ -1,0 +1,294 @@
+<style>
+/* 예약 모달 스타일 */
+.modal-overlay { display: none !important; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+.modal-overlay.active { display: flex !important; }
+.modal-box { background: white; border-radius: 8px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+.modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; }
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+.form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+.form-group textarea { min-height: 100px; resize: vertical; }
+.modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.btn-primary { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+.btn-primary:hover { background: #5568d3; }
+.btn-secondary { padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+.btn-secondary:hover { background: #5a6268; }
+</style>
+
+<!-- 예약 추가/수정 모달 -->
+<div class="modal-overlay" id="reminderModal">
+    <div class="modal-box">
+        <div class="modal-title" id="modalTitle">새 예약 추가</div>
+        <div id="privacyWarning" style="display: none; background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 4px; margin-bottom: 15px;">
+            <strong style="color: #856404;">⚠️ 개인정보 보호 안내</strong>
+            <p style="color: #856404; margin: 8px 0 0 0; font-size: 13px;">전화번호가 감지되었습니다. 개인정보 보호를 위해 전화번호 대신 <strong>상담번호, 고객번호, 또는 이름</strong>을 사용해주세요.</p>
+        </div>
+        <div class="form-group">
+            <label for="reminderTitle">제목 *</label>
+            <input type="text" id="reminderTitle" placeholder="예: CO2511082391109 상담, CU12215795 홍길동" oninput="checkPrivacy()">
+            <small style="color: #666; font-size: 12px;">권장: 상담번호(CO로 시작), 고객번호(CU로 시작), 이름 등</small>
+        </div>
+        <div class="form-group">
+            <label for="reminderContent">내용</label>
+            <textarea id="reminderContent" placeholder="예약 내용을 입력하세요 (선택사항)" oninput="checkPrivacy()"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="reminderDate">날짜 *</label>
+            <input type="date" id="reminderDate">
+        </div>
+        <div class="form-group">
+            <label for="reminderTime">시간 *</label>
+            <input type="time" id="reminderTime">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-secondary" onclick="closeReminderModal()">취소</button>
+            <button class="btn-primary" id="saveBtn" onclick="saveReminder()">저장</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 예약 모달 관련 전역 변수
+if (typeof currentEditingId === 'undefined') {
+    var currentEditingId = null;
+}
+if (typeof selectedDate === 'undefined') {
+    var selectedDate = null;
+}
+
+// 주문번호 예외 처리
+function isExceptionOrderNumber(text) {
+    const orderPattern = /[A-Za-z]{2}\d{8,}/;
+    return orderPattern.test(text);
+}
+
+// 전화번호 패턴 감지
+function detectPhoneNumber(text) {
+    if (isExceptionOrderNumber(text)) {
+        return false;
+    }
+
+    const patterns = [
+        /01[016789]-?\d{3,4}-?\d{4}/g,
+        /01[016789]\s?\d{3,4}\s?\d{4}/g,
+        /\d{3}-\d{3,4}-\d{4}/g,
+        /\d{10,11}/g
+    ];
+
+    for (let pattern of patterns) {
+        if (pattern.test(text)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 개인정보 체크
+function checkPrivacy() {
+    const title = document.getElementById('reminderTitle').value;
+    const content = document.getElementById('reminderContent').value;
+    const warning = document.getElementById('privacyWarning');
+    const saveBtn = document.getElementById('saveBtn');
+
+    const hasPhoneNumber = detectPhoneNumber(title) || detectPhoneNumber(content);
+
+    if (hasPhoneNumber) {
+        warning.style.display = 'block';
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = '0.5';
+        saveBtn.style.cursor = 'not-allowed';
+    } else {
+        warning.style.display = 'none';
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+        saveBtn.style.cursor = 'pointer';
+    }
+}
+
+// 모달 열기 (추가)
+function openAddModal(defaultDate = null) {
+    currentEditingId = null;
+    document.getElementById('modalTitle').textContent = '새 예약 추가';
+    document.getElementById('reminderTitle').value = '';
+    document.getElementById('reminderContent').value = '';
+
+    // 파라미터로 받은 날짜가 있으면 우선 사용, 없으면 선택한 날짜 사용
+    if (defaultDate) {
+        document.getElementById('reminderDate').value = defaultDate;
+    } else if (selectedDate) {
+        document.getElementById('reminderDate').value = selectedDate;
+    } else {
+        document.getElementById('reminderDate').value = '';
+    }
+
+    document.getElementById('reminderTime').value = '';
+
+    document.getElementById('privacyWarning').style.display = 'none';
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').style.opacity = '1';
+    document.getElementById('saveBtn').style.cursor = 'pointer';
+
+    document.getElementById('reminderModal').classList.add('active');
+}
+
+// 모달 열기 (수정)
+async function openEditModal(id) {
+    const response = await fetch(`/api/reminders?show_completed=true`);
+    const reminders = await response.json();
+    const reminder = reminders.find(r => r.id === id);
+
+    if (!reminder) return;
+
+    currentEditingId = id;
+    document.getElementById('modalTitle').textContent = '예약 수정';
+    document.getElementById('reminderTitle').value = reminder.title;
+    document.getElementById('reminderContent').value = reminder.content || '';
+    document.getElementById('reminderDate').value = reminder.scheduled_date;
+    document.getElementById('reminderTime').value = reminder.scheduled_time;
+
+    checkPrivacy();
+
+    document.getElementById('reminderModal').classList.add('active');
+}
+
+// 모달 닫기
+function closeReminderModal() {
+    document.getElementById('reminderModal').classList.remove('active');
+
+    document.getElementById('privacyWarning').style.display = 'none';
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').style.opacity = '1';
+    document.getElementById('saveBtn').style.cursor = 'pointer';
+}
+
+// 예약 저장
+async function saveReminder() {
+    const title = document.getElementById('reminderTitle').value.trim();
+    const content = document.getElementById('reminderContent').value.trim();
+    const date = document.getElementById('reminderDate').value;
+    const time = document.getElementById('reminderTime').value;
+
+    if (!title || !date || !time) {
+        alert('제목, 날짜, 시간은 필수 입력 항목입니다.');
+        return;
+    }
+
+    if (detectPhoneNumber(title) || detectPhoneNumber(content)) {
+        alert('개인정보 보호를 위해 전화번호를 포함할 수 없습니다.\n\n상담주문번호, 고객번호, 또는 이름을 사용해주세요.');
+        return;
+    }
+
+    const data = {
+        title,
+        content,
+        scheduled_date: date,
+        scheduled_time: time
+    };
+
+    let response;
+    if (currentEditingId) {
+        response = await fetch(`/api/reminders/${currentEditingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    } else {
+        response = await fetch('/api/reminders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    }
+
+    if (response.ok) {
+        showReminderToast('성공', currentEditingId ? '예약이 수정되었습니다.' : '예약이 추가되었습니다.');
+        closeReminderModal();
+
+        // 예약 목록이 있는 페이지라면 리로드
+        if (typeof loadReminders === 'function') {
+            loadReminders();
+        }
+
+        // 오늘의 예약 버튼 업데이트
+        if (typeof checkTodayReminders === 'function') {
+            checkTodayReminders();
+        }
+    } else {
+        alert('저장 중 오류가 발생했습니다.');
+    }
+}
+
+// 토스트 알림
+function showReminderToast(title, message) {
+    // 토스트 컨테이너가 없으면 생성
+    let container = document.getElementById('reminderToastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'reminderToastContainer';
+        container.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'reminder-toast';
+    toast.style.cssText = 'background: white; border-left: 4px solid #28a745; padding: 16px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 300px; animation: slideInRight 0.3s ease-out;';
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="flex: 1;">
+                <div style="font-weight: bold; margin-bottom: 4px;">${escapeHtmlForToast(title)}</div>
+                <div style="font-size: 13px; color: #666;">${escapeHtmlForToast(message)}</div>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// HTML 이스케이프
+function escapeHtmlForToast(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 모달 외부 클릭 시 닫기
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('reminderModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeReminderModal();
+            }
+        });
+    }
+});
+</script>
+
+<style>
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+</style>
