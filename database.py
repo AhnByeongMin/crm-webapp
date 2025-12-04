@@ -55,7 +55,15 @@ def load_data():
         cursor = conn.cursor()
         cursor.execute('''
             SELECT
-                t.*,
+                t.id,
+                t.assigned_to,
+                t.title,
+                t.content,
+                t.status,
+                TO_CHAR(t.created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                TO_CHAR(t.assigned_at, 'YYYY-MM-DD HH24:MI:SS') as assigned_at,
+                TO_CHAR(t.updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at,
+                TO_CHAR(t.completed_at, 'YYYY-MM-DD HH24:MI:SS') as completed_at,
                 u.team as team
             FROM tasks t
             LEFT JOIN users u ON t.assigned_to = u.username
@@ -68,7 +76,21 @@ def load_data_by_assigned(username):
     """특정 사용자에게 배정된 할일만 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM tasks WHERE assigned_to = %s ORDER BY id', (username,))
+        cursor.execute('''
+            SELECT
+                id,
+                assigned_to,
+                title,
+                content,
+                status,
+                TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                TO_CHAR(assigned_at, 'YYYY-MM-DD HH24:MI:SS') as assigned_at,
+                TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at,
+                TO_CHAR(completed_at, 'YYYY-MM-DD HH24:MI:SS') as completed_at
+            FROM tasks
+            WHERE assigned_to = %s
+            ORDER BY id
+        ''', (username,))
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
@@ -76,7 +98,21 @@ def load_data_unassigned():
     """미배정 할일 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM tasks WHERE assigned_to IS NULL ORDER BY id')
+        cursor.execute('''
+            SELECT
+                id,
+                assigned_to,
+                title,
+                content,
+                status,
+                TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                TO_CHAR(assigned_at, 'YYYY-MM-DD HH24:MI:SS') as assigned_at,
+                TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at,
+                TO_CHAR(completed_at, 'YYYY-MM-DD HH24:MI:SS') as completed_at
+            FROM tasks
+            WHERE assigned_to IS NULL
+            ORDER BY id
+        ''')
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
@@ -780,3 +816,32 @@ def vacuum_database():
         cursor.execute('VACUUM ANALYZE')
         conn.set_isolation_level(old_isolation)
         print("Database vacuumed successfully")
+
+# ==================== 공휴일 관리 ====================
+
+def load_holidays(year=None):
+    """공휴일 조회
+    Args:
+        year: 연도 (None이면 모든 공휴일)
+    Returns:
+        list: 공휴일 목록 [{'holiday_date': 'YYYY-MM-DD', 'holiday_name': 'name', ...}, ...]
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        if year:
+            cursor.execute('''
+                SELECT holiday_date, holiday_name, year
+                FROM holidays
+                WHERE year = %s
+                ORDER BY holiday_date
+            ''', (year,))
+        else:
+            cursor.execute('''
+                SELECT holiday_date, holiday_name, year
+                FROM holidays
+                ORDER BY holiday_date
+            ''')
+
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
