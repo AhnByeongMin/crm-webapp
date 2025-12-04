@@ -1,3 +1,5 @@
+{% include 'includes/alert_modal.html' %}
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1372,7 +1374,7 @@
             const files = Array.from(e.target.files);
             files.forEach(file => {
                 if (file.size > 50 * 1024 * 1024) {
-                    alert(`${file.name}은(는) 50MB를 초과합니다.`);
+                    showAlert(`${file.name}은(는) 50MB를 초과합니다.`, 'warning');
                     return;
                 }
                 selectedFiles.push(file);
@@ -1447,7 +1449,7 @@
             const files = Array.from(e.dataTransfer.files);
             files.forEach(file => {
                 if (file.size > 50 * 1024 * 1024) {
-                    alert(`${file.name}은(는) 50MB를 초과합니다.`);
+                    showAlert(`${file.name}은(는) 50MB를 초과합니다.`, 'warning');
                     return;
                 }
                 selectedFiles.push(file);
@@ -1477,11 +1479,11 @@
                         const fileInfo = await response.json();
                         fileInfos.push(fileInfo);
                     } else {
-                        alert(`${file.name} 업로드 실패`);
+                        showAlert(`${file.name} 업로드 실패`, 'error');
                     }
                 } catch (error) {
                     console.error('파일 업로드 오류:', error);
-                    alert(`${file.name} 업로드 중 오류 발생`);
+                    showAlert(`${file.name} 업로드 중 오류 발생`, 'error');
                 }
             }
 

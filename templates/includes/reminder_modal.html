@@ -1,3 +1,5 @@
+{% include 'includes/alert_modal.html' %}
+
 <style>
 /* 예약 모달 스타일 */
 .modal-overlay { display: none !important; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
@@ -169,12 +171,12 @@ async function saveReminder() {
     const time = document.getElementById('reminderTime').value;
 
     if (!title || !date || !time) {
-        alert('제목, 날짜, 시간은 필수 입력 항목입니다.');
+        showAlert('제목, 날짜, 시간은 필수 입력 항목입니다.', 'warning');
         return;
     }
 
     if (detectPhoneNumber(title) || detectPhoneNumber(content)) {
-        alert('개인정보 보호를 위해 전화번호를 포함할 수 없습니다.\n\n상담주문번호, 고객번호, 또는 이름을 사용해주세요.');
+        showAlert('개인정보 보호를 위해 전화번호를 포함할 수 없습니다.\n\n상담주문번호, 고객번호, 또는 이름을 사용해주세요.', 'warning');
         return;
     }
 
@@ -214,7 +216,7 @@ async function saveReminder() {
             checkTodayReminders();
         }
     } else {
-        alert('저장 중 오류가 발생했습니다.');
+        showAlert('저장 중 오류가 발생했습니다.', 'error');
     }
 }
 

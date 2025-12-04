@@ -327,7 +327,7 @@
             <!-- 레이아웃 프리셋 선택 -->
             <div style="background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px;">
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <label style="font-weight: 600; color: #555;">테이블 레이아웃:</label>
+                    <label for="layoutPreset" style="font-weight: 600; color: #555;">테이블 레이아웃:</label>
                     <select id="layoutPreset" onchange="loadLayoutPreset()" style="padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 200px;">
                         <optgroup label="기본 프리셋">
                             <option value="default">기본 (날짜 뒤로)</option>
@@ -1544,7 +1544,7 @@
             const content = document.getElementById('editModalContent').value.trim();
 
             if (!title) {
-                alert('제목을 입력하세요.');
+                showAlert('제목을 입력하세요.', 'warning');
                 return;
             }
 
@@ -1828,7 +1828,7 @@
             const layoutName = document.getElementById('layoutNameInput').value.trim();
 
             if (!layoutName) {
-                alert('레이아웃 이름을 입력하세요.');
+                showAlert('레이아웃 이름을 입력하세요.', 'warning');
                 return;
             }
 
@@ -1934,7 +1934,7 @@
             const newName = document.getElementById('newLayoutNameInput').value.trim();
 
             if (!newName) {
-                alert('레이아웃 이름을 입력하세요.');
+                showAlert('레이아웃 이름을 입력하세요.', 'warning');
                 return;
             }
 
@@ -2604,7 +2604,7 @@
                 const value1 = document.getElementById('filterValue1_' + columnKey).value;
                 const value2 = document.getElementById('filterValue2_' + columnKey).value;
                 if (!value1 || !value2) {
-                    alert('시작과 끝 값을 모두 입력해주세요.');
+                    showAlert('시작과 끝 값을 모두 입력해주세요.', 'warning');
                     return;
                 }
                 condition.value = value1;
@@ -2612,18 +2612,18 @@
             } else if (operator === 'in' || operator === 'not_in') {
                 const valueText = document.getElementById('filterValue_' + columnKey).value;
                 if (!valueText.trim()) {
-                    alert('값을 입력해주세요.');
+                    showAlert('값을 입력해주세요.', 'warning');
                     return;
                 }
                 condition.values = valueText.split(',').map(v => v.trim()).filter(v => v);
                 if (condition.values.length === 0) {
-                    alert('유효한 값을 입력해주세요.');
+                    showAlert('유효한 값을 입력해주세요.', 'warning');
                     return;
                 }
             } else {
                 const value = document.getElementById('filterValue_' + columnKey).value;
                 if (!value && value !== 0) {
-                    alert('값을 입력해주세요.');
+                    showAlert('값을 입력해주세요.', 'warning');
                     return;
                 }
                 condition.value = value;
@@ -2781,7 +2781,7 @@
                     installBtn.style.display = 'none';
                 } else {
                     // beforeinstallprompt가 없는 경우 (HTTP 환경)
-                    alert('이 앱을 설치하려면:\n\n1. Chrome 주소창 오른쪽 메뉴(⋮) 클릭\n2. "앱 설치" 또는 "바로가기 만들기" 선택\n\n또는 브라우저 설정에서 바로가기를 만들어주세요.');
+                    showAlert('이 앱을 설치하려면:\n\n1. Chrome 주소창 오른쪽 메뉴(⋮) 클릭\n2. "앱 설치" 또는 "바로가기 만들기" 선택\n\n또는 브라우저 설정에서 바로가기를 만들어주세요.', 'info');
                 }
             });
 
@@ -2905,6 +2905,7 @@
         </div>
     </div>
 
+    {% include 'includes/alert_modal.html' %}
     {% include 'includes/today_reminders.html' %}
 </body>
 </html>

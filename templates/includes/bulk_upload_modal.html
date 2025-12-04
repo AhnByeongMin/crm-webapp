@@ -1,0 +1,482 @@
+{% include 'includes/alert_modal.html' %}
+
+<style>
+/* 일괄등록 모달 스타일 */
+.bulk-upload-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10002; align-items: center; justify-content: center; }
+.bulk-upload-modal.show { display: flex; }
+.bulk-upload-modal-content { background: white; border-radius: 12px; max-width: 90%; width: 1200px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.bulk-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; border-bottom: 2px solid #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0; }
+.bulk-modal-title { font-size: 24px; font-weight: bold; color: white; }
+.bulk-modal-body { padding: 30px; overflow-y: auto; flex: 1; }
+
+/* 탭 스타일 */
+.bulk-tab { transition: all 0.3s ease; }
+.bulk-tab:hover { opacity: 0.8; }
+.upload-section { margin-bottom: 30px; }
+.upload-section-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; }
+.upload-area { border: 2px dashed #667eea; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; transition: all 0.3s; cursor: pointer; }
+.upload-area:hover { background: #e9ecef; border-color: #5568d3; }
+.upload-area.dragover { background: #d4edda; border-color: #28a745; }
+.upload-icon { font-size: 48px; margin-bottom: 15px; }
+.upload-text { font-size: 16px; color: #666; margin-bottom: 10px; }
+.upload-input { display: none; }
+.preview-section { display: none; }
+.preview-section.active { display: block; }
+.preview-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+.preview-table th { background: #667eea; color: white; padding: 12px 8px; text-align: left; font-weight: bold; position: sticky; top: 0; z-index: 1; }
+.preview-table td { padding: 10px 8px; border: 1px solid #ddd; }
+.preview-table tr:nth-child(even) { background: #f8f9fa; }
+.preview-table tr:hover { background: #e9ecef; }
+.preview-table input, .preview-table textarea { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.preview-table textarea { min-height: 60px; resize: vertical; }
+.btn-success { background: #28a745; color: white; }
+.btn-success:hover { background: #218838; }
+.btn-remove-row { padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.btn-remove-row:hover { background: #c82333; }
+.preview-info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px 15px; margin-bottom: 15px; border-radius: 4px; }
+.preview-info strong { color: #0c5460; }
+</style>
+
+<!-- 일괄등록 모달 -->
+<div class="bulk-upload-modal" id="bulkUploadModal">
+    <div class="bulk-upload-modal-content">
+        <div class="bulk-modal-header">
+            <div class="bulk-modal-title">📊 프로모션 일괄등록</div>
+            <button class="close-btn" onclick="closeBulkUploadModal()">&times;</button>
+        </div>
+        <div class="bulk-modal-body">
+            <!-- 1단계: 양식 다운로드 및 업로드 -->
+            <!-- 탭 전환 -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e9ecef;">
+                <button class="bulk-tab active" id="excelTab" onclick="switchBulkTab('excel')" style="flex: 1; padding: 12px; border: none; background: none; cursor: pointer; font-weight: bold; color: #667eea; border-bottom: 3px solid #667eea;">
+                    📁 엑셀 업로드
+                </button>
+                <button class="bulk-tab" id="manualTab" onclick="switchBulkTab('manual')" style="flex: 1; padding: 12px; border: none; background: none; cursor: pointer; font-weight: bold; color: #999; border-bottom: 3px solid transparent;">
+                    ✏️ 직접 입력
+                </button>
+            </div>
+
+            <!-- 엑셀 업로드 섹션 -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-section-title">1단계: 엑셀 파일 업로드</div>
+
+                <!-- 도움말 안내 -->
+                <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <div style="font-weight: bold; color: #333; margin-bottom: 10px;">📌 사용 방법</div>
+                    <ol style="margin: 0; padding-left: 20px; color: #555; font-size: 13px; line-height: 1.8;">
+                        <li><strong>양식 다운로드:</strong> 아래 버튼을 클릭하여 엑셀 양식을 다운로드하세요</li>
+                        <li><strong>데이터 입력:</strong> 양식의 18행부터 실제 데이터를 입력하세요 (17행은 헤더)
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>노란색 필드(대분류, 상품명, 채널, 프로모션명, 내용, 시작일)는 <strong>필수 입력</strong></li>
+                                <li>회색 필드는 선택 입력</li>
+                                <li>5-6행의 예시 데이터는 참고용이며 자동으로 무시됩니다</li>
+                            </ul>
+                        </li>
+                        <li><strong>파일 업로드:</strong> 작성한 엑셀 파일을 업로드하여 미리보기 및 수정</li>
+                        <li><strong>일괄 등록:</strong> 최종 확인 후 일괄 등록 버튼 클릭</li>
+                    </ol>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-secondary" onclick="downloadTemplate()">📥 양식 다운로드</button>
+                    <span style="margin-left: 10px; color: #666; font-size: 14px;">※ 제공된 양식을 다운로드하여 작성 후 업로드해주세요</span>
+                </div>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('excelFile').click()">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">엑셀 파일을 여기에 드래그하거나 클릭하여 업로드</div>
+                    <small style="color: #999;">지원 형식: .xlsx, .xls</small>
+                    <input type="file" id="excelFile" class="upload-input" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+                </div>
+            </div>
+
+            <!-- 직접 입력 섹션 -->
+            <div class="manual-section" id="manualSection" style="display: none;">
+                <div class="upload-section-title">직접 입력 모드</div>
+
+                <!-- 도움말 안내 -->
+                <div style="background: #f0f8ff; border-left: 4px solid #667eea; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <div style="font-weight: bold; color: #333; margin-bottom: 10px;">✏️ 직접 입력 방법</div>
+                    <ul style="margin: 0; padding-left: 20px; color: #555; font-size: 13px; line-height: 1.8;">
+                        <li><strong>행 추가:</strong> 아래 "➕ 새 행 추가" 버튼을 클릭하여 빈 행을 추가하세요</li>
+                        <li><strong>데이터 입력:</strong> 각 필드에 직접 데이터를 입력하세요
+                            <ul style="margin-top: 5px; padding-left: 20px;">
+                                <li>필수 항목: 대분류, 상품명, 채널, 프로모션명, 내용, 시작일</li>
+                                <li>선택 항목: 금액할인, 회차면제, 중복여부, 프로모션코드, 종료일</li>
+                            </ul>
+                        </li>
+                        <li><strong>행 삭제:</strong> 각 행의 삭제 버튼으로 불필요한 행을 제거하세요</li>
+                        <li><strong>일괄 등록:</strong> 입력 완료 후 하단의 "✅ 일괄 등록" 버튼을 클릭하세요</li>
+                    </ul>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="addNewRow()">➕ 새 행 추가</button>
+                    <button class="btn btn-secondary" onclick="addMultipleRows()" style="margin-left: 10px;">➕ 5행 추가</button>
+                    <span style="margin-left: 15px; color: #666; font-size: 14px;">※ 필요한 만큼 행을 추가하여 입력하세요</span>
+                </div>
+            </div>
+
+            <!-- 2단계: 미리보기 및 수정 -->
+            <div class="preview-section" id="previewSection">
+                <div class="upload-section-title">2단계: 미리보기 및 수정</div>
+                <div class="preview-info" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <strong>📌 알림:</strong> <span id="previewCount">0</span>개의 프로모션이 등록 예정입니다. 아래 테이블에서 내용을 수정할 수 있습니다.
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-sm btn-secondary" onclick="addNewRow()" style="padding: 6px 12px; font-size: 13px;">➕ 행 추가</button>
+                        <button class="btn btn-sm btn-secondary" onclick="addMultipleRows()" style="padding: 6px 12px; font-size: 13px;">➕ 5행 추가</button>
+                    </div>
+                </div>
+                <div style="overflow-x: auto; max-height: 400px;">
+                    <table class="preview-table" id="previewTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th style="width: 100px;">대분류</th>
+                                <th style="width: 150px;">상품명 *</th>
+                                <th style="width: 100px;">채널 *</th>
+                                <th style="width: 150px;">프로모션명 *</th>
+                                <th style="width: 100px;">금액할인</th>
+                                <th style="width: 100px;">회차면제</th>
+                                <th style="width: 120px;">중복여부</th>
+                                <th style="width: 120px;">프로모션코드</th>
+                                <th style="width: 200px;">프로모션내용 *</th>
+                                <th style="width: 100px;">시작일 *</th>
+                                <th style="width: 100px;">종료일</th>
+                                <th style="width: 60px;">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewTableBody">
+                            <!-- 동적으로 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions" style="padding: 20px 30px; border-top: 1px solid #ddd;">
+            <button class="btn btn-secondary" onclick="closeBulkUploadModal()">취소</button>
+            <button class="btn btn-success" id="bulkSaveBtn" style="display: none;" onclick="saveBulkPromotions()">✅ 일괄 등록</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let bulkPromotionsData = [];
+let currentBulkMode = 'excel'; // 'excel' 또는 'manual'
+
+// 일괄등록 모달 열기
+function openBulkUploadModal() {
+    document.getElementById('bulkUploadModal').classList.add('show');
+    resetBulkModal();
+}
+
+// 일괄등록 모달 닫기
+function closeBulkUploadModal() {
+    document.getElementById('bulkUploadModal').classList.remove('show');
+    resetBulkModal();
+}
+
+// 모달 초기화
+function resetBulkModal() {
+    document.getElementById('excelFile').value = '';
+    document.getElementById('uploadSection').style.display = 'block';
+    document.getElementById('manualSection').style.display = 'none';
+    document.getElementById('previewSection').classList.remove('active');
+    document.getElementById('bulkSaveBtn').style.display = 'none';
+    bulkPromotionsData = [];
+    currentBulkMode = 'excel';
+
+    // 탭 초기화
+    document.getElementById('excelTab').classList.add('active');
+    document.getElementById('excelTab').style.color = '#667eea';
+    document.getElementById('excelTab').style.borderBottomColor = '#667eea';
+    document.getElementById('manualTab').classList.remove('active');
+    document.getElementById('manualTab').style.color = '#999';
+    document.getElementById('manualTab').style.borderBottomColor = 'transparent';
+}
+
+// 탭 전환
+function switchBulkTab(mode) {
+    currentBulkMode = mode;
+
+    const excelTab = document.getElementById('excelTab');
+    const manualTab = document.getElementById('manualTab');
+    const uploadSection = document.getElementById('uploadSection');
+    const manualSection = document.getElementById('manualSection');
+    const previewSection = document.getElementById('previewSection');
+
+    if (mode === 'excel') {
+        // 엑셀 탭 활성화
+        excelTab.classList.add('active');
+        excelTab.style.color = '#667eea';
+        excelTab.style.borderBottomColor = '#667eea';
+        manualTab.classList.remove('active');
+        manualTab.style.color = '#999';
+        manualTab.style.borderBottomColor = 'transparent';
+
+        uploadSection.style.display = 'block';
+        manualSection.style.display = 'none';
+
+        // 데이터가 있으면 미리보기 유지
+        if (bulkPromotionsData.length > 0) {
+            previewSection.classList.add('active');
+            document.getElementById('bulkSaveBtn').style.display = 'inline-block';
+        }
+    } else {
+        // 직접 입력 탭 활성화
+        manualTab.classList.add('active');
+        manualTab.style.color = '#667eea';
+        manualTab.style.borderBottomColor = '#667eea';
+        excelTab.classList.remove('active');
+        excelTab.style.color = '#999';
+        excelTab.style.borderBottomColor = 'transparent';
+
+        uploadSection.style.display = 'none';
+        manualSection.style.display = 'block';
+
+        // 직접 입력 모드에서는 항상 미리보기 표시
+        previewSection.classList.add('active');
+        document.getElementById('bulkSaveBtn').style.display = 'inline-block';
+
+        // 데이터가 없으면 빈 행 1개 추가
+        if (bulkPromotionsData.length === 0) {
+            addNewRow();
+        }
+    }
+}
+
+// 새 행 추가
+function addNewRow() {
+    const newPromo = {
+        category: '',
+        product_name: '',
+        channel: '',
+        promotion_name: '',
+        discount_amount: '',
+        session_exemption: '',
+        subscription_types: [],
+        promotion_code: '',
+        content: '',
+        start_date: '',
+        end_date: ''
+    };
+
+    bulkPromotionsData.push(newPromo);
+    renderPreviewTable();
+
+    // 미리보기 섹션 표시
+    document.getElementById('previewSection').classList.add('active');
+    document.getElementById('bulkSaveBtn').style.display = 'inline-block';
+
+    // 마지막 행으로 스크롤
+    setTimeout(() => {
+        const tbody = document.getElementById('previewTableBody');
+        const lastRow = tbody.lastElementChild;
+        if (lastRow) {
+            lastRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, 100);
+}
+
+// 여러 행 추가
+function addMultipleRows() {
+    for (let i = 0; i < 5; i++) {
+        const newPromo = {
+            category: '',
+            product_name: '',
+            channel: '',
+            promotion_name: '',
+            discount_amount: '',
+            session_exemption: '',
+            subscription_types: [],
+            promotion_code: '',
+            content: '',
+            start_date: '',
+            end_date: ''
+        };
+        bulkPromotionsData.push(newPromo);
+    }
+
+    renderPreviewTable();
+
+    // 미리보기 섹션 표시
+    document.getElementById('previewSection').classList.add('active');
+    document.getElementById('bulkSaveBtn').style.display = 'inline-block';
+}
+
+// 양식 다운로드 (Fetch + Blob으로 Mixed Content 경고 방지)
+async function downloadTemplate() {
+    try {
+        const response = await fetch('/api/promotions/template');
+        if (!response.ok) throw new Error('다운로드 실패');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '프로모션_일괄등록_양식.xlsx';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        showAlert('양식 다운로드에 실패했습니다: ' + error.message, 'error');
+    }
+}
+
+// 드래그 앤 드롭 이벤트
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('excelFile').files = files;
+        handleFileUpload({ target: { files } });
+    }
+});
+
+// 파일 업로드 처리
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        showSimpleToast('오류', '엑셀 파일만 업로드 가능합니다', 'error');
+        return;
+    }
+
+    // FormData 생성
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/promotions/bulk-upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            bulkPromotionsData = result.data;
+            renderPreviewTable();
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('previewSection').classList.add('active');
+            document.getElementById('bulkSaveBtn').style.display = 'inline-block';
+            showSimpleToast('성공', `${result.count}개의 프로모션 데이터를 불러왔습니다`, 'success');
+        } else {
+            showSimpleToast('오류', result.error || '파일 처리 중 오류가 발생했습니다', 'error');
+        }
+    } catch (error) {
+        console.error('파일 업로드 실패:', error);
+        showSimpleToast('오류', '파일 업로드 중 오류가 발생했습니다', 'error');
+    }
+}
+
+// 미리보기 테이블 렌더링
+function renderPreviewTable() {
+    const tbody = document.getElementById('previewTableBody');
+    document.getElementById('previewCount').textContent = bulkPromotionsData.length;
+
+    tbody.innerHTML = bulkPromotionsData.map((promo, index) => `
+        <tr data-index="${index}">
+            <td>${index + 1}</td>
+            <td><input type="text" value="${promo.category || ''}" onchange="updateBulkData(${index}, 'category', this.value)"></td>
+            <td><input type="text" value="${promo.product_name}" onchange="updateBulkData(${index}, 'product_name', this.value)" required></td>
+            <td><input type="text" value="${promo.channel}" onchange="updateBulkData(${index}, 'channel', this.value)" required></td>
+            <td><input type="text" value="${promo.promotion_name}" onchange="updateBulkData(${index}, 'promotion_name', this.value)" required></td>
+            <td><input type="text" value="${promo.discount_amount || ''}" onchange="updateBulkData(${index}, 'discount_amount', this.value)"></td>
+            <td><input type="text" value="${promo.session_exemption || ''}" onchange="updateBulkData(${index}, 'session_exemption', this.value)"></td>
+            <td><input type="text" value="${(promo.subscription_types || []).join(',')}" onchange="updateBulkData(${index}, 'subscription_types', this.value.split(',').map(t => t.trim()).filter(t => t))"></td>
+            <td><input type="text" value="${promo.promotion_code || ''}" onchange="updateBulkData(${index}, 'promotion_code', this.value)"></td>
+            <td><textarea onchange="updateBulkData(${index}, 'content', this.value)" required>${promo.content}</textarea></td>
+            <td><input type="date" value="${promo.start_date}" onchange="updateBulkData(${index}, 'start_date', this.value)" required></td>
+            <td><input type="text" value="${promo.end_date}" onchange="updateBulkData(${index}, 'end_date', this.value)"></td>
+            <td><button class="btn-remove-row" onclick="removeBulkRow(${index})">삭제</button></td>
+        </tr>
+    `).join('');
+}
+
+// 데이터 업데이트
+function updateBulkData(index, field, value) {
+    if (bulkPromotionsData[index]) {
+        bulkPromotionsData[index][field] = value;
+    }
+}
+
+// 행 삭제
+function removeBulkRow(index) {
+    if (confirm('이 항목을 삭제하시겠습니까?')) {
+        bulkPromotionsData.splice(index, 1);
+        renderPreviewTable();
+
+        if (bulkPromotionsData.length === 0) {
+            resetBulkModal();
+        }
+    }
+}
+
+// 일괄 저장
+async function saveBulkPromotions() {
+    // 필수 필드 검증
+    const errors = [];
+    bulkPromotionsData.forEach((promo, index) => {
+        if (!promo.product_name || !promo.channel || !promo.promotion_name || !promo.content || !promo.start_date) {
+            errors.push(`행 ${index + 1}: 필수 항목이 누락되었습니다`);
+        }
+    });
+
+    if (errors.length > 0) {
+        showSimpleToast('오류', errors.join('\n'), 'error');
+        return;
+    }
+
+    if (!confirm(`${bulkPromotionsData.length}개의 프로모션을 등록하시겠습니까?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/promotions/bulk-save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ promotions: bulkPromotionsData })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSimpleToast('성공', result.message || '프로모션이 등록되었습니다', 'success');
+            closeBulkUploadModal();
+            loadPromotions();
+            loadFilters();
+        } else {
+            showSimpleToast('오류', result.error || '저장 중 오류가 발생했습니다', 'error');
+        }
+    } catch (error) {
+        console.error('저장 실패:', error);
+        showSimpleToast('오류', '저장 중 오류가 발생했습니다', 'error');
+    }
+}
+
+// 모달 외부 클릭 시 닫기
+document.addEventListener('DOMContentLoaded', () => {
+    const bulkModal = document.getElementById('bulkUploadModal');
+    if (bulkModal) {
+        bulkModal.addEventListener('click', (e) => {
+            if (e.target === bulkModal) {
+                closeBulkUploadModal();
+            }
+        });
+    }
+});
+</script>

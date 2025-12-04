@@ -1,3 +1,5 @@
+{% include 'includes/alert_modal.html' %}
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -242,7 +244,7 @@
     <div class="container">
         <div class="form-box">
             <div class="form-group">
-                <label>참여자 검색:</label>
+                <label for="userSearch">참여자 검색:</label>
                 <div class="search-box">
                     <input type="text" id="userSearch" placeholder="사용자 이름을 검색하세요">
                     <div id="searchResults" class="search-results"></div>
@@ -250,12 +252,12 @@
             </div>
 
             <div class="form-group">
-                <label>선택된 참여자:</label>
+                <div style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">선택된 참여자:</div>
                 <div id="selectedUsers" class="selected-users"></div>
             </div>
 
             <div class="form-group hidden" id="titleGroup">
-                <label>채팅방 제목:</label>
+                <label for="chatTitle">채팅방 제목:</label>
                 <input type="text" id="chatTitle" placeholder="그룹 채팅방 제목을 입력하세요">
             </div>
 
@@ -335,7 +337,7 @@
 
         function createChat() {
             if (selectedUsers.length === 0) {
-                alert('최소 한 명의 참여자를 선택하세요.');
+                showAlert('최소 한 명의 참여자를 선택하세요.', 'warning');
                 return;
             }
 
@@ -343,7 +345,7 @@
 
             // 다중 채팅인 경우만 제목 확인
             if (selectedUsers.length > 1 && !title) {
-                alert('채팅방 제목을 입력하세요.');
+                showAlert('채팅방 제목을 입력하세요.', 'warning');
                 return;
             }
 
@@ -357,11 +359,11 @@
             })
             .then(res => res.json())
             .then(data => {
-                alert('채팅방이 생성되었습니다!');
+                showAlert('채팅방이 생성되었습니다!', 'success');
                 location.href = `/chat/${data.chat_id}`;
             })
             .catch(err => {
-                alert('채팅방 생성에 실패했습니다.');
+                showAlert('채팅방 생성에 실패했습니다.', 'error');
                 console.error(err);
             });
         }

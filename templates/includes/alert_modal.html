@@ -1,0 +1,177 @@
+<style>
+/* Alert Modal Styles */
+.alert-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+.alert-modal-overlay.active {
+    display: flex;
+}
+.alert-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 480px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: slideUpModal 0.3s ease-out;
+}
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.alert-modal-header {
+    padding: 20px 30px;
+    border-bottom: 2px solid #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.alert-modal-header.error {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border-bottom-color: #dc3545;
+}
+.alert-modal-header.success {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    border-bottom-color: #28a745;
+}
+.alert-modal-header.warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    border-bottom-color: #ffc107;
+}
+.alert-modal-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.alert-modal-body {
+    padding: 30px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+    white-space: pre-wrap;
+}
+.alert-modal-footer {
+    padding: 15px 30px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.alert-modal-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.alert-modal-btn-primary {
+    background: #667eea;
+    color: white;
+}
+.alert-modal-btn-primary:hover {
+    background: #5568d3;
+}
+</style>
+
+<!-- Alert Modal -->
+<div class="alert-modal-overlay" id="alertModalOverlay">
+    <div class="alert-modal">
+        <div class="alert-modal-header" id="alertModalHeader">
+            <div class="alert-modal-title" id="alertModalTitle">알림</div>
+        </div>
+        <div class="alert-modal-body" id="alertModalBody"></div>
+        <div class="alert-modal-footer">
+            <button class="alert-modal-btn alert-modal-btn-primary" onclick="closeAlertModal()">확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Show alert modal
+ * @param {string} message - Message to display
+ * @param {string} type - Type of alert: 'info', 'error', 'success', 'warning' (default: 'info')
+ * @param {string} title - Optional custom title
+ */
+function showAlert(message, type = 'info', title = null) {
+    const overlay = document.getElementById('alertModalOverlay');
+    const header = document.getElementById('alertModalHeader');
+    const titleEl = document.getElementById('alertModalTitle');
+    const body = document.getElementById('alertModalBody');
+
+    // Reset classes
+    header.className = 'alert-modal-header';
+
+    // Set title and style based on type
+    let icon = '💬';
+    let defaultTitle = '알림';
+
+    switch(type) {
+        case 'error':
+            header.classList.add('error');
+            icon = '❌';
+            defaultTitle = '오류';
+            break;
+        case 'success':
+            header.classList.add('success');
+            icon = '✅';
+            defaultTitle = '성공';
+            break;
+        case 'warning':
+            header.classList.add('warning');
+            icon = '⚠️';
+            defaultTitle = '경고';
+            break;
+        default:
+            icon = '💬';
+            defaultTitle = '알림';
+    }
+
+    titleEl.innerHTML = `${icon} ${title || defaultTitle}`;
+    body.textContent = message;
+    overlay.classList.add('active');
+}
+
+function closeAlertModal() {
+    document.getElementById('alertModalOverlay').classList.remove('active');
+}
+
+// Close on overlay click
+document.addEventListener('DOMContentLoaded', function() {
+    const overlay = document.getElementById('alertModalOverlay');
+    if (overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                closeAlertModal();
+            }
+        });
+    }
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeAlertModal();
+    }
+});
+</script>

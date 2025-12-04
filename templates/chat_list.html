@@ -278,7 +278,7 @@
         /* 도움말 버튼 */
         .help-button {
             position: fixed;
-            bottom: 90px;
+            bottom: 20px;
             right: 20px;
             width: 56px;
             height: 56px;
@@ -433,6 +433,7 @@
 
         <!-- 검색 바 -->
         <div class="search-bar">
+            <label for="searchInput" style="position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0;">채팅방 검색</label>
             <input type="text" id="searchInput" placeholder="채팅방 검색..." oninput="filterChats()">
             <span class="search-icon">🔍</span>
         </div>
@@ -768,15 +769,15 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert('채팅방이 삭제되었습니다.');
+                        showAlert('채팅방이 삭제되었습니다.', 'success');
                         loadChats(); // 목록 새로고침
                     } else {
-                        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+                        showAlert('삭제 실패: ' + (data.error || '알 수 없는 오류'), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('삭제 오류:', error);
-                    alert('삭제 중 오류가 발생했습니다.');
+                    showAlert('삭제 중 오류가 발생했습니다.', 'error');
                 });
             }
         }
@@ -981,51 +982,13 @@
                 </div>
             </div>
 
-            {% if is_admin %}
-            <div class="help-section">
-                <div class="help-section-title">👤 관리자 기능</div>
-                <div class="help-content">
-                    <ul>
-                        <li><strong>내 채팅</strong>: 내가 참여 중인 채팅방 목록</li>
-                        <li><strong>전체 채팅 관리</strong>: 모든 채팅방 확인 및 삭제 가능</li>
-                        <li><strong>로컬 Admin</strong>: 전체 채팅방 입장 및 메시지 확인 가능</li>
-                        <li><strong>일반 Admin</strong>: 채팅방 삭제만 가능 (메시지 확인 불가)</li>
-                    </ul>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="help-section">
-                <div class="help-section-title">🔔 알림 기능</div>
-                <div class="help-content">
-                    <ul>
-                        <li><strong>읽지 않은 메시지</strong>: 빨간 배지로 개수 표시</li>
-                        <li><strong>토스트 알림</strong>: 새 메시지 도착 시 화면 우하단에 표시</li>
-                        <li><strong>브라우저 알림</strong>: 페이지가 포커스되지 않았을 때 알림</li>
-                        <li><strong>제목 깜빡임</strong>: 탭에서 벗어났을 때 새 메시지 개수 표시</li>
-                        <li><strong>당일 예약 배너</strong>: 오늘 예약이 있으면 상단 빨간 배너 표시</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="help-section">
-                <div class="help-section-title">📋 채팅방 정보</div>
-                <div class="help-content">
-                    <ul>
-                        <li><strong>채팅방 제목</strong>: 1:1 채팅은 상대방 이름, 그룹 채팅은 제목 표시</li>
-                        <li><strong>최신 메시지</strong>: 마지막 메시지 미리보기 (파일은 📎 아이콘)</li>
-                        <li><strong>참여자 목록</strong>: 채팅방에 참여 중인 사용자 표시</li>
-                        <li><strong>시간 표시</strong>: 마지막 메시지 시간 (방금, N분 전, N시간 전 등)</li>
-                    </ul>
-                </div>
-            </div>
-
             <div class="help-tip">
-                <strong>💡 팁:</strong> 채팅방을 클릭하면 바로 입장하며, 읽지 않은 메시지가 자동으로 읽음 처리됩니다.
+                <strong>💡 팁:</strong> 채팅방을 클릭하면 바로 입장하며, 읽지 않은 메시지가 자동으로 읽음 처리됩니다. 빨간 배지는 읽지 않은 메시지 개수를 나타내며, 📎 아이콘은 파일 첨부를 의미합니다.{% if is_admin %} 관리자는 "전체 채팅 관리" 탭에서 모든 채팅방을 관리할 수 있습니다.{% endif %}
             </div>
         </div>
     </div>
 
+    {% include 'includes/alert_modal.html' %}
     {% include 'includes/today_reminders.html' %}
 </body>
 </html>
