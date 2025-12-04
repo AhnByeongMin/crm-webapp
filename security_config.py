@@ -105,13 +105,14 @@ def add_security_headers(response):
     # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
 
     # CSP (Content Security Policy) - 인라인 스크립트 허용하되 제한적으로
+    # WebSocket을 위해 connect-src를 더 관대하게 설정
     csp = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "  # Socket.IO 등을 위해 unsafe-inline 필요
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: blob:; "
         "font-src 'self' data:; "
-        "connect-src 'self' ws: wss:; "  # WebSocket 지원
+        "connect-src 'self' ws: wss: http: https:; "  # WebSocket 및 HTTP 연결 모두 허용
         "frame-ancestors 'self'; "
         "base-uri 'self'; "
         "form-action 'self';"
@@ -141,9 +142,9 @@ CONSOLE_DISABLE_SCRIPT = """
 (function() {
     // 프로덕션 환경에서만 콘솔 비활성화
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        // 콘솔 메서드 비활성화
+        // 콘솔 메서드 비활성화 (error와 warn은 유지 - 디버깅용)
         const noop = function() {};
-        const methods = ['log', 'debug', 'info', 'warn', 'error', 'dir', 'dirxml',
+        const methods = ['log', 'debug', 'info', 'dir', 'dirxml',
                         'trace', 'assert', 'clear', 'table', 'group', 'groupEnd',
                         'groupCollapsed', 'time', 'timeEnd', 'timeLog', 'count',
                         'countReset', 'profile', 'profileEnd'];
@@ -154,88 +155,11 @@ CONSOLE_DISABLE_SCRIPT = """
             }
         });
 
-        // F12, Ctrl+Shift+I 등 개발자 도구 단축키 차단
-        document.addEventListener('keydown', function(e) {
-            // F12
-            if (e.key === 'F12' || e.keyCode === 123) {
-                e.preventDefault();
-                return false;
-            }
-            // Ctrl+Shift+I (개발자 도구)
-            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.keyCode === 73)) {
-                e.preventDefault();
-                return false;
-            }
-            // Ctrl+Shift+J (콘솔)
-            if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.keyCode === 74)) {
-                e.preventDefault();
-                return false;
-            }
-            // Ctrl+Shift+C (요소 검사)
-            if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.keyCode === 67)) {
-                e.preventDefault();
-                return false;
-            }
-            // Ctrl+U (소스 보기)
-            if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.keyCode === 85)) {
-                e.preventDefault();
-                return false;
-            }
-        });
+        // error와 warn은 유지하되, 메시지를 조용히 처리
+        // (완전 차단하면 에러 처리 로직이 깨질 수 있음)
 
-        // 우클릭 메뉴 비활성화
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-
-        // 텍스트 선택 방지 (선택적 사용)
-        // document.addEventListener('selectstart', function(e) {
-        //     e.preventDefault();
-        //     return false;
-        // });
-
-        // 개발자 도구 열림 감지 (완벽하지 않음)
-        const devtools = {
-            isOpen: false,
-            orientation: null
-        };
-
-        const threshold = 160;
-        const emitEvent = (isOpen, orientation) => {
-            window.dispatchEvent(new CustomEvent('devtoolschange', {
-                detail: { isOpen, orientation }
-            }));
-        };
-
-        setInterval(() => {
-            const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-            const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-            const orientation = widthThreshold ? 'vertical' : 'horizontal';
-
-            if (!(heightThreshold && widthThreshold) &&
-                ((window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized) ||
-                 widthThreshold || heightThreshold)) {
-                if (!devtools.isOpen || devtools.orientation !== orientation) {
-                    emitEvent(true, orientation);
-                }
-                devtools.isOpen = true;
-                devtools.orientation = orientation;
-            } else {
-                if (devtools.isOpen) {
-                    emitEvent(false, null);
-                }
-                devtools.isOpen = false;
-                devtools.orientation = null;
-            }
-        }, 500);
-
-        // 개발자 도구 열림 시 경고 (선택적)
-        // window.addEventListener('devtoolschange', e => {
-        //     if (e.detail.isOpen) {
-        //         alert('개발자 도구 사용이 감지되었습니다.');
-        //     }
-        // });
+        // 개발자 도구는 열 수 있지만, 콘솔 출력만 차단
+        // (관리자는 네트워크, 요소 검사 등을 봐야 하므로)
     }
 })();
 </script>
