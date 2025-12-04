@@ -154,15 +154,14 @@ def update_task_status(task_id, status):
             conn.commit()
 
 def update_task_assignment(task_id, assigned_to):
-    """할일 배정 업데이트 (배정/회수)"""
+    """할일 배정 업데이트 (배정/회수) - 배정일만 업데이트, 수정일은 변경하지 않음"""
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE tasks
                 SET assigned_to = %s,
-                    assigned_at = CURRENT_TIMESTAMP,
-                    updated_at = CURRENT_TIMESTAMP
+                    assigned_at = CURRENT_TIMESTAMP
                 WHERE id = %s
             ''', (assigned_to, task_id))
             conn.commit()
