@@ -2,29 +2,18 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_compress import Compress
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
 import json
 import os
 import uuid
 import threading
-from datetime import datetime, timedelta
-import database  # PostgreSQL 데이터베이스 헬퍼
+from datetime import datetime
+import database  # SQLite 데이터베이스 헬퍼
 import pandas as pd
 import random
 from cache_manager import app_cache, cached, invalidate_cache, generate_etag
-from security_config import (
-    rate_limit, add_security_headers, CONSOLE_DISABLE_SCRIPT,
-    SESSION_CONFIG, login_tracker, generate_secret_key
-)
 
 app = Flask(__name__)
-
-# 보안 강화: SECRET_KEY 환경변수 또는 자동 생성
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', generate_secret_key())
-
-# 세션 보안 설정
-app.config.update(SESSION_CONFIG)
-
+app.secret_key = 'your-secret-key-change-in-production'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 최대 파일 크기
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1년 캐시 (asset versioning으로 제어)
@@ -128,7 +117,7 @@ def load_asset_manifest():
 
 @app.context_processor
 def utility_processor():
-    """템플릿에서 공통 유틸리티 및 보안 기능 제공"""
+    """템플릿에서 asset_version 함수 사용 가능하게"""
     def asset_version(filename):
         manifest = load_asset_manifest()
         # Extract base name without extension
@@ -140,18 +129,12 @@ def utility_processor():
             return f"{filename}?v={manifest[key]}"
         return filename
 
-    return dict(
-        asset_version=asset_version,
-        console_disable_script=CONSOLE_DISABLE_SCRIPT
-    )
+    return dict(asset_version=asset_version)
 
 @app.after_request
 def add_cache_headers(response):
-    """캐시 헤더 최적화 및 보안 헤더 추가"""
-    # 보안 헤더 추가
-    response = add_security_headers(response)
-
-    # 캐시 헤더 최적화: 정적 파일은 캐싱, 동적 콘텐츠는 no-cache
+    """캐시 헤더 최적화: 정적 파일은 캐싱, 동적 콘텐츠는 no-cache"""
+    # 정적 파일 (CSS, JS, 이미지, 폰트 등)은 1시간 캐싱
     if request.path.startswith('/static/') or request.path.startswith('/uploads/'):
         response.headers['Cache-Control'] = 'public, max-age=3600'
     # 동적 콘텐츠는 캐시 비활성화
@@ -183,22 +166,11 @@ def index():
                          current_page='tasks')
 
 @app.route('/login', methods=['GET', 'POST'])
-@rate_limit(max_requests=10, window_seconds=60)  # 분당 10회 로그인 시도 제한
 def login():
     if is_localhost():
         return redirect(url_for('admin'))
 
     if request.method == 'POST':
-        ip = request.remote_addr
-
-        # 로그인 차단 상태 확인
-        if login_tracker.is_locked_out(ip):
-            remaining = login_tracker.get_remaining_lockout_time(ip)
-            minutes = remaining // 60
-            seconds = remaining % 60
-            return render_template('login.html',
-                error=f'로그인 시도 횟수를 초과했습니다. {minutes}분 {seconds}초 후 다시 시도하세요.')
-
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
 
@@ -213,19 +185,12 @@ def login():
 
         if user:
             # 로그인 성공
-            login_tracker.record_attempt(ip, username, True)
             session['username'] = user['username']
             session['role'] = user['role']
-            session.permanent = True  # 세션 영구 설정 (PERMANENT_SESSION_LIFETIME 적용)
             return redirect(url_for('index'))
         else:
-            # 로그인 실패 기록
-            login_tracker.record_attempt(ip, username, False)
-
             # 로그인 실패 (잘못된 이름/비밀번호 또는 비활성 계정)
-            return render_template('login.html',
-                error='이름 또는 비밀번호가 올바르지 않거나 비활성 계정입니다.',
-                username=username)
+            return render_template('login.html', error='이름 또는 비밀번호가 올바르지 않거나 비활성 계정입니다.', username=username)
 
     return render_template('login.html')
 
