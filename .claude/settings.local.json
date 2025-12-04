@@ -59,7 +59,22 @@
       "Bash(sudo /svc/web/nginx/sbin/nginx:*)",
       "Bash(journalctl:*)",
       "Bash(pkill:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git fetch:*)",
+      "Bash(for page in admin chat_list chat_room promotions reminders mypage users)",
+      "Bash(do grep -n \"<script src=\"\"/static/js/banner.js\"\"\" /svc/was/crm/crm-webapp/templates/$page.html)",
+      "Bash(psql --version)",
+      "Bash(systemctl status postgresql)",
+      "Bash(systemctl list-units:*)",
+      "Bash(sudo -u postgres psql:*)",
+      "Bash(pip3 list:*)",
+      "Bash(pip3 install:*)",
+      "Bash(PGPASSWORD=crm_password_2024 psql:*)",
+      "Bash(sudo cat:*)",
+      "Bash(sudo sed:*)",
+      "Bash(sudo cp:*)",
+      "Bash(sudo systemctl restart:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -26,8 +26,8 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 proc_name = 'crm_webapp'
 
 # 재시작 설정
-max_requests = 1000  # 메모리 누수 방지
-max_requests_jitter = 50
+max_requests = 10000  # 메모리 누수 방지 (1000->10000: 워커 재시작 주기 증가)
+max_requests_jitter = 500
 graceful_timeout = 30
 
 # 보안

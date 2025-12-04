@@ -568,16 +568,13 @@
     <div class="container">
         {% include 'includes/header.html' %}
         <div class="controls">
+            <!-- 1줄: 고정 크기 필터 -->
             <div class="controls-row">
-                <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력...">
-                <select id="categoryFilter">
-                    <option value="">전체 대분류</option>
-                </select>
-                <select id="productFilter">
-                    <option value="">전체 상품</option>
-                </select>
                 <select id="channelFilter">
                     <option value="">전체 채널</option>
+                </select>
+                <select id="categoryFilter">
+                    <option value="">전체 대분류</option>
                 </select>
                 <select id="promotionFilter">
                     <option value="">전체 프로모션</option>
@@ -588,8 +585,19 @@
                 </label>
                 <button class="btn btn-secondary" onclick="clearFilters()">필터 초기화</button>
                 {% if is_admin %}
+                <button class="btn btn-success" onclick="openBulkUploadModal()">📊 일괄등록</button>
                 <button class="btn btn-primary" onclick="openCreateModal()">+ 새 프로모션</button>
                 {% endif %}
+            </div>
+            <!-- 2줄: 가변 크기 필터 (제품명) -->
+            <div class="controls-row">
+                <select id="productFilter" style="flex: 1;">
+                    <option value="">전체 상품</option>
+                </select>
+            </div>
+            <!-- 3줄: 검색창 -->
+            <div class="controls-row">
+                <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력..." style="flex: 1;">
             </div>
         </div>
 
@@ -597,6 +605,9 @@
 
         <div id="promotionList"></div>
     </div>
+
+    <!-- 일괄등록 모달 포함 -->
+    {% include 'includes/bulk_upload_modal.html' %}
 
     <!-- 생성/수정 모달 -->
     <div class="modal" id="editModal">
@@ -610,31 +621,31 @@
             <form id="promotionForm">
                 <input type="hidden" id="promoId">
                 <div class="form-group">
-                    <label class="required">대분류</label>
+                    <label for="category" class="required">대분류</label>
                     <input type="text" id="category" required>
                 </div>
                 <div class="form-group">
-                    <label class="required">상품명</label>
+                    <label for="productName" class="required">상품명</label>
                     <input type="text" id="productName" required>
                 </div>
                 <div class="form-group">
-                    <label class="required">프로모션 채널</label>
+                    <label for="channel" class="required">프로모션 채널</label>
                     <input type="text" id="channel" required>
                 </div>
                 <div class="form-group">
-                    <label class="required">프로모션명</label>
+                    <label for="promotionName" class="required">프로모션명</label>
                     <input type="text" id="promotionName" required>
                 </div>
                 <div class="form-group">
-                    <label>금액할인</label>
+                    <label for="discountAmount">금액할인</label>
                     <input type="text" id="discountAmount" placeholder="예: 10,000원 또는 10%">
                 </div>
                 <div class="form-group">
-                    <label>회차면제</label>
+                    <label for="sessionExemption">회차면제</label>
                     <input type="text" id="sessionExemption" placeholder="예: 1회차 면제">
                 </div>
                 <div class="form-group">
-                    <label>중복여부</label>
+                    <div style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 16px; color: #333;">중복여부</div>
                     <div style="display: flex; gap: 15px; margin-top: 8px;">
                         <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
                             <input type="checkbox" id="typeExisting" value="기존">
@@ -651,19 +662,19 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>프로모션 코드</label>
+                    <label for="promotionCode">프로모션 코드</label>
                     <input type="text" id="promotionCode">
                 </div>
                 <div class="form-group">
-                    <label class="required">프로모션 내용</label>
+                    <label for="content" class="required">프로모션 내용</label>
                     <textarea id="content" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label class="required">시작일</label>
+                    <label for="startDate" class="required">시작일</label>
                     <input type="date" id="startDate" required>
                 </div>
                 <div class="form-group">
-                    <label>종료일</label>
+                    <label for="endDate">종료일</label>
                     <input type="date" id="endDate">
                     <small style="color: #666;">비워두면 '무기한'으로 설정됩니다</small>
                 </div>
@@ -1697,6 +1708,14 @@
                 <div class="help-content">
                     <ul>
                         <li><strong>"+ 새 프로모션"</strong>: 새로운 프로모션 등록</li>
+                        <li><strong>"일괄등록"</strong>: 엑셀 파일로 여러 프로모션을 한 번에 등록
+                            <ul style="margin-top: 5px;">
+                                <li>양식 다운로드 → 엑셀에 데이터 입력 (18행부터 - 17행은 헤더)</li>
+                                <li>필수 항목(노란색): 대분류, 상품명, 채널, 프로모션명, 내용, 시작일</li>
+                                <li>옵션 항목(회색): 금액할인, 회차면제, 중복여부, 프로모션코드, 종료일</li>
+                                <li>5-6행 예시 데이터는 참고용이며 자동으로 무시됩니다</li>
+                            </ul>
+                        </li>
                         <li><strong>"수정"</strong>: 기존 프로모션 내용 수정 (다른 관리자가 수정 중이면 잠금)</li>
                         <li><strong>"삭제"</strong>: 프로모션 삭제</li>
                         <li>수정 중에는 다른 관리자가 수정할 수 없도록 자동 잠금</li>

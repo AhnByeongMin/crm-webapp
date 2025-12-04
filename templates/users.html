@@ -212,23 +212,35 @@
 
         <!-- 필터 & 검색 영역 -->
         <div class="filter-section">
-            <select id="filterRole" onchange="filterAndRenderUsers()">
-                <option value="">전체 권한</option>
-                <option value="상담사">상담사</option>
-                <option value="관리자">관리자</option>
-            </select>
+            <label for="filterRole" style="display: flex; align-items: center; gap: 5px;">
+                <span style="font-weight: bold; font-size: 14px;">권한:</span>
+                <select id="filterRole" onchange="filterAndRenderUsers()">
+                    <option value="">전체 권한</option>
+                    <option value="상담사">상담사</option>
+                    <option value="관리자">관리자</option>
+                </select>
+            </label>
 
-            <select id="filterStatus" onchange="filterAndRenderUsers()">
-                <option value="">전체 상태</option>
-                <option value="active">활성</option>
-                <option value="inactive">비활성</option>
-            </select>
+            <label for="filterStatus" style="display: flex; align-items: center; gap: 5px;">
+                <span style="font-weight: bold; font-size: 14px;">상태:</span>
+                <select id="filterStatus" onchange="filterAndRenderUsers()">
+                    <option value="">전체 상태</option>
+                    <option value="active">활성</option>
+                    <option value="inactive">비활성</option>
+                </select>
+            </label>
 
-            <select id="filterTeam" onchange="filterAndRenderUsers()">
-                <option value="">전체 팀</option>
-            </select>
+            <label for="filterTeam" style="display: flex; align-items: center; gap: 5px;">
+                <span style="font-weight: bold; font-size: 14px;">팀:</span>
+                <select id="filterTeam" onchange="filterAndRenderUsers()">
+                    <option value="">전체 팀</option>
+                </select>
+            </label>
 
-            <input type="text" id="searchKeyword" placeholder="이름 검색..." onkeyup="filterAndRenderUsers()" style="flex: 1; min-width: 200px;">
+            <label for="searchKeyword" style="flex: 1; min-width: 200px; display: flex; align-items: center; gap: 5px;">
+                <span style="font-weight: bold; font-size: 14px;">검색:</span>
+                <input type="text" id="searchKeyword" placeholder="이름 검색..." onkeyup="filterAndRenderUsers()" style="flex: 1;">
+            </label>
 
             <button class="btn-primary" onclick="openAddModal()">+ 사용자 추가</button>
             <button class="btn-team-manage" onclick="openTeamManageModal()">팀 관리</button>
@@ -262,25 +274,25 @@
         <div class="modal-box">
             <h2 class="modal-title">새 사용자 추가</h2>
             <div class="form-group">
-                <label>이름 <span class="required">*</span></label>
+                <label for="newUsername">이름 <span class="required">*</span></label>
                 <input type="text" id="newUsername" placeholder="이름을 입력하세요">
             </div>
             <div class="form-group">
-                <label>권한 <span class="required">*</span></label>
+                <label for="newRole">권한 <span class="required">*</span></label>
                 <select id="newRole" onchange="handleRoleChange()">
                     <option value="상담사">상담사</option>
                     <option value="관리자">관리자</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>상태 <span class="required">*</span></label>
+                <label for="newStatus">상태 <span class="required">*</span></label>
                 <select id="newStatus">
                     <option value="active">활성</option>
                     <option value="inactive">비활성</option>
                 </select>
             </div>
             <div class="form-group" id="teamSelectGroup">
-                <label>팀 (선택)</label>
+                <label for="newTeam">팀 (선택)</label>
                 <select id="newTeam">
                     <option value="">선택 안 함</option>
                 </select>
@@ -300,7 +312,7 @@
         <div class="modal-box">
             <h2 class="modal-title">팀 변경</h2>
             <div class="form-group">
-                <label>팀 선택</label>
+                <label for="editTeamSelect">팀 선택</label>
                 <select id="editTeamSelect">
                     <option value="">팀 없음</option>
                 </select>
@@ -317,7 +329,7 @@
         <div class="modal-box">
             <h2 class="modal-title">권한 변경</h2>
             <div class="form-group">
-                <label>권한 선택</label>
+                <label for="editRoleSelect">권한 선택</label>
                 <select id="editRoleSelect">
                     <option value="상담사">상담사</option>
                     <option value="관리자">관리자</option>
@@ -335,14 +347,14 @@
         <div class="modal-box">
             <h2 class="modal-title">팀 관리</h2>
             <div class="form-group">
-                <label>새 팀 추가</label>
+                <label for="newTeamName">새 팀 추가</label>
                 <div style="display: flex; gap: 10px;">
                     <input type="text" id="newTeamName" placeholder="팀 이름 입력" style="flex: 1;">
                     <button class="btn-primary" onclick="addTeam()">추가</button>
                 </div>
             </div>
             <div class="form-group">
-                <label>현재 팀 목록</label>
+                <div style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">현재 팀 목록</div>
                 <div class="team-list" id="teamList">
                     <p class="empty-state">로딩 중...</p>
                 </div>

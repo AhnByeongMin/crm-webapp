@@ -4,7 +4,7 @@
 /* 당일 예약 버튼 */
 .today-reminders-button {
     position: fixed;
-    bottom: 90px;
+    bottom: 80px;
     right: 20px;
     width: 56px;
     height: 56px;
@@ -17,12 +17,9 @@
     box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
     z-index: 9998;
     transition: all 0.3s ease;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
-}
-.today-reminders-button.has-reminders {
-    display: flex;
 }
 .today-reminders-button:hover {
     transform: scale(1.1);
@@ -330,20 +327,19 @@ function quickAddTodayReminder() {
     checkTodayReminders();
 })();
 
-// 당일 예약 확인 (버튼 표시/숨김)
+// 당일 예약 확인 (배지 업데이트)
 async function checkTodayReminders() {
     try {
         const response = await fetch('/api/reminders/banner-check');
         const data = await response.json();
 
-        const button = document.getElementById('todayRemindersButton');
         const badge = document.getElementById('reminderBadge');
 
         if (data.today_count > 0) {
-            button.classList.add('has-reminders');
+            badge.style.display = 'flex';
             badge.textContent = data.today_count;
         } else {
-            button.classList.remove('has-reminders');
+            badge.style.display = 'none';
         }
     } catch (error) {
         console.error('예약 확인 실패:', error);

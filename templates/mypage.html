@@ -216,7 +216,7 @@
             {% if user_info.created_at %}
             <div class="info-row">
                 <div class="info-label">가입일</div>
-                <div class="info-value">{{ user_info.created_at.split('.')[0] if user_info.created_at else '-' }}</div>
+                <div class="info-value">{{ user_info.created_at.strftime('%Y-%m-%d %H:%M:%S') if user_info.created_at else '-' }}</div>
             </div>
             {% endif %}
         </div>

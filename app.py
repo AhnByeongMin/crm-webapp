@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_compress import Compress
 from werkzeug.utils import secure_filename
@@ -74,6 +74,32 @@ def is_admin():
         return True
 
     return False
+
+def require_login():
+    """로그인 필수 체크 - 로그인하지 않은 경우 로그인 페이지로 리다이렉트"""
+    if is_localhost():
+        return None  # localhost는 항상 허용
+
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    return None
+
+def require_admin():
+    """관리자 권한 필수 체크 - 권한 없으면 access_denied 페이지로"""
+    if is_localhost():
+        return None  # localhost는 항상 허용
+
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
+    if not is_admin():
+        return render_template('access_denied.html',
+                             required_role='관리자',
+                             current_role=session.get('role', '권한 없음'),
+                             username=session.get('username', ''))
+
+    return None
 
 # Asset versioning for cache busting
 _asset_manifest = None
@@ -170,8 +196,10 @@ def login():
 
 @app.route('/admin')
 def admin():
-    if not is_admin():
-        return "Access Denied", 403
+    # 관리자 권한 검증
+    auth_check = require_admin()
+    if auth_check:
+        return auth_check
 
     username = session.get('username', 'Admin')
     return render_template('admin.html',
@@ -586,8 +614,10 @@ def uploaded_file(filename):
 # 채팅 관련 라우트
 @app.route('/chats')
 def chat_list():
-    if 'username' not in session and not is_localhost():
-        return redirect(url_for('login'))
+    # 로그인 필수
+    auth_check = require_login()
+    if auth_check:
+        return auth_check
 
     username = session.get('username', 'Admin')
     admin = is_admin()
@@ -606,15 +636,19 @@ def chat_list_admin():
 
 @app.route('/chat/create')
 def chat_create_page():
-    if 'username' not in session and not is_localhost():
-        return redirect(url_for('login'))
+    # 로그인 필수
+    auth_check = require_login()
+    if auth_check:
+        return auth_check
 
     return render_template('chat_create.html')
 
 @app.route('/chat/<chat_id>')
 def chat_room(chat_id):
-    if 'username' not in session and not is_localhost():
-        return redirect(url_for('login'))
+    # 로그인 필수
+    auth_check = require_login()
+    if auth_check:
+        return auth_check
 
     chats = load_chats()
     if chat_id not in chats:
@@ -626,7 +660,11 @@ def chat_room(chat_id):
     # 로컬호스트(진짜 서버 관리자)만 모든 채팅방 입장 가능
     # 관리자 계정 포함 일반 사용자는 자신이 참여자인 채팅방만 입장 가능
     if not is_localhost() and username not in chat_info['participants']:
-        return "Access Denied - 참여자만 입장 가능합니다", 403
+        return render_template('access_denied.html',
+                             required_role='채팅방 참여자',
+                             current_role='비참여자',
+                             username=username,
+                             message='이 채팅방의 참여자만 입장할 수 있습니다.')
 
     return render_template('chat_room.html',
                          chat_id=chat_id,
@@ -1029,8 +1067,11 @@ def handle_unlock_promotion_edit(data):
 
 @app.route('/promotions')
 def promotions_page():
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    # 로그인 필수
+    auth_check = require_login()
+    if auth_check:
+        return auth_check
+
     return render_template('promotions.html',
                          username=session['username'],
                          is_admin=is_admin(),
@@ -1207,13 +1248,389 @@ def get_promotion_filters():
         'category_products': category_products  # 대분류별 상품 매핑 추가
     })
 
+@app.route('/api/promotions/template', methods=['GET'])
+def download_promotion_template():
+    """프로모션 일괄등록 엑셀 양식 다운로드"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "프로모션 일괄등록"
+
+    # 스타일 정의
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    required_fill = PatternFill(start_color="FFE699", end_color="FFE699", fill_type="solid")  # 연한 노란색
+    optional_fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")  # 연한 회색
+    example_fill = PatternFill(start_color="F0F8FF", end_color="F0F8FF", fill_type="solid")  # 연한 파랑
+    guide_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")  # 연한 노랑
+
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    bold_font = Font(bold=True, size=10)
+    normal_font = Font(size=10)
+    small_font = Font(size=9, color="666666")
+
+    center_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left_alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # 제목 (1행)
+    ws.merge_cells('A1:K1')
+    title_cell = ws['A1']
+    title_cell.value = "📊 프로모션 일괄등록 양식"
+    title_cell.font = Font(bold=True, size=14, color="FFFFFF")
+    title_cell.fill = PatternFill(start_color="305496", end_color="305496", fill_type="solid")
+    title_cell.alignment = center_alignment
+    ws.row_dimensions[1].height = 25
+
+    # 필수/옵션 안내 (2행)
+    ws.merge_cells('A2:K2')
+    info_cell = ws['A2']
+    info_cell.value = "💡 필수 항목(노란색 배경)은 반드시 입력해야 하며, 옵션 항목(회색 배경)은 선택사항입니다"
+    info_cell.font = Font(size=10, color="C00000")
+    info_cell.fill = guide_fill
+    info_cell.alignment = left_alignment
+    ws.row_dimensions[2].height = 30
+
+    # 헤더 (3행) - 필수/옵션 표시
+    headers_with_required = [
+        ("대분류", True),       # 필수
+        ("상품명", True),       # 필수
+        ("채널", True),         # 필수
+        ("프로모션명", True),   # 필수
+        ("금액할인", False),    # 옵션
+        ("회차면제", False),    # 옵션
+        ("중복여부", False),    # 옵션
+        ("프로모션코드", False),# 옵션
+        ("프로모션내용", True), # 필수
+        ("시작일", True),       # 필수
+        ("종료일", False)       # 옵션
+    ]
+
+    for col_num, (header, is_required) in enumerate(headers_with_required, 1):
+        cell = ws.cell(row=3, column=col_num)
+        cell.value = f"{header} *" if is_required else header
+        cell.fill = required_fill if is_required else optional_fill
+        cell.font = header_font if is_required else Font(bold=True, color="000000", size=11)
+        cell.alignment = center_alignment
+        cell.border = thin_border
+
+    ws.row_dimensions[3].height = 35
+
+    # 설명 (4행)
+    descriptions = [
+        "상품 분류",
+        "등록된 상품명\n입력 필수",
+        "판매 채널\n입력 필수",
+        "프로모션 이름\n입력 필수",
+        "할인 금액\n예: 10,000원",
+        "면제 회차\n예: 1회차",
+        "기존/결합/지인\n콤마로 구분",
+        "프로모션 코드\n영문+숫자",
+        "상세 설명\n입력 필수",
+        "YYYY-MM-DD\n입력 필수",
+        "YYYY-MM-DD\n비우면 무기한"
+    ]
+
+    for col_num, desc in enumerate(descriptions, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.value = desc
+        cell.font = small_font
+        cell.alignment = center_alignment
+        cell.border = thin_border
+
+    ws.row_dimensions[4].height = 40
+
+    # 예시 데이터 1 (5행)
+    example_data_1 = [
+        "안마의자",
+        "안마의자 프리미엄",
+        "온라인",
+        "신규고객 특별할인",
+        "10,000원",
+        "1회차 면제",
+        "기존,결합",
+        "NEW2024",
+        "신규 가입 고객 대상 10,000원 할인 프로모션",
+        "2024-01-01",
+        "2024-12-31"
+    ]
+
+    for col_num, value in enumerate(example_data_1, 1):
+        cell = ws.cell(row=5, column=col_num)
+        cell.value = value
+        cell.font = normal_font
+        cell.fill = example_fill
+        cell.alignment = left_alignment
+        cell.border = thin_border
+
+    ws.row_dimensions[5].height = 30
+
+    # 예시 데이터 2 (6행)
+    example_data_2 = [
+        "공기청정기",
+        "공기청정기 스탠다드",
+        "오프라인",
+        "회차면제 프로모션",
+        "",
+        "2회차 면제",
+        "결합",
+        "FREE2024",
+        "첫 2회차 렌탈료 면제 프로모션",
+        "2024-06-01",
+        ""
+    ]
+
+    for col_num, value in enumerate(example_data_2, 1):
+        cell = ws.cell(row=6, column=col_num)
+        cell.value = value
+        cell.font = normal_font
+        cell.fill = example_fill
+        cell.alignment = left_alignment
+        cell.border = thin_border
+
+    ws.row_dimensions[6].height = 30
+
+    # 안내 메시지 (8-15행)
+    ws.merge_cells('A8:K8')
+    guide_title = ws['A8']
+    guide_title.value = "📋 작성 가이드"
+    guide_title.font = Font(bold=True, size=11, color="C00000")
+    guide_title.fill = guide_fill
+    guide_title.alignment = left_alignment
+
+    # 9-16행: 가이드 (17행은 헤더이므로 여기서 멈춤)
+    guides = [
+        "",
+        "💡 위 5-6행은 예시용입니다. 삭제하지 않아도 자동으로 무시됩니다.",
+        "",
+        "✅ 필수 항목 (노란색): 대분류, 상품명, 채널, 프로모션명, 프로모션내용, 시작일",
+        "📌 옵션 항목 (회색): 금액할인, 회차면제, 중복여부, 프로모션코드, 종료일",
+        "",
+        "🔹 아래 17행은 헤더, 실제 데이터는 18행부터 입력하세요 🔹",
+        ""
+    ]
+
+    for idx, guide in enumerate(guides, 9):
+        ws.merge_cells(f'A{idx}:K{idx}')
+        cell = ws[f'A{idx}']
+        cell.value = guide
+        cell.font = Font(size=9)
+        cell.alignment = left_alignment
+        if "⚠️" in guide or "🔹" in guide:
+            cell.font = Font(bold=True, size=10, color="C00000")
+
+    # 컬럼 너비 조정
+    column_widths = [12, 20, 12, 20, 12, 12, 15, 15, 40, 12, 12]
+    for col_num, width in enumerate(column_widths, 1):
+        ws.column_dimensions[chr(64 + col_num)].width = width
+
+    # 데이터 입력 시작 행 (17행)에 헤더 재표시
+    for col_num, (header, is_required) in enumerate(headers_with_required, 1):
+        cell = ws.cell(row=17, column=col_num)
+        cell.value = f"{header} *" if is_required else header
+        cell.fill = required_fill if is_required else optional_fill
+        cell.font = Font(bold=True, color="000000", size=10)
+        cell.alignment = center_alignment
+        cell.border = thin_border
+
+    ws.row_dimensions[17].height = 25
+
+    # 18행부터 여유 공간 (사용자 입력용)
+    for row in range(18, 21):
+        for col in range(1, 12):
+            cell = ws.cell(row=row, column=col)
+            cell.border = thin_border
+
+    # BytesIO로 저장
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='프로모션_일괄등록_양식.xlsx'
+    )
+
+@app.route('/api/promotions/bulk-upload', methods=['POST'])
+def bulk_upload_promotions():
+    """엑셀 파일을 파싱하여 JSON 형태로 반환 (저장하지 않음)"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'error': '파일이 없습니다'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': '파일이 선택되지 않았습니다'}), 400
+
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        return jsonify({'error': '엑셀 파일만 업로드 가능합니다'}), 400
+
+    try:
+        from openpyxl import load_workbook
+        from io import BytesIO
+
+        # 파일을 메모리에 로드
+        file_content = BytesIO(file.read())
+        wb = load_workbook(file_content, data_only=True)
+        ws = wb.active
+
+        # 헤더 확인 (17번째 행 - 데이터 입력 시작 행)
+        expected_headers = [
+            "대분류", "상품명", "채널", "프로모션명",
+            "금액할인", "회차면제", "중복여부", "프로모션코드",
+            "프로모션내용", "시작일", "종료일"
+        ]
+
+        # 헤더 검증 (17번째 행에서 헤더 확인, * 제거 후 비교)
+        actual_headers = [str(cell.value).replace(' *', '').strip() if cell.value else '' for cell in ws[17]]
+        if actual_headers[:len(expected_headers)] != expected_headers:
+            return jsonify({'error': '엑셀 양식이 올바르지 않습니다. 제공된 양식을 사용해주세요.'}), 400
+
+        # 데이터 파싱 (18번째 행부터, 예시 데이터와 가이드 제외하고 실제 데이터만)
+        promotions_data = []
+        errors = []
+
+        for row_num, row in enumerate(ws.iter_rows(min_row=18, values_only=True), start=18):
+            # 빈 행 스킵
+            if not any(row):
+                continue
+
+            # 주의사항 행 스킵
+            if row[0] and str(row[0]).startswith('※'):
+                continue
+
+            # 필수 필드 검증
+            category, product_name, channel, promotion_name, \
+            discount_amount, session_exemption, subscription_types_str, promotion_code, \
+            content, start_date, end_date = row[:11]
+
+            # 필수 필드 체크
+            if not all([category, product_name, channel, promotion_name, content, start_date]):
+                errors.append(f"행 {row_num}: 필수 항목이 누락되었습니다 (대분류, 상품명, 채널, 프로모션명, 내용, 시작일은 필수)")
+                continue
+
+            # 중복여부 파싱
+            subscription_types = []
+            if subscription_types_str:
+                types_list = [t.strip() for t in str(subscription_types_str).split(',')]
+                for t in types_list:
+                    if t in ['기존', '결합', '지인']:
+                        subscription_types.append(t)
+
+            # 날짜 형식 변환
+            def format_date(date_val):
+                if date_val is None:
+                    return None
+                if isinstance(date_val, str):
+                    return date_val
+                # datetime 객체인 경우
+                try:
+                    return date_val.strftime('%Y-%m-%d')
+                except:
+                    return str(date_val)
+
+            start_date_str = format_date(start_date)
+            end_date_str = format_date(end_date) if end_date else '무기한'
+
+            promotion_data = {
+                'category': str(category) if category else '',
+                'product_name': str(product_name),
+                'channel': str(channel),
+                'promotion_name': str(promotion_name),
+                'discount_amount': str(discount_amount) if discount_amount else '',
+                'session_exemption': str(session_exemption) if session_exemption else '',
+                'subscription_types': subscription_types,
+                'promotion_code': str(promotion_code) if promotion_code else '',
+                'content': str(content),
+                'start_date': start_date_str,
+                'end_date': end_date_str
+            }
+
+            promotions_data.append(promotion_data)
+
+        if errors:
+            return jsonify({'error': '\n'.join(errors)}), 400
+
+        if not promotions_data:
+            return jsonify({'error': '등록할 데이터가 없습니다'}), 400
+
+        return jsonify({
+            'success': True,
+            'count': len(promotions_data),
+            'data': promotions_data
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'파일 처리 중 오류 발생: {str(e)}'}), 500
+
+@app.route('/api/promotions/bulk-save', methods=['POST'])
+def bulk_save_promotions():
+    """미리보기에서 수정된 프로모션 목록을 일괄 저장"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    try:
+        data = request.get_json()
+        promotions_to_save = data.get('promotions', [])
+
+        if not promotions_to_save:
+            return jsonify({'error': '저장할 데이터가 없습니다'}), 400
+
+        # 기존 프로모션 로드
+        existing_promotions = load_promotions()
+
+        # 새 ID 생성을 위한 최대 ID 찾기
+        max_id = max([p.get('id', 0) for p in existing_promotions], default=0)
+
+        # 현재 사용자 정보
+        username = session.get('username', 'Admin')
+        now = datetime.now().isoformat()
+
+        # 새 프로모션 추가
+        for promo in promotions_to_save:
+            max_id += 1
+            promo['id'] = max_id
+            promo['created_at'] = now
+            promo['created_by'] = username
+            promo['updated_at'] = now
+            existing_promotions.append(promo)
+
+        # 저장
+        save_promotions(existing_promotions)
+
+        return jsonify({
+            'success': True,
+            'count': len(promotions_to_save),
+            'message': f'{len(promotions_to_save)}개의 프로모션이 등록되었습니다'
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'저장 중 오류 발생: {str(e)}'}), 500
+
 # ==================== 개인 예약 관리 ====================
 
 @app.route('/reminders')
 def reminders_page():
     """예약 관리 페이지"""
-    if 'username' not in session and not is_localhost():
-        return redirect(url_for('login'))
+    # 로그인 필수
+    auth_check = require_login()
+    if auth_check:
+        return auth_check
 
     username = session.get('username', 'Admin')
     return render_template('reminders.html',
@@ -1227,8 +1644,10 @@ def reminders_page():
 @app.route('/mypage')
 def mypage():
     """마이페이지"""
-    if 'username' not in session and not is_localhost():
-        return redirect(url_for('login'))
+    # 로그인 필수
+    auth_check = require_login()
+    if auth_check:
+        return auth_check
 
     username = session.get('username', 'Admin')
     user_info = database.get_user_info(username) if not is_localhost() else {
@@ -1492,8 +1911,10 @@ def get_holidays():
 @app.route('/users')
 def users_page():
     """사용자 관리 페이지 (관리자 전용)"""
-    if not is_admin():
-        return redirect(url_for('login'))
+    # 관리자 권한 검증
+    auth_check = require_admin()
+    if auth_check:
+        return auth_check
 
     username = session.get('username', 'Admin')
     return render_template('users.html',
