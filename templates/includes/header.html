@@ -1,4 +1,17 @@
 <!-- 통합 헤더 컴포넌트 -->
+<script>
+// 최소 침습 보안: console 출력만 차단 (error/warn 유지, 개발자도구 완전 허용)
+(function() {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        // console.log, debug, info만 무효화
+        const noop = function() {};
+        console.log = noop;
+        console.debug = noop;
+        console.info = noop;
+        // console.error와 console.warn은 그대로 유지 (에러 처리용)
+    }
+})();
+</script>
 <style>
     .header {
         background: white;
@@ -75,6 +88,10 @@
         {% endif %}
     </h1>
     <div class="nav">
+        {% if current_page == 'chat_room' %}
+        <button id="participantsBtn" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">👥 참여자</button>
+        <a href="/chats" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 16px;">← 채팅목록</a>
+        {% endif %}
         {% if is_admin %}
         <a href="/admin" {% if current_page == 'admin' %}class="active"{% endif %}>할일관리</a>
         <a href="/users" {% if current_page == 'users' %}class="active"{% endif %}>사용자관리</a>
@@ -85,7 +102,7 @@
         </a>
         {% endif %}
         <a href="/promotions" {% if current_page == 'promotions' %}class="active"{% endif %}>프로모션게시판</a>
-        <a href="/chats" id="navChats" {% if current_page == 'chats' %}class="active"{% endif %}>
+        <a href="/chats" id="navChats" {% if current_page == 'chats' or current_page == 'chat_room' %}class="active"{% endif %}>
             채팅
             <span id="navChatsBadge" class="nav-badge" style="display: none;"></span>
         </a>

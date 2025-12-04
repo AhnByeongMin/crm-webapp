@@ -669,7 +669,10 @@ def chat_room(chat_id):
     return render_template('chat_room.html',
                          chat_id=chat_id,
                          username=username,
-                         chat_title=chat_info['title'])
+                         chat_title=chat_info['title'],
+                         page_title=chat_info['title'],
+                         current_page='chat_room',
+                         is_admin=is_admin())
 
 @app.route('/api/chats', methods=['GET'])
 def get_chats():
