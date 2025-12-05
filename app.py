@@ -32,7 +32,15 @@ Compress(app)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
 
-socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=50 * 1024 * 1024)
+# Socket.IO 초기화
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    max_http_buffer_size=50 * 1024 * 1024,
+    async_mode='eventlet',
+    logger=False,
+    engineio_logger=False
+)
 
 # 관리자 계정 (이름: 비밀번호)
 ADMIN_ACCOUNTS = {
@@ -58,7 +66,9 @@ load_teams = database.load_teams
 load_users_with_team = database.load_users_with_team
 
 def is_localhost():
-    return request.remote_addr in ['127.0.0.1', 'localhost', '::1']
+    # Nginx 프록시 뒤에서는 X-Real-IP 헤더 사용
+    real_ip = request.headers.get('X-Real-IP', request.remote_addr)
+    return real_ip in ['127.0.0.1', 'localhost', '::1']
 
 def is_admin():
     """실제 관리자 권한 확인 (로컬호스트 또는 관리자 역할)"""
@@ -95,9 +105,8 @@ def require_admin():
 
     if not is_admin():
         return render_template('access_denied.html',
-                             required_role='관리자',
-                             current_role=session.get('role', '권한 없음'),
-                             username=session.get('username', ''))
+                             message='이 페이지는 관리자만 접근할 수 있습니다.',
+                             redirect_url=url_for('index'))
 
     return None
 
@@ -661,10 +670,8 @@ def chat_room(chat_id):
     # 관리자 계정 포함 일반 사용자는 자신이 참여자인 채팅방만 입장 가능
     if not is_localhost() and username not in chat_info['participants']:
         return render_template('access_denied.html',
-                             required_role='채팅방 참여자',
-                             current_role='비참여자',
-                             username=username,
-                             message='이 채팅방의 참여자만 입장할 수 있습니다.')
+                             message='이 채팅방의 참여자만 입장할 수 있습니다.',
+                             redirect_url=url_for('chats'))
 
     return render_template('chat_room.html',
                          chat_id=chat_id,
@@ -1831,7 +1838,8 @@ def check_reminder_banner():
         for user in users:
             user_reminders = database.load_reminders(user['username'], show_completed=True)
             for r in user_reminders:
-                if r.get('is_completed'):
+                # PostgreSQL: is_completed는 0(미완료) 또는 1(완료)
+                if r.get('is_completed') == 1:
                     continue
                 reminder_date = r.get('scheduled_date', '')
                 if reminder_date == today:
@@ -1842,7 +1850,8 @@ def check_reminder_banner():
         # 로그인된 사용자: 본인 예약만 확인
         reminders = database.load_reminders(username, show_completed=True)
         for r in reminders:
-            if r.get('is_completed'):
+            # PostgreSQL: is_completed는 0(미완료) 또는 1(완료)
+            if r.get('is_completed') == 1:
                 continue
             reminder_date = r.get('scheduled_date', '')
             if reminder_date == today:
