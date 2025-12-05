@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>내 예약 관리</title>
+
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="내 예약 관리">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Service Worker 등록은 가장 먼저 -->
+    <script src="/static/js/sw-register.js"></script>
+    <!-- 그 다음 auto-update와 push-notifications -->
+    <script src="/static/js/sw-auto-update.js"></script>
+    <script src="/static/js/push-notifications.js" defer></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
@@ -296,6 +315,11 @@
                         <span class="stats-value" id="completedCount">0</span>
                     </div>
                 </div>
+
+                <!-- 알림 설정 버튼 -->
+                <button onclick="openNotificationSettingsModal()" style="width: 100%; margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s;">
+                    🔔 알림 설정
+                </button>
             </div>
 
             <!-- 예약 목록 영역 -->
@@ -799,5 +823,163 @@
             </div>
         </div>
     </div>
+
+    <!-- 알림 설정 모달 -->
+    <div class="modal-overlay" id="notificationSettingsModal">
+        <div class="modal-box" style="max-width: 480px;">
+            <div class="modal-title">🔔 알림 설정</div>
+
+            <!-- 예약 알림 시간 설정 -->
+            <div class="form-group">
+                <label>⏰ 예약 알림 시간</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <select id="reminderMinutes" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="5">5분 전</option>
+                        <option value="10">10분 전</option>
+                        <option value="15">15분 전</option>
+                        <option value="30" selected>30분 전</option>
+                        <option value="60">1시간 전</option>
+                    </select>
+                    <span style="color: #666; font-size: 13px;">에 첫 알림</span>
+                </div>
+            </div>
+
+            <!-- 반복 알림 설정 -->
+            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">
+                    <input type="checkbox" id="repeatEnabled" style="width: 18px; height: 18px;">
+                    🔁 반복 알림 (미완료 시)
+                </label>
+                <div id="repeatSettings" style="margin-left: 28px; display: none;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                        <span>매</span>
+                        <select id="repeatInterval" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="3">3분</option>
+                            <option value="5" selected>5분</option>
+                            <option value="10">10분</option>
+                        </select>
+                        <span>마다,</span>
+                        <select id="repeatUntilMinutes" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="0">예약 시간까지</option>
+                            <option value="5">5분 전까지</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 아침 일일 요약 -->
+            <div style="margin-bottom: 20px; padding: 15px; background: #fff8e1; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">
+                    <input type="checkbox" id="dailySummaryEnabled" checked style="width: 18px; height: 18px;">
+                    📅 아침 일일 요약 알림
+                </label>
+                <div id="dailySummarySettings" style="margin-left: 28px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>매일</span>
+                        <input type="time" id="dailySummaryTime" value="09:00" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <span>에 오늘 일정 알림</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeNotificationSettingsModal()">취소</button>
+                <button class="btn-success" onclick="testDailySummary()">📤 테스트</button>
+                <button class="btn-primary" onclick="saveNotificationSettings()">💾 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 알림 설정 모달 제어
+        function openNotificationSettingsModal() {
+            loadNotificationSettings();
+            document.getElementById('notificationSettingsModal').classList.add('active');
+        }
+
+        function closeNotificationSettingsModal() {
+            document.getElementById('notificationSettingsModal').classList.remove('active');
+        }
+
+        // 알림 설정 불러오기
+        async function loadNotificationSettings() {
+            try {
+                const response = await fetch('/api/notification-settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    document.getElementById('reminderMinutes').value = settings.reminder_minutes || 30;
+                    document.getElementById('repeatEnabled').checked = settings.repeat_enabled || false;
+                    document.getElementById('repeatInterval').value = settings.repeat_interval || 5;
+                    document.getElementById('repeatUntilMinutes').value = settings.repeat_until_minutes || 0;
+                    document.getElementById('dailySummaryEnabled').checked = settings.daily_summary_enabled !== false;
+                    document.getElementById('dailySummaryTime').value = settings.daily_summary_time || '09:00';
+
+                    document.getElementById('repeatSettings').style.display = settings.repeat_enabled ? 'block' : 'none';
+                    document.getElementById('dailySummarySettings').style.display = settings.daily_summary_enabled !== false ? 'block' : 'none';
+                }
+            } catch (error) {
+                console.error('알림 설정 불러오기 실패:', error);
+            }
+        }
+
+        // 알림 설정 저장
+        async function saveNotificationSettings() {
+            const settings = {
+                reminder_minutes: parseInt(document.getElementById('reminderMinutes').value),
+                repeat_enabled: document.getElementById('repeatEnabled').checked,
+                repeat_interval: parseInt(document.getElementById('repeatInterval').value),
+                repeat_until_minutes: parseInt(document.getElementById('repeatUntilMinutes').value),
+                daily_summary_enabled: document.getElementById('dailySummaryEnabled').checked,
+                daily_summary_time: document.getElementById('dailySummaryTime').value
+            };
+
+            try {
+                const response = await fetch('/api/notification-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    showToast('알림 설정이 저장되었습니다.');
+                    closeNotificationSettingsModal();
+                } else {
+                    showToast('저장 실패');
+                }
+            } catch (error) {
+                console.error('알림 설정 저장 실패:', error);
+                showToast('저장 실패');
+            }
+        }
+
+        // 일일 요약 테스트
+        async function testDailySummary() {
+            try {
+                const response = await fetch('/api/notification-settings/test-daily-summary', { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success > 0) {
+                    showToast('일일 요약 알림이 발송되었습니다!');
+                } else if (result.message) {
+                    showToast(result.message);
+                } else {
+                    showToast('발송 실패');
+                }
+            } catch (error) {
+                console.error('일일 요약 테스트 실패:', error);
+                showToast('테스트 실패');
+            }
+        }
+
+        // 체크박스 이벤트
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('repeatEnabled').addEventListener('change', function() {
+                document.getElementById('repeatSettings').style.display = this.checked ? 'block' : 'none';
+            });
+            document.getElementById('dailySummaryEnabled').addEventListener('change', function() {
+                document.getElementById('dailySummarySettings').style.display = this.checked ? 'block' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>

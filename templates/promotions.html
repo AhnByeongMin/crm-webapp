@@ -4,7 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>프로모션 게시판</title>
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="프로모션 게시판">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Service Worker 등록은 가장 먼저 -->
+    <script src="/static/js/sw-register.js"></script>
+    <!-- 그 다음 auto-update와 push-notifications -->
+    <script src="/static/js/sw-auto-update.js"></script>
+    <script src="/static/js/push-notifications.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; font-size: 16px; padding: 20px; }

@@ -15,6 +15,7 @@ import database  # SQLite 데이터베이스 헬퍼
 import pandas as pd
 import random
 from cache_manager import app_cache, cached, invalidate_cache, generate_etag
+import push_helper  # 웹 푸시 알림 헬퍼
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production'
@@ -968,6 +969,24 @@ def handle_message(data):
                 with app.app_context():
                     participant_counts = calculate_nav_counts(participant)
                     emit('nav_counts_update', participant_counts, room=f'user_{participant}')
+
+                # 푸시 알림 발송 (백그라운드)
+                def send_push_async():
+                    try:
+                        push_helper.send_push_notification(
+                            username=participant,
+                            title=f'{username}님의 메시지',
+                            body=message[:100],
+                            data={
+                                'type': 'chat',
+                                'chatId': chat_id,
+                                'url': f'/chat/{chat_id}'
+                            }
+                        )
+                    except Exception as e:
+                        print(f'푸시 알림 발송 실패: {e}')
+
+                threading.Thread(target=send_push_async).start()
 
 @socketio.on('typing_start')
 def handle_typing_start(data):
@@ -2073,6 +2092,79 @@ def get_teams_api():
     teams = database.load_teams()
     return jsonify(teams)
 
+# ==================== 푸시 알림 API ====================
+
+@app.route('/api/push/vapid-public-key', methods=['GET'])
+def get_vapid_public_key():
+    """VAPID 공개키 조회 (클라이언트에서 구독시 필요)"""
+    try:
+        vapid_keys = push_helper.get_vapid_keys()
+        from py_vapid import Vapid
+        from cryptography.hazmat.primitives import serialization
+        import base64
+
+        vapid = Vapid.from_file('/svc/was/crm/crm-webapp/vapid_private.pem')
+        public_key_bytes = vapid.public_key.public_bytes(
+            encoding=serialization.Encoding.X962,
+            format=serialization.PublicFormat.UncompressedPoint
+        )
+        public_key_b64 = base64.urlsafe_b64encode(public_key_bytes).decode('utf-8').rstrip('=')
+
+        return jsonify({'publicKey': public_key_b64})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/push/subscribe', methods=['POST'])
+def push_subscribe():
+    """푸시 알림 구독"""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        data = request.json
+        username = session.get('username')
+        print(f"[Push Subscribe] username: {username}, data: {data}")
+
+        if not data or 'subscription' not in data:
+            return jsonify({'error': 'Invalid subscription data'}), 400
+
+        subscription = data['subscription']
+        print(f"[Push Subscribe] subscription: {subscription}")
+
+        if push_helper.save_subscription(username, subscription):
+            print(f"[Push Subscribe] 저장 성공: {username}")
+            return jsonify({'success': True, 'message': 'Subscription saved'})
+        else:
+            print(f"[Push Subscribe] 저장 실패: {username}")
+            return jsonify({'error': 'Failed to save subscription'}), 500
+
+    except Exception as e:
+        import traceback
+        print(f"[Push Subscribe] 예외 발생: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/push/unsubscribe', methods=['POST'])
+def push_unsubscribe():
+    """푸시 알림 구독 취소"""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        data = request.json
+        endpoint = data.get('endpoint')
+
+        if not endpoint:
+            return jsonify({'error': 'Endpoint is required'}), 400
+
+        if push_helper.remove_subscription(endpoint):
+            return jsonify({'success': True, 'message': 'Subscription removed'})
+        else:
+            return jsonify({'error': 'Failed to remove subscription'}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @cached(ttl=30, key_prefix='nav_counts')
 def calculate_nav_counts(username):
     """네비게이션 바 카운트 계산 (헬퍼 함수) - 30초 캐시"""
@@ -2161,3 +2253,260 @@ def service_unavailable(error):
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+
+
+# ==================== 알림 설정 API ====================
+
+@app.route('/api/notification-settings', methods=['GET'])
+def get_notification_settings():
+    """사용자 알림 설정 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    settings = database.get_user_notification_settings(username)
+    return jsonify(settings)
+
+
+@app.route('/api/notification-settings', methods=['POST'])
+def save_notification_settings():
+    """사용자 알림 설정 저장"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.get_json()
+
+    settings = {
+        'reminder_minutes': data.get('reminder_minutes', 30),
+        'repeat_enabled': data.get('repeat_enabled', False),
+        'repeat_interval': data.get('repeat_interval', 5),
+        'repeat_until_minutes': data.get('repeat_until_minutes', 0),
+        'daily_summary_enabled': data.get('daily_summary_enabled', True),
+        'daily_summary_time': data.get('daily_summary_time', '09:00')
+    }
+
+    success = database.save_user_notification_settings(username, settings)
+
+    if success:
+        return jsonify({'success': True, 'settings': settings})
+    else:
+        return jsonify({'error': 'Failed to save settings'}), 500
+
+
+@app.route('/api/notification-settings/test-daily-summary', methods=['POST'])
+def test_daily_summary():
+    """일일 요약 알림 테스트"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    today_count = database.get_today_reminder_count(username)
+
+    if today_count > 0:
+        today_reminders = database.get_today_reminders_list(username)
+        reminder_list = ', '.join([f"{r['scheduled_time']} {r['title']}" for r in today_reminders[:3]])
+        if today_count > 3:
+            reminder_list += f' 외 {today_count - 3}건'
+
+        result = push_helper.send_push_notification(
+            username=username,
+            title='📅 오늘의 예약 알림 (테스트)',
+            body=f'오늘 {today_count}건의 예약이 있습니다: {reminder_list}',
+            data={
+                'type': 'daily_summary',
+                'url': '/reminders',
+                'requireInteraction': False,
+                'tag': 'daily-summary-test'
+            }
+        )
+        return jsonify(result)
+    else:
+        return jsonify({'message': '오늘 예약이 없습니다', 'success': 0, 'failed': 0})
+
+
+@app.route('/api/push/test', methods=['POST'])
+def test_push_notification():
+    """푸시 알림 테스트 API"""
+    if 'username' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username')
+
+    try:
+        result = push_helper.send_push_notification(
+            username=username,
+            title='테스트 푸시 알림',
+            body='푸시 알림이 정상 작동합니다!',
+            data={
+                'type': 'test',
+                'timestamp': str(datetime.now())
+            }
+        )
+
+        print(f'[PUSH TEST] 결과: {result}')  # 로그 출력
+        return jsonify(result)
+    except Exception as e:
+        print(f'[PUSH TEST] 오류: {e}')  # 오류 로그
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sw-version', methods=['GET'])
+def get_sw_version():
+    """Service Worker 버전 정보 조회 (클라이언트 자동 업데이트용)"""
+    # Service Worker 파일의 수정 시간을 기반으로 타임스탬프 생성
+    sw_path = os.path.join(os.path.dirname(__file__), 'static', 'service-worker.js')
+    try:
+        mtime = os.path.getmtime(sw_path)
+        version = {
+            'version': 'v9',  # 주 버전 (수동 관리)
+            'timestamp': int(mtime),  # 파일 수정 시간
+            'hash': str(int(mtime))  # 간단한 해시
+        }
+        return jsonify(version)
+    except Exception as e:
+        return jsonify({'version': 'v9', 'timestamp': 0, 'hash': '0'})
+
+
+@app.route('/service-worker.js')
+def serve_service_worker():
+    """루트에서 Service Worker 제공 (scope='/'를 위해 필요)"""
+    from flask import send_file
+    sw_path = os.path.join(os.path.dirname(__file__), 'static', 'service-worker.js')
+    response = send_file(sw_path, mimetype='application/javascript')
+    # Service-Worker-Allowed 헤더로 루트 스코프 허용
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
+
+# ==================== 예약 알림 스케줄러 ====================
+
+def check_reminder_notifications():
+    """예약 알림 체크 및 푸시 발송 (사용자별 설정 적용, 반복 알림 지원)"""
+    while True:
+        try:
+            # 사용자별 설정이 적용된 알림 대상 목록 가져오기
+            pending_reminders = database.get_pending_reminders_for_notification()
+
+            for reminder in pending_reminders:
+                if not reminder.get('should_notify'):
+                    continue
+
+                user_id = reminder.get('user_id')
+                reminder_id = reminder.get('id')
+                title = reminder.get('title', '예약')
+                scheduled_time = reminder.get('scheduled_time', '')
+                notify_reason = reminder.get('notify_reason', 'first')
+
+                # 반복 알림인 경우 메시지 다르게
+                if notify_reason == 'repeat':
+                    notification_count = reminder.get('notification_count', 0)
+                    push_title = f'🔔 재알림: {title}'
+                    push_body = f'{scheduled_time} 예약이 곧 시작됩니다! (알림 {notification_count + 1}회차)'
+                else:
+                    push_title = f'⏰ 예약 알림: {title}'
+                    push_body = f'{scheduled_time}에 "{title}" 예약이 있습니다.'
+
+                # 푸시 알림 발송
+                push_result = push_helper.send_push_notification(
+                    username=user_id,
+                    title=push_title,
+                    body=push_body,
+                    data={
+                        'type': 'reminder',
+                        'reminderId': reminder_id,
+                        'url': '/reminders',
+                        'requireInteraction': True,
+                        'tag': f'reminder-{reminder_id}-{notify_reason}'
+                    }
+                )
+
+                # 알림 발송 완료 표시
+                if push_result.get('success', 0) > 0:
+                    database.update_reminder_notification(reminder_id)
+                    print(f"[Reminder] 푸시 알림 발송 완료: {user_id} - {title} ({notify_reason})")
+                else:
+                    print(f"[Reminder] 푸시 알림 발송 실패: {user_id} - {title}, errors: {push_result.get('errors')}")
+
+        except Exception as e:
+            print(f"[Reminder] 알림 체크 오류: {e}")
+            import traceback
+            traceback.print_exc()
+
+        # 1분마다 체크
+        eventlet.sleep(60)
+
+
+def check_daily_summary_notifications():
+    """아침 일일 요약 알림 체크 및 발송"""
+    from datetime import date
+
+    while True:
+        try:
+            now = datetime.now()
+            current_time = now.strftime('%H:%M')
+            today = str(date.today())
+
+            # 일일 요약이 필요한 사용자 목록
+            users_needing_summary = database.get_users_needing_daily_summary()
+
+            for user in users_needing_summary:
+                username = user.get('username')
+                summary_time = user.get('daily_summary_time', '09:00')
+
+                # 설정된 시간이 지났으면 알림 발송
+                if current_time >= summary_time:
+                    # 오늘 예약 개수 확인
+                    today_count = database.get_today_reminder_count(username)
+
+                    if today_count > 0:
+                        # 오늘 예약 목록 가져오기
+                        today_reminders = database.get_today_reminders_list(username)
+                        reminder_list = ', '.join([f"{r['scheduled_time']} {r['title']}" for r in today_reminders[:3]])
+                        if today_count > 3:
+                            reminder_list += f' 외 {today_count - 3}건'
+
+                        push_result = push_helper.send_push_notification(
+                            username=username,
+                            title=f'📅 오늘의 예약 알림',
+                            body=f'오늘 {today_count}건의 예약이 있습니다: {reminder_list}',
+                            data={
+                                'type': 'daily_summary',
+                                'url': '/reminders',
+                                'requireInteraction': False,
+                                'tag': f'daily-summary-{today}'
+                            }
+                        )
+
+                        if push_result.get('success', 0) > 0:
+                            database.update_last_daily_summary(username, today)
+                            print(f"[DailySummary] 일일 요약 발송 완료: {username} - {today_count}건")
+                    else:
+                        # 예약이 없어도 발송 완료 처리 (다시 보내지 않도록)
+                        database.update_last_daily_summary(username, today)
+
+        except Exception as e:
+            print(f"[DailySummary] 일일 요약 체크 오류: {e}")
+            import traceback
+            traceback.print_exc()
+
+        # 5분마다 체크
+        eventlet.sleep(300)
+
+
+def start_reminder_scheduler():
+    """예약 알림 스케줄러 시작"""
+    print("[Reminder] 예약 알림 스케줄러 시작")
+    eventlet.spawn(check_reminder_notifications)
+    eventlet.spawn(check_daily_summary_notifications)
+
+
+# 앱 시작 시 스케줄러 실행 (Gunicorn 워커당 1회)
+_scheduler_started = False
+
+@app.before_request
+def ensure_scheduler_started():
+    """첫 요청 시 스케줄러 시작 (1회만)"""
+    global _scheduler_started
+    if not _scheduler_started:
+        _scheduler_started = True
+        start_reminder_scheduler()

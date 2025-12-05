@@ -796,6 +796,256 @@ def get_pending_notifications(user_id):
             result.append(r)
         return result
 
+
+def get_all_pending_reminder_notifications():
+    """모든 사용자의 30분 이내 예약 알림 목록 (스케줄러용)"""
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    today = now.strftime('%Y-%m-%d')
+    current_time = now.strftime('%H:%M')
+
+    # 30분 후 시간 계산
+    time_30min_later = (now + timedelta(minutes=30)).strftime('%H:%M')
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 당일 예약 중 현재~30분 이내, 아직 알림 안 보낸 것
+        cursor.execute('''
+            SELECT * FROM reminders
+            WHERE scheduled_date = %s
+              AND scheduled_time > %s
+              AND scheduled_time <= %s
+              AND is_completed = 0
+              AND notified_30min = 0
+            ORDER BY scheduled_time ASC
+        ''', (today, current_time, time_30min_later))
+        rows = cursor.fetchall()
+
+        result = []
+        for row in rows:
+            r = dict(row)
+            if 'created_at' in r and r['created_at']:
+                r['created_at'] = str(r['created_at'])
+            if 'updated_at' in r and r['updated_at']:
+                r['updated_at'] = str(r['updated_at'])
+            result.append(r)
+        return result
+
+
+# ==================== 사용자 알림 설정 ====================
+
+def get_user_notification_settings(username):
+    """사용자의 알림 설정 조회 (없으면 기본값 반환)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM user_notification_settings WHERE username = %s
+        ''', (username,))
+        row = cursor.fetchone()
+
+        if row:
+            result = dict(row)
+            if 'created_at' in result and result['created_at']:
+                result['created_at'] = str(result['created_at'])
+            if 'updated_at' in result and result['updated_at']:
+                result['updated_at'] = str(result['updated_at'])
+            return result
+
+        # 기본값 반환
+        return {
+            'username': username,
+            'reminder_minutes': 30,
+            'repeat_enabled': False,
+            'repeat_interval': 5,
+            'repeat_until_minutes': 0,
+            'daily_summary_enabled': True,
+            'daily_summary_time': '09:00',
+            'last_daily_summary_date': None
+        }
+
+
+def save_user_notification_settings(username, settings):
+    """사용자 알림 설정 저장 (UPSERT)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO user_notification_settings
+                    (username, reminder_minutes, repeat_enabled, repeat_interval,
+                     repeat_until_minutes, daily_summary_enabled, daily_summary_time)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (username) DO UPDATE SET
+                    reminder_minutes = EXCLUDED.reminder_minutes,
+                    repeat_enabled = EXCLUDED.repeat_enabled,
+                    repeat_interval = EXCLUDED.repeat_interval,
+                    repeat_until_minutes = EXCLUDED.repeat_until_minutes,
+                    daily_summary_enabled = EXCLUDED.daily_summary_enabled,
+                    daily_summary_time = EXCLUDED.daily_summary_time,
+                    updated_at = CURRENT_TIMESTAMP
+            ''', (
+                username,
+                settings.get('reminder_minutes', 30),
+                settings.get('repeat_enabled', False),
+                settings.get('repeat_interval', 5),
+                settings.get('repeat_until_minutes', 0),
+                settings.get('daily_summary_enabled', True),
+                settings.get('daily_summary_time', '09:00')
+            ))
+            conn.commit()
+            return True
+
+
+def update_last_daily_summary(username, date_str):
+    """일일 요약 발송 날짜 업데이트"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE user_notification_settings
+                SET last_daily_summary_date = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE username = %s
+            ''', (date_str, username))
+            conn.commit()
+
+
+def get_users_needing_daily_summary():
+    """일일 요약이 필요한 사용자 목록 (오늘 아직 안 보낸 사람)"""
+    from datetime import date
+    today = str(date.today())
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 설정이 있는 사용자 중 오늘 요약 안 보낸 사람
+        cursor.execute('''
+            SELECT username, daily_summary_time
+            FROM user_notification_settings
+            WHERE daily_summary_enabled = true
+              AND (last_daily_summary_date IS NULL OR last_daily_summary_date < %s)
+        ''', (today,))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_all_reminder_users():
+    """예약이 있는 모든 사용자 목록"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT DISTINCT user_id FROM reminders WHERE is_completed = 0
+        ''')
+        rows = cursor.fetchall()
+        return [row['user_id'] for row in rows]
+
+
+def get_today_reminder_count(username):
+    """사용자의 당일 예약 개수"""
+    from datetime import date
+    today = str(date.today())
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT COUNT(*) as count FROM reminders
+            WHERE user_id = %s AND scheduled_date = %s AND is_completed = 0
+        ''', (username, today))
+        row = cursor.fetchone()
+        return row['count'] if row else 0
+
+
+def get_today_reminders_list(username):
+    """사용자의 당일 예약 목록 (시간순)"""
+    from datetime import date
+    today = str(date.today())
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, title, scheduled_time FROM reminders
+            WHERE user_id = %s AND scheduled_date = %s AND is_completed = 0
+            ORDER BY scheduled_time ASC
+        ''', (username, today))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+def update_reminder_notification(reminder_id):
+    """예약 알림 발송 기록 업데이트"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE reminders
+                SET last_notified_at = CURRENT_TIMESTAMP,
+                    notification_count = notification_count + 1,
+                    notified_30min = 1
+                WHERE id = %s
+            ''', (reminder_id,))
+            conn.commit()
+
+
+def get_pending_reminders_for_notification():
+    """알림이 필요한 모든 예약 목록 (사용자별 설정 적용)"""
+    from datetime import datetime, timedelta
+
+    now = datetime.now()
+    today = now.strftime('%Y-%m-%d')
+    current_time = now.strftime('%H:%M')
+
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 당일 미완료 예약 + 사용자 설정 조인
+        cursor.execute('''
+            SELECT r.*,
+                   COALESCE(s.reminder_minutes, 30) as reminder_minutes,
+                   COALESCE(s.repeat_enabled, false) as repeat_enabled,
+                   COALESCE(s.repeat_interval, 5) as repeat_interval,
+                   COALESCE(s.repeat_until_minutes, 0) as repeat_until_minutes
+            FROM reminders r
+            LEFT JOIN user_notification_settings s ON r.user_id = s.username
+            WHERE r.scheduled_date = %s
+              AND r.is_completed = 0
+              AND r.scheduled_time > %s
+            ORDER BY r.scheduled_time ASC
+        ''', (today, current_time))
+        rows = cursor.fetchall()
+
+        result = []
+        for row in rows:
+            r = dict(row)
+            # 예약 시간 파싱
+            scheduled_time = datetime.strptime(f"{today} {r['scheduled_time']}", '%Y-%m-%d %H:%M')
+            minutes_until = (scheduled_time - now).total_seconds() / 60
+
+            # 첫 알림 체크 (설정된 분 전)
+            reminder_minutes = r.get('reminder_minutes', 30)
+            if minutes_until <= reminder_minutes and r.get('notification_count', 0) == 0:
+                r['should_notify'] = True
+                r['notify_reason'] = 'first'
+                result.append(r)
+                continue
+
+            # 반복 알림 체크
+            if r.get('repeat_enabled') and r.get('notification_count', 0) > 0:
+                repeat_interval = r.get('repeat_interval', 5)
+                repeat_until = r.get('repeat_until_minutes', 0)
+
+                # 마지막 알림 이후 repeat_interval분 경과했는지
+                last_notified = r.get('last_notified_at')
+                if last_notified:
+                    if isinstance(last_notified, str):
+                        last_notified = datetime.strptime(last_notified, '%Y-%m-%d %H:%M:%S.%f')
+                    minutes_since_last = (now - last_notified).total_seconds() / 60
+
+                    # repeat_until 체크 (예약 시간까지 또는 설정된 분까지)
+                    if minutes_until > repeat_until and minutes_since_last >= repeat_interval:
+                        r['should_notify'] = True
+                        r['notify_reason'] = 'repeat'
+                        result.append(r)
+
+        return result
+
+
 # ==================== 유틸리티 ====================
 
 def get_next_id(table):

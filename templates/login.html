@@ -8,6 +8,7 @@
     <!-- PWA 메타 태그 -->
     <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
     <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="업무관리">
@@ -305,16 +306,6 @@
             }
         });
 
-        // PWA 서비스 워커 등록
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/service-worker.js')
-                .then(registration => {
-                    console.log('Service Worker 등록 성공:', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Service Worker 등록 실패:', error);
-                });
-        }
 
         // 폼 제출 시 애니메이션
         document.querySelector('form').addEventListener('submit', function(e) {
@@ -323,5 +314,10 @@
             button.disabled = true;
         });
     </script>
+
+    <!-- Service Worker 등록 (로그인 후에도 유지되도록) -->
+    <script src="/static/js/sw-register.js"></script>
+    <script src="/static/js/sw-auto-update.js"></script>
+    <script src="/static/js/push-notifications.js" defer></script>
 </body>
 </html>

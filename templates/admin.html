@@ -11,6 +11,7 @@
     <!-- PWA 메타 태그 -->
     <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
     <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="업무관리">
@@ -19,6 +20,11 @@
     <link rel="apple-touch-icon" href="/static/icon-192.png">
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Service Worker 등록은 가장 먼저 -->
+    <script src="/static/js/sw-register.js"></script>
+    <!-- 그 다음 auto-update와 push-notifications -->
+    <script src="/static/js/sw-auto-update.js"></script>
+    <script src="/static/js/push-notifications.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
@@ -2800,16 +2806,6 @@
             }, 3000);
         }
 
-        // PWA 서비스 워커 등록
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/service-worker.js')
-                .then(registration => {
-                    console.log('Service Worker 등록 성공:', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Service Worker 등록 실패:', error);
-                });
-        }
 
         // 도움말 모달 제어
         function openHelpModal() {
