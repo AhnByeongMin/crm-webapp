@@ -1,6 +1,6 @@
 """
-Gunicorn 설정 파일 - 포트 5002 (Flask-SocketIO 최적화)
-무중단 서비스를 위한 이중 인스턴스 구성
+Gunicorn 설정 파일 - 포트 5002 (Flask-SocketIO + Redis + gevent)
+무중단 서비스를 위한 이중 인스턴스 구성 (TEST: gevent worker)
 """
 import multiprocessing
 
@@ -8,9 +8,9 @@ import multiprocessing
 bind = '127.0.0.1:5002'
 backlog = 2048
 
-# 워커 설정 (SocketIO는 eventlet 사용)
+# 워커 설정 (eventlet - Socket.IO 안정성 우선)
 worker_class = 'eventlet'
-# Socket.IO sticky session을 위해 단일 워커 사용
+# eventlet은 싱글 워커 권장 (Socket.IO 호환성)
 workers = 1
 worker_connections = 1000
 timeout = 120
