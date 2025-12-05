@@ -7,3 +7,6 @@ openpyxl==3.1.2
 gunicorn==21.2.0
 eventlet==0.35.2
 psycopg2-binary==2.9.11
+redis==5.0.1
+gevent==24.2.1
+gevent-websocket==0.10.1

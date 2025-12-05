@@ -1,3 +1,7 @@
+# Eventlet monkey patching (최상단 필수!)
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_compress import Compress
@@ -32,12 +36,13 @@ Compress(app)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
 
-# Socket.IO 초기화
+# Socket.IO 초기화 (eventlet + Redis)
 socketio = SocketIO(
     app,
+    async_mode='eventlet',
+    message_queue='redis://127.0.0.1:6379/0',
     cors_allowed_origins="*",
     max_http_buffer_size=50 * 1024 * 1024,
-    async_mode='eventlet',
     logger=False,
     engineio_logger=False
 )
