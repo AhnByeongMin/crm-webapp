@@ -2128,5 +2128,36 @@ def get_nav_counts():
     print(f"[DEBUG] Final nav-counts for {username}: {counts}")
     return jsonify(counts)
 
+# ============================================================
+# 커스텀 에러 핸들러 (nginx 에러 페이지 사용)
+# ============================================================
+@app.errorhandler(400)
+def bad_request(error):
+    return send_file('/svc/web/nginx/html/errors/400.html'), 400
+
+@app.errorhandler(401)
+def unauthorized(error):
+    return send_file('/svc/web/nginx/html/errors/401.html'), 401
+
+@app.errorhandler(403)
+def forbidden(error):
+    return send_file('/svc/web/nginx/html/errors/403.html'), 403
+
+@app.errorhandler(404)
+def not_found(error):
+    return send_file('/svc/web/nginx/html/errors/404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return send_file('/svc/web/nginx/html/errors/500.html'), 500
+
+@app.errorhandler(502)
+def bad_gateway(error):
+    return send_file('/svc/web/nginx/html/errors/502.html'), 502
+
+@app.errorhandler(503)
+def service_unavailable(error):
+    return send_file('/svc/web/nginx/html/errors/503.html'), 503
+
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
