@@ -25,9 +25,9 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 # 프로세스 이름
 proc_name = 'crm_webapp_5001'
 
-# 재시작 설정
-max_requests = 10000  # 메모리 누수 방지
-max_requests_jitter = 500
+# 재시작 설정 (메모리 누수 없으므로 크게 설정)
+max_requests = 100000  # 약 10배 늘림 (재시작 빈도 감소)
+max_requests_jitter = 5000
 graceful_timeout = 30
 
 # 보안
