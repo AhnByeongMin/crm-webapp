@@ -18,7 +18,8 @@ from cache_manager import app_cache, cached, invalidate_cache, generate_etag
 import push_helper  # 웹 푸시 알림 헬퍼
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-in-production'
+# Secret Key: 환경변수에서 로드, 없으면 기본값 (프로덕션에서는 반드시 환경변수 설정 필요)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'haru-crm-secret-key-2024-prod')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 최대 파일 크기
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1년 캐시 (asset versioning으로 제어)
@@ -48,14 +49,22 @@ socketio = SocketIO(
     engineio_logger=False
 )
 
-# 관리자 계정 (이름: 비밀번호)
-ADMIN_ACCOUNTS = {
-    '김은아': 'admin1234',
-    '김지원': 'admin1234',
-    '민건희': 'admin1234',
-    '홍민지': 'admin1234',
-    '안병민': 'admin1234'
-}
+# 관리자 사용자명 캐시 (DB에서 로드)
+_admin_cache = None
+_admin_cache_time = None
+
+def get_admin_accounts():
+    """관리자 사용자명 집합 반환 (5분 캐시)"""
+    global _admin_cache, _admin_cache_time
+    import time
+    now = time.time()
+
+    # 캐시가 없거나 5분 지났으면 갱신
+    if _admin_cache is None or _admin_cache_time is None or (now - _admin_cache_time) > 300:
+        _admin_cache = database.get_admin_usernames()
+        _admin_cache_time = now
+
+    return _admin_cache
 
 # SQLite 데이터베이스 함수 사용
 load_data = database.load_data
@@ -85,8 +94,8 @@ def is_admin():
     if 'role' in session and session['role'] == '관리자':
         return True
 
-    # 하위 호환성: ADMIN_ACCOUNTS에 있는 경우 (마이그레이션 중)
-    if 'username' in session and session['username'] in ADMIN_ACCOUNTS:
+    # DB에서 관리자 목록 확인
+    if 'username' in session and session['username'] in get_admin_accounts():
         return True
 
     return False
@@ -314,7 +323,7 @@ def update_item_status(item_id):
         # 최적화: 단일 항목만 조회
         with database.get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT assigned_to FROM tasks WHERE id = ?', (item_id,))
+            cursor.execute('SELECT assigned_to FROM tasks WHERE id = %s', (item_id,))
             row = cursor.fetchone()
             if not row:
                 return jsonify({'error': 'Not found'}), 404
@@ -326,7 +335,7 @@ def update_item_status(item_id):
     # Socket.IO로 할당자에게 배지 업데이트 전송
     with database.get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT assigned_to FROM tasks WHERE id = ?', (item_id,))
+        cursor.execute('SELECT assigned_to FROM tasks WHERE id = %s', (item_id,))
         row = cursor.fetchone()
         if row and row['assigned_to']:
             assignee = row['assigned_to']
@@ -347,7 +356,7 @@ def update_item_assignment(item_id):
     old_assignee = None
     with database.get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT assigned_to FROM tasks WHERE id = ?', (item_id,))
+        cursor.execute('SELECT assigned_to FROM tasks WHERE id = %s', (item_id,))
         row = cursor.fetchone()
         if row:
             old_assignee = row['assigned_to']
@@ -500,7 +509,8 @@ def get_non_admin_users():
 
     all_users = database.load_users()
     # 관리자 계정 제외
-    non_admin_users = [user for user in all_users if user not in ADMIN_ACCOUNTS]
+    admin_accounts = get_admin_accounts()
+    non_admin_users = [user for user in all_users if user not in admin_accounts]
     return jsonify(non_admin_users)
 
 @app.route('/api/teams', methods=['GET'])
@@ -522,11 +532,12 @@ def get_users_by_team():
 
     team = request.args.get('team')
 
+    admin_accounts = get_admin_accounts()
     if team == '전체':
         # 전체 팀원 (관리자 팀 제외, 팀 없는 사용자 제외)
         users = load_users_by_team()
         # 관리자 계정은 배정 대상에서 제외
-        users = [user for user in users if user not in ADMIN_ACCOUNTS]
+        users = [user for user in users if user not in admin_accounts]
     elif team == '관리자':
         # 관리자 팀은 배정 대상이 아니므로 빈 리스트 반환
         users = []
@@ -534,11 +545,11 @@ def get_users_by_team():
         # 특정 팀 사용자
         users = load_users_by_team(team)
         # 혹시 모를 경우를 대비해 관리자 제외
-        users = [user for user in users if user not in ADMIN_ACCOUNTS]
+        users = [user for user in users if user not in admin_accounts]
     else:
         # 팀 파라미터 없으면 전체 사용자 (관리자 제외)
         users = database.load_all_users_detail()
-        users = [user for user in users if user not in ADMIN_ACCOUNTS]
+        users = [user for user in users if user not in admin_accounts]
 
     return jsonify(users)
 
@@ -550,7 +561,8 @@ def get_users_with_team():
 
     users = load_users_with_team()
     # 관리자 계정 제외
-    users = [user for user in users if user['username'] not in ADMIN_ACCOUNTS]
+    admin_accounts = get_admin_accounts()
+    users = [user for user in users if user['username'] not in admin_accounts]
     return jsonify(users)
 
 @app.route('/download/template/tasks')
@@ -1057,7 +1069,7 @@ def search_users():
             users.add(item['assigned_to'])
 
     # 관리자 계정도 추가
-    users.update(ADMIN_ACCOUNTS.keys())
+    users.update(get_admin_accounts())
 
     # None 값 제거
     users.discard(None)
@@ -2354,13 +2366,13 @@ def calculate_nav_counts(username):
                             counts['unread_chats'] += 1
 
         # 상담사: 내게 할당된 미완료 할일 개수 (assigned_to 사용)
-        if username not in ADMIN_ACCOUNTS:
+        if username not in get_admin_accounts():
             with database.get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
                     SELECT COUNT(*) as count
                     FROM tasks
-                    WHERE assigned_to = ? AND status != '완료'
+                    WHERE assigned_to = %s AND status != '완료'
                 ''', (username,))
                 row = cursor.fetchone()
                 counts['pending_tasks'] = row['count'] if row else 0

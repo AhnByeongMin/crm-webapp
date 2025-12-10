@@ -220,6 +220,25 @@ def load_users():
         cursor.execute('SELECT username FROM users ORDER BY username')
         return [row['username'] for row in cursor.fetchall()]
 
+
+def get_admin_usernames():
+    """관리자 사용자명 목록 조회 (캐시용)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username FROM users WHERE role = '관리자' AND status = 'active'")
+        return set(row['username'] for row in cursor.fetchall())
+
+
+def is_user_admin(username):
+    """특정 사용자가 관리자인지 확인"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM users WHERE username = %s AND role = '관리자' AND status = 'active'",
+            (username,)
+        )
+        return cursor.fetchone() is not None
+
 def save_users(users):
     """사용자 목록 저장"""
     with db_lock:

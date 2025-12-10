@@ -446,6 +446,25 @@
     </div>
 
     <script>
+        // XSS 방지를 위한 HTML 이스케이프 함수
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
+        // HTML 속성 값 이스케이프 (value, onclick 등)
+        function escapeAttr(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         const socket = io();
         const currentUsername = '{{ username }}';
         let editingId = null;
@@ -1520,20 +1539,20 @@
                 .then(data => {
                     const item = data.find(i => i.id === id);
                     if (item) {
-                        // 수정 모달 표시
+                        // 수정 모달 표시 (XSS 방지: escapeAttr 적용)
                         showModal('할일 수정', `
                             <div style="text-align: left;">
                                 <div style="margin-bottom: 15px;">
                                     <label style="display: block; margin-bottom: 5px; font-weight: bold;">배정 대상:</label>
-                                    <input type="text" id="editModalAssignedTo" value="${item.assigned_to || ''}" placeholder="배정 대상 입력 (선택)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                    <input type="text" id="editModalAssignedTo" value="${escapeAttr(item.assigned_to || '')}" placeholder="배정 대상 입력 (선택)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                                 </div>
                                 <div style="margin-bottom: 15px;">
                                     <label style="display: block; margin-bottom: 5px; font-weight: bold;">제목:</label>
-                                    <input type="text" id="editModalTitle" value="${item.title || ''}" placeholder="제목 입력" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                    <input type="text" id="editModalTitle" value="${escapeAttr(item.title || '')}" placeholder="제목 입력" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
                                 </div>
                                 <div style="margin-bottom: 15px;">
                                     <label style="display: block; margin-bottom: 5px; font-weight: bold;">내용:</label>
-                                    <textarea id="editModalContent" placeholder="내용 입력" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-height: 120px; resize: vertical;">${item.content || ''}</textarea>
+                                    <textarea id="editModalContent" placeholder="내용 입력" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-height: 120px; resize: vertical;">${escapeHtml(item.content || '')}</textarea>
                                 </div>
                             </div>
                         `, [
@@ -2436,15 +2455,15 @@
                     let statusColor = '#6c757d';
                     if (item.status === '진행중') statusColor = '#ffc107';
                     if (item.status === '완료') statusColor = '#28a745';
-                    return `<span style="background: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${item.status || '대기중'}</span>`;
+                    return `<span style="background: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHtml(item.status || '대기중')}</span>`;
                 case 'team':
-                    return item.team || '<span style="color: #999;">-</span>';
+                    return item.team ? escapeHtml(item.team) : '<span style="color: #999;">-</span>';
                 case 'assigned_to':
-                    return item.assigned_to || '<span style="color: #999;">미배정</span>';
+                    return item.assigned_to ? escapeHtml(item.assigned_to) : '<span style="color: #999;">미배정</span>';
                 case 'title':
-                    return item.title || '';
+                    return escapeHtml(item.title || '');
                 case 'content':
-                    return item.content || '';
+                    return escapeHtml(item.content || '');
                 case 'created_at':
                 case 'assigned_at':
                 case 'updated_at':

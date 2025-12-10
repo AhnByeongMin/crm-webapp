@@ -721,6 +721,14 @@
     </div>
 
     <script>
+        // XSS 방지를 위한 HTML 이스케이프 함수
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
         const isAdmin = {{ 'true' if is_admin else 'false' }};
         let currentPromoId = null;
         let allPromotions = [];
@@ -1043,30 +1051,30 @@
                 .then(promo => {
                     document.getElementById('detailContent').innerHTML = `
                         <div style="line-height: 1.8;">
-                            <p><strong>대분류:</strong> ${promo.category || '-'}</p>
+                            <p><strong>대분류:</strong> ${escapeHtml(promo.category) || '-'}</p>
                             <p>
-                                <strong>상품명:</strong> ${promo.product_name}
-                                <button class="copy-btn" onclick="copyToClipboard('${promo.product_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
+                                <strong>상품명:</strong> ${escapeHtml(promo.product_name)}
+                                <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.product_name).replace(/'/g, "\\'")}', this)">📋 복사</button>
                             </p>
-                            <p><strong>채널:</strong> ${promo.channel}</p>
+                            <p><strong>채널:</strong> ${escapeHtml(promo.channel)}</p>
                             <p>
-                                <strong>프로모션명:</strong> ${promo.promotion_name}
-                                <button class="copy-btn" onclick="copyToClipboard('${promo.promotion_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
+                                <strong>프로모션명:</strong> ${escapeHtml(promo.promotion_name)}
+                                <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.promotion_name).replace(/'/g, "\\'")}', this)">📋 복사</button>
                             </p>
                             <p>
-                                <strong>패키지 정책 코드:</strong> ${promo.promotion_code || '-'}
-                                ${promo.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${promo.promotion_code.replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
+                                <strong>패키지 정책 코드:</strong> ${escapeHtml(promo.promotion_code) || '-'}
+                                ${promo.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.promotion_code).replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
                             </p>
-                            <p><strong>금액할인:</strong> ${promo.discount_amount || '-'}</p>
-                            <p><strong>회차면제:</strong> ${promo.session_exemption || '-'}</p>
-                            <p><strong>중복여부:</strong> ${(promo.subscription_types || []).join(', ') || '-'}</p>
+                            <p><strong>금액할인:</strong> ${escapeHtml(promo.discount_amount) || '-'}</p>
+                            <p><strong>회차면제:</strong> ${escapeHtml(promo.session_exemption) || '-'}</p>
+                            <p><strong>중복여부:</strong> ${escapeHtml((promo.subscription_types || []).join(', ')) || '-'}</p>
                             <p><strong>내용:</strong></p>
-                            <p style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px;">${promo.content}</p>
-                            <p><strong>기간:</strong> ${promo.start_date} ~ ${promo.end_date}</p>
+                            <p style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px;">${escapeHtml(promo.content)}</p>
+                            <p><strong>기간:</strong> ${escapeHtml(promo.start_date)} ~ ${escapeHtml(promo.end_date)}</p>
                             <p><strong>상태:</strong> ${getStatusBadge(promo)}</p>
                             <p style="font-size: 12px; color: #666; margin-top: 20px;">
                                 등록일: ${new Date(promo.created_at).toLocaleString('ko-KR')}<br>
-                                ${promo.created_by ? `등록자: ${promo.created_by}<br>` : ''}
+                                ${promo.created_by ? `등록자: ${escapeHtml(promo.created_by)}<br>` : ''}
                                 ${promo.updated_at ? `최종 수정: ${new Date(promo.updated_at).toLocaleString('ko-KR')}` : ''}
                             </p>
                         </div>
