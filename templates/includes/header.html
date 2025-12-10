@@ -89,6 +89,7 @@
     </h1>
     <div class="nav">
         {% if current_page == 'chat_room' %}
+        <button onclick="toggleSearchPanel()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">🔍 검색</button>
         <button id="participantsBtn" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">👥 참여자</button>
         <a href="/chats" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 16px;">← 채팅목록</a>
         {% endif %}
@@ -162,6 +163,7 @@
     }
 
     // Socket.IO 실시간 업데이트
+    let socketConnected = false;
     if (typeof io !== 'undefined') {
         const socket = io();
 
@@ -172,11 +174,20 @@
         socket.on('nav_counts_update', (counts) => {
             updateNavBadges(counts);
         });
+
+        socket.on('connect', () => { socketConnected = true; });
+        socket.on('disconnect', () => { socketConnected = false; });
     }
 
-    // 페이지 로드 시 초기 배지 조회 및 주기적 업데이트
+    // 페이지 로드 시 초기 조회 + 페이지 포커스 시에만 갱신 (폴링 제거)
     document.addEventListener('DOMContentLoaded', () => {
         fetchNavCounts();
-        setInterval(fetchNavCounts, 30000); // 30초마다 폴링 (백업)
+    });
+
+    // 페이지가 다시 보일 때만 갱신 (탭 전환, 앱 복귀 시)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !socketConnected) {
+            fetchNavCounts();
+        }
     });
 </script>

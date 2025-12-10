@@ -874,6 +874,171 @@ def get_chat_messages(chat_id):
         'limit': limit
     })
 
+@app.route('/api/chats/<chat_id>/search', methods=['GET'])
+def search_chat_messages(chat_id):
+    """
+    채팅방 메시지 검색 API
+
+    Query Parameters:
+        - q: 검색어 (필수)
+        - date: 특정 날짜 검색 (YYYY-MM-DD 형식)
+
+    Returns:
+        {
+            'results': [{ message, index, highlight }...],
+            'total': 검색 결과 개수
+        }
+    """
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    chats = load_chats()
+
+    if chat_id not in chats:
+        return jsonify({'error': 'Chat not found'}), 404
+
+    chat_info = chats[chat_id]
+
+    # 권한 확인
+    if not is_localhost():
+        username = session['username']
+        if username not in chat_info['participants']:
+            return jsonify({'error': 'Forbidden'}), 403
+
+    query = request.args.get('q', '').strip().lower()
+    date_filter = request.args.get('date', '')  # YYYY-MM-DD 형식
+
+    messages = chat_info.get('messages', [])
+    results = []
+
+    for idx, msg in enumerate(messages):
+        msg_text = msg.get('message', '').lower()
+        msg_timestamp = msg.get('timestamp', '')
+        msg_date = msg_timestamp[:10] if msg_timestamp else ''  # YYYY-MM-DD 추출
+
+        # 날짜 필터
+        if date_filter and msg_date != date_filter:
+            continue
+
+        # 검색어 필터 (검색어가 있을 때만)
+        if query and query not in msg_text:
+            continue
+
+        # 결과에 추가
+        result_msg = msg.copy()
+        result_msg['index'] = idx
+        result_msg['id'] = msg.get('id', idx)
+        results.append(result_msg)
+
+    return jsonify({
+        'results': results,
+        'total': len(results),
+        'query': query,
+        'date': date_filter
+    })
+
+@app.route('/api/chats/<chat_id>/dates', methods=['GET'])
+def get_chat_dates(chat_id):
+    """
+    채팅방에 메시지가 있는 날짜 목록 반환 (캘린더용)
+    """
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    chats = load_chats()
+
+    if chat_id not in chats:
+        return jsonify({'error': 'Chat not found'}), 404
+
+    chat_info = chats[chat_id]
+
+    # 권한 확인
+    if not is_localhost():
+        username = session['username']
+        if username not in chat_info['participants']:
+            return jsonify({'error': 'Forbidden'}), 403
+
+    messages = chat_info.get('messages', [])
+    dates = set()
+
+    for msg in messages:
+        timestamp = msg.get('timestamp', '')
+        if timestamp:
+            date = timestamp[:10]  # YYYY-MM-DD
+            dates.add(date)
+
+    return jsonify({
+        'dates': sorted(list(dates)),
+        'total': len(dates)
+    })
+
+@app.route('/api/chats/<chat_id>/messages/context/<int:msg_id>', methods=['GET'])
+def get_message_context(chat_id, msg_id):
+    """
+    특정 메시지 ID를 기준으로 주변 메시지를 가져오는 API
+    검색/날짜 이동 시 화면에 없는 메시지로 점프할 때 사용
+
+    Query Parameters:
+        - before: 해당 메시지 이전 몇 개를 가져올지 (기본: 25)
+        - after: 해당 메시지 이후 몇 개를 가져올지 (기본: 25)
+
+    Returns:
+        {
+            'messages': [...],
+            'target_index': 타겟 메시지의 인덱스 (messages 배열 내),
+            'first_msg_index': 전체 대화에서 첫 번째 메시지의 인덱스,
+            'has_more_before': 더 이전 메시지가 있는지,
+            'has_more_after': 더 이후 메시지가 있는지
+        }
+    """
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    chats = load_chats()
+
+    if chat_id not in chats:
+        return jsonify({'error': 'Chat not found'}), 404
+
+    chat_info = chats[chat_id]
+
+    # 권한 확인
+    if not is_localhost():
+        username = session['username']
+        if username not in chat_info['participants']:
+            return jsonify({'error': 'Forbidden'}), 403
+
+    before = int(request.args.get('before', 25))
+    after = int(request.args.get('after', 25))
+
+    messages = chat_info.get('messages', [])
+
+    # 메시지 ID로 인덱스 찾기
+    target_index = -1
+    for idx, msg in enumerate(messages):
+        if msg.get('id') == msg_id:
+            target_index = idx
+            break
+
+    if target_index == -1:
+        return jsonify({'error': 'Message not found'}), 404
+
+    # 시작/끝 인덱스 계산
+    start_index = max(0, target_index - before)
+    end_index = min(len(messages), target_index + after + 1)
+
+    # 메시지 슬라이스
+    context_messages = messages[start_index:end_index]
+
+    return jsonify({
+        'messages': context_messages,
+        'target_index': target_index - start_index,  # context_messages 내에서의 인덱스
+        'first_msg_index': start_index,  # 전체 대화에서 첫 메시지 인덱스
+        'total_messages': len(messages),
+        'has_more_before': start_index > 0,
+        'has_more_after': end_index < len(messages)
+    })
+
+
 @app.route('/api/search_users', methods=['GET'])
 def search_users():
     # 로그인한 사용자는 누구나 검색 가능
@@ -888,16 +1053,19 @@ def search_users():
     # 항목에 할당된 사용자도 추가
     data = load_data()
     for item in data:
-        if 'assigned_to' in item:
+        if item.get('assigned_to'):  # None이 아닌 경우만 추가
             users.add(item['assigned_to'])
 
     # 관리자 계정도 추가
     users.update(ADMIN_ACCOUNTS.keys())
 
+    # None 값 제거
+    users.discard(None)
+
     if query:
-        users = [u for u in users if query in u.lower()]
+        users = [u for u in users if u and query in u.lower()]
     else:
-        users = list(users)
+        users = [u for u in users if u]
 
     return jsonify(sorted(users))
 

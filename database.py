@@ -454,6 +454,7 @@ def load_chats():
             chat_id = str(msg_row['chat_id'])
             if chat_id in chats:
                 msg = {
+                    'id': msg_row['id'],  # 메시지 ID 추가 (검색/스크롤용)
                     'username': msg_row['username'],
                     'message': msg_row['message'],
                     'timestamp': str(msg_row['timestamp'])

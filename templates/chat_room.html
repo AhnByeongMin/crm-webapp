@@ -639,6 +639,226 @@
             min-width: 18px;
             text-align: center;
         }
+
+        /* 검색 패널 스타일 */
+        .search-panel {
+            display: none;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            padding: 12px 15px;
+            gap: 10px;
+            flex-direction: column;
+        }
+        .search-panel.show {
+            display: flex;
+        }
+        .search-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-input-wrap {
+            flex: 1;
+            position: relative;
+        }
+        .search-input-wrap input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+        }
+        .search-input-wrap input:focus {
+            border-color: #667eea;
+        }
+        .search-input-wrap .clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+        .search-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .search-btn:hover {
+            background: #5568d3;
+        }
+        .date-btn {
+            padding: 10px 15px;
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .date-btn:hover {
+            background: #e0e0e0;
+        }
+        .search-results-info {
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .search-results-info .nav-btns {
+            display: flex;
+            gap: 5px;
+        }
+        .search-results-info .nav-btns button {
+            padding: 5px 12px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .search-results-info .nav-btns button:hover {
+            background: #e0e0e0;
+        }
+        .search-results-info .nav-btns button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .close-search-btn {
+            padding: 8px 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* 검색 결과 하이라이트 */
+        .message.search-highlight {
+            animation: highlightPulse 2s ease-out;
+        }
+        @keyframes highlightPulse {
+            0%, 100% { box-shadow: none; }
+            50% { box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.5); }
+        }
+        .search-match {
+            background: #ffeb3b;
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
+
+        /* 날짜 선택 모달 */
+        .date-picker-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10002;
+            align-items: center;
+            justify-content: center;
+        }
+        .date-picker-modal.show {
+            display: flex;
+        }
+        .date-picker-content {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 350px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .date-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .date-picker-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .date-picker-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .calendar-nav button {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .calendar-nav button:hover {
+            background: #e0e0e0;
+        }
+        .calendar-month {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+        .calendar-day-header {
+            font-size: 12px;
+            color: #999;
+            padding: 5px;
+        }
+        .calendar-day {
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .calendar-day:hover {
+            background: #f0f0f0;
+        }
+        .calendar-day.has-messages {
+            background: #e8f0fe;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .calendar-day.today {
+            border: 2px solid #667eea;
+        }
+        .calendar-day.selected {
+            background: #667eea;
+            color: white;
+        }
+        .calendar-day.other-month {
+            color: #ccc;
+        }
+        .calendar-day.no-messages {
+            color: #ccc;
+            cursor: not-allowed;
+        }
     </style>
     <script src="/static/js/banner.js" defer></script>
 </head>
@@ -665,6 +885,26 @@
     {% include 'includes/header.html' %}
 
     <div class="chat-container">
+        <!-- 검색 패널 -->
+        <div id="searchPanel" class="search-panel">
+            <div class="search-row">
+                <div class="search-input-wrap">
+                    <input type="text" id="searchInput" placeholder="메시지 검색..." autocomplete="off">
+                    <button class="clear-btn" onclick="clearSearch()" title="지우기">×</button>
+                </div>
+                <button class="date-btn" onclick="openDatePicker()">📅 날짜</button>
+                <button class="search-btn" onclick="performSearch()">검색</button>
+                <button class="close-search-btn" onclick="closeSearchPanel()">닫기</button>
+            </div>
+            <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+                <span id="searchResultsText">검색 결과: 0건</span>
+                <div class="nav-btns">
+                    <button onclick="navigateSearchResult(-1)" id="prevResultBtn">↑ 이전</button>
+                    <button onclick="navigateSearchResult(1)" id="nextResultBtn">다음 ↓</button>
+                </div>
+            </div>
+        </div>
+
         <div id="messages"></div>
         <div id="typingIndicator" class="typing-indicator">
             <span id="typingUser"></span>님이 입력 중<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
@@ -685,6 +925,22 @@
             <div class="emoji-grid" id="emojiGrid"></div>
         </div>
         <div id="filePreview" class="file-preview"></div>
+    </div>
+
+    <!-- 날짜 선택 모달 -->
+    <div id="datePickerModal" class="date-picker-modal">
+        <div class="date-picker-content">
+            <div class="date-picker-header">
+                <span class="date-picker-title">📅 날짜로 이동</span>
+                <button class="date-picker-close" onclick="closeDatePicker()">×</button>
+            </div>
+            <div class="calendar-nav">
+                <button onclick="changeMonth(-1)">◀ 이전</button>
+                <span id="calendarMonth" class="calendar-month"></span>
+                <button onclick="changeMonth(1)">다음 ▶</button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+        </div>
     </div>
 
     <script>
@@ -930,12 +1186,22 @@
         let isLoadingMessages = false;  // 메시지 로딩 중 플래그
         let hasMoreMessages = true;      // 더 로드할 메시지가 있는지
         let currentOffset = 0;            // 현재 오프셋
+        let contextMode = false;         // 검색/날짜 이동으로 컨텍스트 표시 중인지
         const messagesPerPage = 50;      // 한 번에 로드할 메시지 개수
         let lastDisplayedDate = null;    // 마지막으로 표시된 날짜 (날짜 구분선용)
 
         // 날짜 포맷 함수 (카카오톡 스타일)
         function formatDateSeparator(dateStr) {
-            const msgDate = new Date(dateStr);
+            if (!dateStr) return '';
+            // "2025-12-08 18:17:06" 형식을 Date가 파싱할 수 있도록 T로 변환
+            const normalizedDateStr = dateStr.replace(' ', 'T');
+            const msgDate = new Date(normalizedDateStr);
+
+            // Invalid Date 체크
+            if (isNaN(msgDate.getTime())) {
+                return dateStr.substring(0, 10);  // 파싱 실패시 YYYY-MM-DD만 반환
+            }
+
             const today = new Date();
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
@@ -960,8 +1226,10 @@
 
         // 날짜만 추출 (YYYY-MM-DD 형식)
         function getDateKey(dateStr) {
-            const date = new Date(dateStr);
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            if (!dateStr) return '';
+            // "2025-12-08 18:17:06" 또는 "2025-12-08T18:17:06" 형식 모두 지원
+            // 앞 10자리만 추출 (YYYY-MM-DD)
+            return dateStr.substring(0, 10);
         }
 
         // 날짜 구분선 요소 생성
@@ -1020,7 +1288,8 @@
 
         // 이전 메시지 로드 (무한 스크롤용)
         async function loadMoreMessages() {
-            if (isLoadingMessages || !hasMoreMessages) {
+            // 컨텍스트 모드에서는 무한스크롤 비활성화
+            if (isLoadingMessages || !hasMoreMessages || contextMode) {
                 return;
             }
 
@@ -1744,7 +2013,358 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchNavCounts();
-            setInterval(fetchNavCounts, 30000);
+        });
+
+        // ==================== 검색 및 날짜 필터 기능 ====================
+        let searchResults = [];
+        let currentSearchIndex = -1;
+        let chatDates = [];  // 메시지가 있는 날짜 목록
+        let calendarDate = new Date();  // 캘린더에 표시할 월
+
+        // 검색 패널 열기/닫기
+        function toggleSearchPanel() {
+            const panel = document.getElementById('searchPanel');
+            panel.classList.toggle('show');
+            if (panel.classList.contains('show')) {
+                document.getElementById('searchInput').focus();
+                loadChatDates();  // 날짜 목록 미리 로드
+            }
+        }
+
+        function closeSearchPanel() {
+            const panel = document.getElementById('searchPanel');
+            panel.classList.remove('show');
+            clearSearchHighlights();
+            document.getElementById('searchResultsInfo').style.display = 'none';
+        }
+
+        // 검색 수행
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showAlert('검색어를 입력하세요.', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/chats/${chatId}/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+
+                searchResults = data.results;
+                currentSearchIndex = -1;
+
+                const resultsInfo = document.getElementById('searchResultsInfo');
+                const resultsText = document.getElementById('searchResultsText');
+
+                if (searchResults.length > 0) {
+                    resultsText.textContent = `검색 결과: ${searchResults.length}건`;
+                    resultsInfo.style.display = 'flex';
+                    // 첫 번째 결과로 이동
+                    navigateSearchResult(1);
+                } else {
+                    resultsText.textContent = '검색 결과가 없습니다.';
+                    resultsInfo.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('검색 오류:', error);
+                showAlert('검색 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 검색 결과 네비게이션
+        async function navigateSearchResult(direction) {
+            if (searchResults.length === 0) return;
+
+            currentSearchIndex += direction;
+
+            // 범위 제한
+            if (currentSearchIndex < 0) currentSearchIndex = searchResults.length - 1;
+            if (currentSearchIndex >= searchResults.length) currentSearchIndex = 0;
+
+            const result = searchResults[currentSearchIndex];
+
+            // 네비게이션 버튼 상태 업데이트 (먼저 표시)
+            document.getElementById('searchResultsText').textContent =
+                `검색 결과: ${currentSearchIndex + 1} / ${searchResults.length}`;
+
+            // 해당 메시지로 스크롤 및 하이라이트
+            await scrollToMessageById(result.id, document.getElementById('searchInput').value.trim());
+        }
+
+        // 특정 메시지 ID로 스크롤
+        async function scrollToMessageById(msgId, highlightText = null) {
+            const msgEl = messagesDiv.querySelector(`[data-msg-id="${msgId}"]`);
+
+            if (msgEl) {
+                clearSearchHighlights();
+                msgEl.classList.add('search-highlight');
+                msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // 텍스트 하이라이트
+                if (highlightText) {
+                    highlightTextInMessage(msgEl, highlightText);
+                }
+            } else {
+                // 메시지가 화면에 없으면 API로 컨텍스트 로드 후 표시
+                await loadMessageAndScroll(msgId, highlightText);
+            }
+        }
+
+        // 메시지 내 텍스트 하이라이트
+        function highlightTextInMessage(msgEl, text) {
+            const msgTextEl = msgEl.querySelector('.message-text');
+            if (!msgTextEl) return;
+
+            const originalHtml = msgTextEl.innerHTML;
+            const regex = new RegExp(`(${escapeRegex(text)})`, 'gi');
+            msgTextEl.innerHTML = originalHtml.replace(regex, '<span class="search-match">$1</span>');
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // 화면에 없는 메시지 로드 후 스크롤
+        // 메시지 주변 컨텍스트를 API로 가져와서 화면을 다시 렌더링
+        async function loadMessageAndScroll(msgId, highlightText) {
+            try {
+                // 메시지 주변 컨텍스트 가져오기 (앞뒤 각 30개씩)
+                const res = await fetch(`/api/chats/${chatId}/messages/context/${msgId}?before=30&after=30`);
+
+                if (!res.ok) {
+                    showAlert('해당 메시지를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+
+                const data = await res.json();
+
+                // 기존 메시지 비우고 새로 렌더링
+                messagesDiv.innerHTML = '';
+                lastDisplayedDate = null;
+
+                // 이전 메시지가 있으면 "더 보기" 표시
+                if (data.has_more_before) {
+                    const loadMoreDiv = document.createElement('div');
+                    loadMoreDiv.className = 'load-more-indicator';
+                    loadMoreDiv.innerHTML = `
+                        <button onclick="returnToLatestMessages()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                            🔄 최신 메시지로 돌아가기
+                        </button>
+                    `;
+                    loadMoreDiv.style.cssText = 'text-align: center; padding: 15px; color: #666;';
+                    messagesDiv.appendChild(loadMoreDiv);
+                }
+
+                // 메시지 렌더링
+                data.messages.forEach(msg => {
+                    displayMessage(msg, chatParticipants);
+                });
+
+                // 이후 메시지가 있으면 "최신으로" 버튼 표시
+                if (data.has_more_after) {
+                    const goLatestDiv = document.createElement('div');
+                    goLatestDiv.className = 'go-latest-indicator';
+                    goLatestDiv.innerHTML = `
+                        <button onclick="returnToLatestMessages()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                            ↓ 최신 메시지로 이동
+                        </button>
+                    `;
+                    goLatestDiv.style.cssText = 'text-align: center; padding: 15px; color: #666;';
+                    messagesDiv.appendChild(goLatestDiv);
+                }
+
+                // 상태 업데이트 (무한 스크롤 일시 중단)
+                contextMode = true;  // 컨텍스트 모드 플래그
+
+                // 타겟 메시지로 스크롤 및 하이라이트
+                setTimeout(() => {
+                    const targetMsgEl = messagesDiv.querySelector(`[data-msg-id="${msgId}"]`);
+                    if (targetMsgEl) {
+                        clearSearchHighlights();
+                        targetMsgEl.classList.add('search-highlight');
+                        targetMsgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        if (highlightText) {
+                            highlightTextInMessage(targetMsgEl, highlightText);
+                        }
+                    }
+                }, 100);
+
+            } catch (error) {
+                console.error('메시지 컨텍스트 로드 실패:', error);
+                showAlert('메시지를 불러오는 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 최신 메시지로 돌아가기
+        async function returnToLatestMessages() {
+            contextMode = false;
+            messagesDiv.innerHTML = '';
+            lastDisplayedDate = null;
+            currentOffset = 0;
+            hasMoreMessages = true;
+            await loadInitialMessages();
+        }
+
+        // 검색 하이라이트 제거
+        function clearSearchHighlights() {
+            messagesDiv.querySelectorAll('.search-highlight').forEach(el => {
+                el.classList.remove('search-highlight');
+            });
+            messagesDiv.querySelectorAll('.search-match').forEach(el => {
+                el.outerHTML = el.textContent;
+            });
+        }
+
+        // 검색어 지우기
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            searchResults = [];
+            currentSearchIndex = -1;
+            clearSearchHighlights();
+            document.getElementById('searchResultsInfo').style.display = 'none';
+        }
+
+        // 검색 입력창 엔터 키 처리
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // ==================== 날짜 선택 기능 ====================
+        async function loadChatDates() {
+            try {
+                const res = await fetch(`/api/chats/${chatId}/dates`);
+                const data = await res.json();
+                chatDates = data.dates;
+            } catch (error) {
+                console.error('날짜 목록 로드 오류:', error);
+            }
+        }
+
+        function openDatePicker() {
+            document.getElementById('datePickerModal').classList.add('show');
+            renderCalendar();
+        }
+
+        function closeDatePicker() {
+            document.getElementById('datePickerModal').classList.remove('show');
+        }
+
+        function changeMonth(delta) {
+            calendarDate.setMonth(calendarDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const monthLabel = document.getElementById('calendarMonth');
+
+            const year = calendarDate.getFullYear();
+            const month = calendarDate.getMonth();
+
+            monthLabel.textContent = `${year}년 ${month + 1}월`;
+
+            // 캘린더 그리드 생성
+            grid.innerHTML = '';
+
+            // 요일 헤더
+            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            dayNames.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+
+            // 첫 날과 마지막 날
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            // 이전 달 빈 칸
+            for (let i = 0; i < firstDay.getDay(); i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                grid.appendChild(emptyDay);
+            }
+
+            // 날짜 채우기
+            const today = new Date().toISOString().split('T')[0];
+
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+                dayEl.textContent = day;
+
+                // 오늘 표시
+                if (dateStr === today) {
+                    dayEl.classList.add('today');
+                }
+
+                // 메시지가 있는 날짜 표시
+                if (chatDates.includes(dateStr)) {
+                    dayEl.classList.add('has-messages');
+                    dayEl.onclick = () => selectDate(dateStr);
+                } else {
+                    dayEl.classList.add('no-messages');
+                }
+
+                grid.appendChild(dayEl);
+            }
+        }
+
+        // 날짜 선택 시 해당 날짜로 이동
+        async function selectDate(dateStr) {
+            closeDatePicker();
+            await jumpToDate(dateStr);
+        }
+
+        // 특정 날짜로 점프
+        async function jumpToDate(dateStr) {
+            try {
+                // 해당 날짜의 첫 번째 메시지 검색
+                const res = await fetch(`/api/chats/${chatId}/search?date=${dateStr}`);
+                const data = await res.json();
+
+                if (data.results && data.results.length > 0) {
+                    const firstMsgOfDate = data.results[0];
+
+                    // 해당 날짜 구분선으로 스크롤
+                    const dateSeparator = messagesDiv.querySelector(`[data-date="${dateStr}"]`);
+                    if (dateSeparator) {
+                        dateSeparator.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else {
+                        // 날짜 구분선이 없으면 메시지 컨텍스트 로드 후 스크롤
+                        await scrollToMessageById(firstMsgOfDate.id);
+                    }
+                } else {
+                    showAlert('해당 날짜에 메시지가 없습니다.', 'info');
+                }
+            } catch (error) {
+                console.error('날짜 이동 오류:', error);
+            }
+        }
+
+        // 모달 외부 클릭 시 닫기
+        document.getElementById('datePickerModal').addEventListener('click', (e) => {
+            if (e.target.id === 'datePickerModal') {
+                closeDatePicker();
+            }
+        });
+
+        // Ctrl+F로 검색 패널 열기
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                toggleSearchPanel();
+            }
+            // ESC로 검색 패널 닫기
+            if (e.key === 'Escape') {
+                closeSearchPanel();
+                closeDatePicker();
+            }
         });
 </script>
 

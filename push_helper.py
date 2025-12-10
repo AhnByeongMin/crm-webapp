@@ -155,6 +155,7 @@ def send_push_to_multiple_users(usernames, title, body, data=None):
 def save_subscription(username, subscription_data):
     """
     푸시 구독 정보를 저장합니다.
+    같은 사용자의 이전 구독은 삭제하고 새 구독만 유지합니다 (중복 알림 방지).
 
     Args:
         username (str): 사용자 이름
@@ -170,7 +171,14 @@ def save_subscription(username, subscription_data):
 
         with get_db_connection() as conn:
             cur = conn.cursor()
-            # UPSERT: endpoint가 이미 있으면 username 업데이트, 없으면 삽입
+
+            # 1. 같은 사용자의 이전 구독 삭제 (중복 알림 방지)
+            cur.execute("""
+                DELETE FROM push_subscriptions
+                WHERE username = %s AND endpoint != %s
+            """, (username, endpoint))
+
+            # 2. UPSERT: endpoint가 이미 있으면 업데이트, 없으면 삽입
             cur.execute("""
                 INSERT INTO push_subscriptions (username, endpoint, p256dh, auth)
                 VALUES (%s, %s, %s, %s)
