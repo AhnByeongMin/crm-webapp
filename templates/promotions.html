@@ -10,7 +10,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <meta name="apple-mobile-web-app-title" content="하루CRM">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
@@ -678,7 +678,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="promotionCode">프로모션 코드</label>
+                    <label for="promotionCode">패키지 정책 번호</label>
                     <input type="text" id="promotionCode">
                 </div>
                 <div class="form-group">
@@ -974,7 +974,7 @@
                                                             <button class="copy-btn" onclick="copyToClipboard('${p.promotion_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
                                                         </div>
 
-                                                        <div class="info-label">프로모션 코드:</div>
+                                                        <div class="info-label">패키지 정책 번호:</div>
                                                         <div class="info-value" onclick="event.stopPropagation();">
                                                             ${p.promotion_code || '-'}
                                                             ${p.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${p.promotion_code.replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
@@ -1054,7 +1054,7 @@
                                 <button class="copy-btn" onclick="copyToClipboard('${promo.promotion_name.replace(/'/g, "\\'")}', this)">📋 복사</button>
                             </p>
                             <p>
-                                <strong>프로모션 코드:</strong> ${promo.promotion_code || '-'}
+                                <strong>패키지 정책 코드:</strong> ${promo.promotion_code || '-'}
                                 ${promo.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${promo.promotion_code.replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
                             </p>
                             <p><strong>금액할인:</strong> ${promo.discount_amount || '-'}</p>

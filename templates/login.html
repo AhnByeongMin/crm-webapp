@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인 - CRM 시스템</title>
+    <title>로그인 - 하루CRM</title>
 
     <!-- PWA 메타 태그 -->
-    <meta name="description" content="긴급 상황을 위한 업무 할당 및 채팅 시스템">
+    <meta name="description" content="스마트한 고객 관리와 팀 협업을 위한 CRM 시스템">
     <meta name="theme-color" content="#667eea">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="업무관리">
+    <meta name="apple-mobile-web-app-title" content="하루CRM">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/static/manifest.json">
@@ -60,8 +60,13 @@
         }
 
         .logo-icon {
-            font-size: 64px;
             margin-bottom: 15px;
+        }
+
+        .logo-icon img {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
         }
 
         h1 {
@@ -216,8 +221,9 @@
                 font-size: 24px;
             }
 
-            .logo-icon {
-                font-size: 48px;
+            .logo-icon img {
+                width: 80px;
+                height: 80px;
             }
         }
     </style>
@@ -225,9 +231,9 @@
 <body>
     <div class="login-container">
         <div class="logo">
-            <div class="logo-icon">🔐</div>
-            <h1>로그인</h1>
-            <div class="subtitle">CRM 관리 시스템</div>
+            <div class="logo-icon"><img src="/static/icon-192.png" alt="하루CRM"></div>
+            <h1>하루CRM</h1>
+            <div class="subtitle">스마트한 고객 관리의 시작</div>
         </div>
 
         {% if error %}

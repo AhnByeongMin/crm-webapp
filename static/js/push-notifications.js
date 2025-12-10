@@ -255,6 +255,12 @@ window.pushNotificationManager = new PushNotificationManager();
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Push Notifications] DOMContentLoaded - 초기화 시작');
 
+    // 로그인 페이지에서는 푸시 알림 초기화 건너뛰기 (인증 필요)
+    if (window.location.pathname === '/login' || window.location.pathname === '/login/') {
+        console.log('[Push Notifications] 로그인 페이지 - 초기화 건너뜀');
+        return;
+    }
+
     if (window.pushNotificationManager.isSupported()) {
         const initialized = await window.pushNotificationManager.initialize();
         console.log('[Push Notifications] 초기화 결과:', initialized);

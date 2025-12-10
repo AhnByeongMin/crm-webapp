@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crm-cache-v9';
+const CACHE_NAME = 'crm-cache-v10';
 const urlsToCache = [
   '/',
   '/static/manifest.json',
@@ -9,15 +9,15 @@ const urlsToCache = [
 
 // 설치 이벤트 - 캐시 생성
 self.addEventListener('install', event => {
-  console.log('[Service Worker v9] 설치 중...');
+  console.log('[Service Worker v10] 설치 중...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[Service Worker v9] 캐시 생성');
+        console.log('[Service Worker v10] 캐시 생성');
         return cache.addAll(urlsToCache);
       })
       .catch(err => {
-        console.log('[Service Worker v9] 캐시 생성 실패:', err);
+        console.log('[Service Worker v10] 캐시 생성 실패:', err);
       })
   );
   self.skipWaiting();
@@ -110,7 +110,7 @@ self.addEventListener('push', event => {
   console.log('[Service Worker] 푸시 알림 수신', event);
 
   let notificationData = {
-    title: '업무 관리 시스템',
+    title: '하루CRM',
     body: '새로운 알림이 있습니다',
     icon: '/static/icon-192.png',
     badge: '/static/icon-192.png',
@@ -198,25 +198,25 @@ self.addEventListener('notificationclick', event => {
 
 // Message 리스너 - 클라이언트에서 강제 업데이트 명령 수신
 self.addEventListener('message', event => {
-  console.log('[Service Worker v9] Message 수신:', event.data);
+  console.log('[Service Worker v10] Message 수신:', event.data);
 
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('[Service Worker v9] SKIP_WAITING 명령 수신 - 즉시 활성화');
+    console.log('[Service Worker v10] SKIP_WAITING 명령 수신 - 즉시 활성화');
     self.skipWaiting();
   }
 
   if (event.data && event.data.type === 'CLEAR_CACHE') {
-    console.log('[Service Worker v9] CLEAR_CACHE 명령 수신 - 모든 캐시 삭제');
+    console.log('[Service Worker v10] CLEAR_CACHE 명령 수신 - 모든 캐시 삭제');
     event.waitUntil(
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
-            console.log('[Service Worker v9] 캐시 삭제:', cacheName);
+            console.log('[Service Worker v10] 캐시 삭제:', cacheName);
             return caches.delete(cacheName);
           })
         );
       }).then(() => {
-        console.log('[Service Worker v9] 모든 캐시 삭제 완료');
+        console.log('[Service Worker v10] 모든 캐시 삭제 완료');
         // 클라이언트에게 완료 알림
         return self.clients.matchAll().then(clients => {
           clients.forEach(client => client.postMessage({ type: 'CACHE_CLEARED' }));
