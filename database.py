@@ -8,7 +8,10 @@ import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 import threading
+import logging
 from contextlib import contextmanager
+
+logger = logging.getLogger('crm')
 
 # PostgreSQL 연결 설정
 DB_CONFIG = {
@@ -38,14 +41,22 @@ db_lock = threading.Lock()
 @contextmanager
 def get_db_connection():
     """데이터베이스 연결을 안전하게 관리하는 컨텍스트 매니저"""
-    init_connection_pool()
-    conn = connection_pool.getconn()
+    conn = None
     try:
+        init_connection_pool()
+        conn = connection_pool.getconn()
         # dict-like cursor 사용
         conn.cursor_factory = psycopg2.extras.RealDictCursor
         yield conn
+    except psycopg2.pool.PoolError as e:
+        logger.error(f"DB 풀 연결 오류: {e}")
+        raise
+    except psycopg2.OperationalError as e:
+        logger.error(f"DB 연결 오류: {e}")
+        raise
     finally:
-        connection_pool.putconn(conn)
+        if conn is not None:
+            connection_pool.putconn(conn)
 
 # ==================== 할일 관리 ====================
 
@@ -1054,7 +1065,13 @@ def get_pending_reminders_for_notification():
                 last_notified = r.get('last_notified_at')
                 if last_notified:
                     if isinstance(last_notified, str):
-                        last_notified = datetime.strptime(last_notified, '%Y-%m-%d %H:%M:%S.%f')
+                        # 여러 날짜 포맷 시도
+                        for fmt in ['%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']:
+                            try:
+                                last_notified = datetime.strptime(last_notified, fmt)
+                                break
+                            except ValueError:
+                                continue
                     minutes_since_last = (now - last_notified).total_seconds() / 60
 
                     # repeat_until 체크 (예약 시간까지 또는 설정된 분까지)
@@ -1084,7 +1101,7 @@ def vacuum_database():
         cursor = conn.cursor()
         cursor.execute('VACUUM ANALYZE')
         conn.set_isolation_level(old_isolation)
-        print("Database vacuumed successfully")
+        logger.info("Database vacuumed successfully")
 
 # ==================== 공휴일 관리 ====================
 

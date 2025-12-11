@@ -11,11 +11,55 @@ import os
 import uuid
 import threading
 from datetime import datetime
+import logging
+from logging.handlers import RotatingFileHandler
 import database  # SQLite 데이터베이스 헬퍼
 import pandas as pd
 import random
 from cache_manager import app_cache, cached, invalidate_cache, generate_etag
 import push_helper  # 웹 푸시 알림 헬퍼
+
+# 로깅 설정
+def setup_logging():
+    """애플리케이션 로깅 설정"""
+    # 로그 디렉토리 생성
+    log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+
+    # 로거 설정
+    logger = logging.getLogger('crm')
+    logger.setLevel(logging.INFO)
+
+    # 파일 핸들러 (로테이션: 10MB, 최대 5개)
+    file_handler = RotatingFileHandler(
+        os.path.join(log_dir, 'crm.log'),
+        maxBytes=10*1024*1024,
+        backupCount=5,
+        encoding='utf-8'
+    )
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+    ))
+
+    # 에러 전용 핸들러
+    error_handler = RotatingFileHandler(
+        os.path.join(log_dir, 'error.log'),
+        maxBytes=10*1024*1024,
+        backupCount=5,
+        encoding='utf-8'
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+    ))
+
+    logger.addHandler(file_handler)
+    logger.addHandler(error_handler)
+
+    return logger
+
+logger = setup_logging()
 
 app = Flask(__name__)
 # Secret Key: 환경변수에서 로드, 없으면 기본값 (프로덕션에서는 반드시 환경변수 설정 필요)
@@ -37,6 +81,34 @@ Compress(app)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
+
+# 파일 시그니처 (Magic Bytes) 검증
+FILE_SIGNATURES = {
+    'xlsx': [b'PK\x03\x04'],  # ZIP 기반 (Office Open XML)
+    'xls': [b'\xd0\xcf\x11\xe0'],  # OLE2 Compound Document
+    'png': [b'\x89PNG\r\n\x1a\n'],
+    'jpg': [b'\xff\xd8\xff'],
+    'jpeg': [b'\xff\xd8\xff'],
+    'gif': [b'GIF87a', b'GIF89a'],
+    'pdf': [b'%PDF'],
+    'zip': [b'PK\x03\x04'],
+    'rar': [b'Rar!\x1a\x07'],
+}
+
+def validate_file_signature(file_stream, extension):
+    """파일 시그니처로 실제 파일 타입 검증"""
+    ext = extension.lower()
+    if ext not in FILE_SIGNATURES:
+        return True  # 시그니처 정의가 없으면 통과
+
+    file_stream.seek(0)
+    header = file_stream.read(16)
+    file_stream.seek(0)  # 스트림 위치 복원
+
+    for sig in FILE_SIGNATURES[ext]:
+        if header.startswith(sig):
+            return True
+    return False
 
 # Socket.IO 초기화 (eventlet + Redis)
 socketio = SocketIO(
@@ -399,28 +471,28 @@ def bulk_assign_items():
             base_count = items_per_person * len(users)
             remainder = len(shuffled_tasks) - base_count
 
-            print(f"[랜덤배정] 전체: {len(shuffled_tasks)}개, 인원: {len(users)}명")
-            print(f"[랜덤배정] 1인당: {items_per_person}개, 균등배정: {base_count}개, 나머지: {remainder}개")
+            logger.info(f"[랜덤배정] 전체: {len(shuffled_tasks)}개, 인원: {len(users)}명")
+            logger.info(f"[랜덤배정] 1인당: {items_per_person}개, 균등배정: {base_count}개, 나머지: {remainder}개")
 
             # 1단계: 균등 분배 (모두에게 동일하게)
             for i, task_id in enumerate(shuffled_tasks[:base_count]):
                 user = users[i % len(users)]
                 database.update_task_assignment(task_id, user)
 
-            print(f"[랜덤배정] 1단계 완료: {base_count}개 균등 배정")
+            logger.info(f"[랜덤배정] 1단계 완료: {base_count}개 균등 배정")
 
             # 2단계: 나머지를 랜덤하게 선정된 사람들에게 1개씩 분배
             remainder_tasks = shuffled_tasks[base_count:]
-            print(f"[랜덤배정] 2단계 시작: {len(remainder_tasks)}개 나머지 랜덤 배정")
+            logger.info(f"[랜덤배정] 2단계 시작: {len(remainder_tasks)}개 나머지 랜덤 배정")
 
             if remainder_tasks:
                 # 나머지 개수만큼 사람을 랜덤하게 선정 (중복 없이)
                 selected_users = random.sample(users, len(remainder_tasks))
                 for task_id, user in zip(remainder_tasks, selected_users):
                     database.update_task_assignment(task_id, user)
-                    print(f"[랜덤배정] 나머지 task_id={task_id} -> {user}")
+                    logger.debug(f"[랜덤배정] 나머지 task_id={task_id} -> {user}")
 
-            print(f"[랜덤배정] 완료: 총 {len(shuffled_tasks)}개 배정")
+            logger.info(f"[랜덤배정] 완료: 총 {len(shuffled_tasks)}개 배정")
 
         elif assign_mode == 'sequential':
             # 순차 배정: 딱 나누어떨어지는 수만큼만 순차 분배, 나머지는 미배정
@@ -454,9 +526,14 @@ def bulk_upload_items():
     if file.filename == '':
         return jsonify({'error': '파일이 선택되지 않았습니다'}), 400
 
-    # 엑셀 파일 확인
+    # 엑셀 파일 확인 (확장자)
     if not ('.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in EXCEL_EXTENSIONS):
         return jsonify({'error': '엑셀 파일만 업로드 가능합니다 (.xlsx, .xls)'}), 400
+
+    # 파일 시그니처 검증
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    if not validate_file_signature(file.stream, ext):
+        return jsonify({'error': '올바른 엑셀 파일이 아닙니다'}), 400
 
     try:
         # 엑셀 파일 읽기
@@ -612,6 +689,11 @@ def upload_file():
         return jsonify({'error': '파일이 선택되지 않았습니다'}), 400
 
     if file and allowed_file(file.filename):
+        # 파일 시그니처 검증 (이미지/문서 파일)
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        if ext in FILE_SIGNATURES and not validate_file_signature(file.stream, ext):
+            return jsonify({'error': '올바른 파일 형식이 아닙니다'}), 400
+
         # 고유한 파일명 생성
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4().hex}_{filename}"
@@ -737,7 +819,7 @@ def get_chats():
 
             # 디버깅 로그
             if unread_count > 0:
-                print(f"[DEBUG] 채팅방 {chat_id} ({chat_info.get('title')}): 사용자 {username}의 안 읽은 메시지 = {unread_count}")
+                logger.debug(f"[DEBUG] 채팅방 {chat_id} ({chat_info.get('title')}): 사용자 {username}의 안 읽은 메시지 = {unread_count}")
 
             # 채팅방 정보에 unread_count 추가 + 메시지 제한
             chat_data = chat_info.copy()
@@ -1164,7 +1246,7 @@ def handle_message(data):
                             }
                         )
                     except Exception as e:
-                        print(f'푸시 알림 발송 실패: {e}')
+                        logger.error(f'푸시 알림 발송 실패: {e}')
 
                 threading.Thread(target=send_push_async).start()
 
@@ -1693,6 +1775,11 @@ def bulk_upload_promotions():
 
     if not file.filename.endswith(('.xlsx', '.xls')):
         return jsonify({'error': '엑셀 파일만 업로드 가능합니다'}), 400
+
+    # 파일 시그니처 검증
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    if not validate_file_signature(file.stream, ext):
+        return jsonify({'error': '올바른 엑셀 파일이 아닙니다'}), 400
 
     try:
         from openpyxl import load_workbook
@@ -2303,25 +2390,22 @@ def push_subscribe():
     try:
         data = request.json
         username = session.get('username')
-        print(f"[Push Subscribe] username: {username}, data: {data}")
+        logger.debug(f"[Push Subscribe] username: {username}")
 
         if not data or 'subscription' not in data:
             return jsonify({'error': 'Invalid subscription data'}), 400
 
         subscription = data['subscription']
-        print(f"[Push Subscribe] subscription: {subscription}")
 
         if push_helper.save_subscription(username, subscription):
-            print(f"[Push Subscribe] 저장 성공: {username}")
+            logger.info(f"[Push Subscribe] 저장 성공: {username}")
             return jsonify({'success': True, 'message': 'Subscription saved'})
         else:
-            print(f"[Push Subscribe] 저장 실패: {username}")
+            logger.warning(f"[Push Subscribe] 저장 실패: {username}")
             return jsonify({'error': 'Failed to save subscription'}), 500
 
     except Exception as e:
-        import traceback
-        print(f"[Push Subscribe] 예외 발생: {e}")
-        traceback.print_exc()
+        logger.error(f"[Push Subscribe] 예외 발생: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/push/unsubscribe', methods=['POST'])
@@ -2385,7 +2469,7 @@ def calculate_nav_counts(username):
         counts['today_reminders'] = len(today_reminders)
 
     except Exception as e:
-        print(f"Error calculating nav counts for {username}: {e}")
+        logger.error(f"Error calculating nav counts for {username}: {e}")
 
     return counts
 
@@ -2397,7 +2481,7 @@ def get_nav_counts():
 
     username = session['username']
     counts = calculate_nav_counts(username)
-    print(f"[DEBUG] Final nav-counts for {username}: {counts}")
+    logger.debug(f"[DEBUG] Final nav-counts for {username}: {counts}")
     return jsonify(counts)
 
 # ============================================================
@@ -2524,10 +2608,10 @@ def test_push_notification():
             }
         )
 
-        print(f'[PUSH TEST] 결과: {result}')  # 로그 출력
+        logger.info(f'[PUSH TEST] 결과: {result}')
         return jsonify(result)
     except Exception as e:
-        print(f'[PUSH TEST] 오류: {e}')  # 오류 로그
+        logger.error(f'[PUSH TEST] 오류: {e}')
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sw-version', methods=['GET'])
@@ -2603,14 +2687,12 @@ def check_reminder_notifications():
                 # 알림 발송 완료 표시
                 if push_result.get('success', 0) > 0:
                     database.update_reminder_notification(reminder_id)
-                    print(f"[Reminder] 푸시 알림 발송 완료: {user_id} - {title} ({notify_reason})")
+                    logger.info(f"[Reminder] 푸시 알림 발송 완료: {user_id} - {title} ({notify_reason})")
                 else:
-                    print(f"[Reminder] 푸시 알림 발송 실패: {user_id} - {title}, errors: {push_result.get('errors')}")
+                    logger.warning(f"[Reminder] 푸시 알림 발송 실패: {user_id} - {title}, errors: {push_result.get('errors')}")
 
         except Exception as e:
-            print(f"[Reminder] 알림 체크 오류: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"[Reminder] 알림 체크 오류: {e}", exc_info=True)
 
         # 1분마다 체크
         eventlet.sleep(60)
@@ -2659,15 +2741,13 @@ def check_daily_summary_notifications():
 
                         if push_result.get('success', 0) > 0:
                             database.update_last_daily_summary(username, today)
-                            print(f"[DailySummary] 일일 요약 발송 완료: {username} - {today_count}건")
+                            logger.info(f"[DailySummary] 일일 요약 발송 완료: {username} - {today_count}건")
                     else:
                         # 예약이 없어도 발송 완료 처리 (다시 보내지 않도록)
                         database.update_last_daily_summary(username, today)
 
         except Exception as e:
-            print(f"[DailySummary] 일일 요약 체크 오류: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f"[DailySummary] 일일 요약 체크 오류: {e}", exc_info=True)
 
         # 5분마다 체크
         eventlet.sleep(300)
@@ -2675,7 +2755,7 @@ def check_daily_summary_notifications():
 
 def start_reminder_scheduler():
     """예약 알림 스케줄러 시작"""
-    print("[Reminder] 예약 알림 스케줄러 시작")
+    logger.info("[Reminder] 예약 알림 스케줄러 시작")
     eventlet.spawn(check_reminder_notifications)
     eventlet.spawn(check_daily_summary_notifications)
 

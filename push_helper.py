@@ -5,8 +5,11 @@
 
 import os
 import json
+import logging
 from pywebpush import webpush, WebPushException
 from database import get_db_connection
+
+logger = logging.getLogger('crm')
 
 
 def get_vapid_keys():
@@ -194,9 +197,7 @@ def save_subscription(username, subscription_data):
             return True
 
     except Exception as e:
-        print(f"Error saving subscription: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error saving subscription: {e}", exc_info=True)
         return False
 
 
@@ -221,5 +222,5 @@ def remove_subscription(endpoint):
             return True
 
     except Exception as e:
-        print(f"Error removing subscription: {e}")
+        logger.error(f"Error removing subscription: {e}")
         return False
