@@ -378,7 +378,8 @@ def unassign_item(item_id):
         database.update_task_assignment(item_id, None)
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'할일 배정 해제 실패 (item_id={item_id}): {e}', exc_info=True)
+        return jsonify({'error': '배정 해제 중 오류가 발생했습니다'}), 500
 
 @app.route('/api/items/<int:item_id>/status', methods=['PUT'])
 def update_item_status(item_id):
@@ -511,7 +512,8 @@ def bulk_assign_items():
         return jsonify({'success': True, 'count': len(task_ids)})
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'일괄 배정 실패: {e}', exc_info=True)
+        return jsonify({'error': '일괄 배정 중 오류가 발생했습니다'}), 500
 
 @app.route('/api/items/bulk-upload', methods=['POST'])
 def bulk_upload_items():
@@ -574,9 +576,8 @@ def bulk_upload_items():
         return jsonify({'success': True, 'count': added_count, 'skipped': skipped_count})
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'파일 처리 오류: {str(e)}'}), 500
+        logger.error(f'엑셀 일괄 등록 실패: {e}', exc_info=True)
+        return jsonify({'error': '파일 처리 중 오류가 발생했습니다'}), 500
 
 @app.route('/api/users/non-admin', methods=['GET'])
 def get_non_admin_users():
@@ -2372,7 +2373,8 @@ def get_vapid_public_key():
 
         return jsonify({'publicKey': public_key_b64})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'VAPID 공개키 조회 실패: {e}', exc_info=True)
+        return jsonify({'error': '공개키 조회 중 오류가 발생했습니다'}), 500
 
 @app.route('/api/push/subscribe', methods=['POST'])
 def push_subscribe():
@@ -2420,7 +2422,8 @@ def push_unsubscribe():
             return jsonify({'error': 'Failed to remove subscription'}), 500
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'푸시 구독 해제 실패: {e}', exc_info=True)
+        return jsonify({'error': '구독 해제 중 오류가 발생했습니다'}), 500
 
 @cached(ttl=30, key_prefix='nav_counts')
 def calculate_nav_counts(username):
