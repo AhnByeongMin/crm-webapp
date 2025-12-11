@@ -640,6 +640,161 @@ def save_chats(chats):
                 conn.rollback()
                 raise e
 
+
+def save_message(chat_id, message):
+    """
+    개별 메시지 저장 (최적화: 전체 데이터 로드/저장 없이 단일 INSERT)
+
+    Args:
+        chat_id: 채팅방 ID
+        message: 메시지 딕셔너리 (username, message, timestamp, file_path, file_name, read_by)
+
+    Returns:
+        int: 저장된 메시지 ID
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # 메시지 INSERT
+        cursor.execute('''
+            INSERT INTO messages (chat_id, username, message, timestamp, file_path, file_name)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+        ''', (
+            int(chat_id),
+            message['username'],
+            message['message'],
+            message['timestamp'],
+            message.get('file_path'),
+            message.get('file_name')
+        ))
+
+        msg_id = cursor.fetchone()['id']
+
+        # 읽음 상태 INSERT (보낸 사람)
+        read_by = message.get('read_by', [message['username']])
+        if read_by:
+            for reader in read_by:
+                cursor.execute('''
+                    INSERT INTO message_reads (message_id, username)
+                    VALUES (%s, %s)
+                    ON CONFLICT DO NOTHING
+                ''', (msg_id, reader))
+
+        conn.commit()
+        return msg_id
+
+
+def mark_messages_as_read(chat_id, username):
+    """
+    채팅방의 모든 메시지를 읽음 처리 (최적화: 직접 INSERT)
+
+    Args:
+        chat_id: 채팅방 ID
+        username: 읽은 사용자명
+
+    Returns:
+        int: 새로 읽음 처리된 메시지 수
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # 아직 읽지 않은 메시지에 대해 읽음 상태 추가
+        cursor.execute('''
+            INSERT INTO message_reads (message_id, username)
+            SELECT m.id, %s
+            FROM messages m
+            WHERE m.chat_id = %s
+            AND NOT EXISTS (
+                SELECT 1 FROM message_reads mr
+                WHERE mr.message_id = m.id AND mr.username = %s
+            )
+        ''', (username, int(chat_id), username))
+
+        affected = cursor.rowcount
+        conn.commit()
+        return affected
+
+
+def mark_single_message_as_read(chat_id, message_id, username):
+    """
+    특정 메시지 하나를 읽음 처리
+
+    Args:
+        chat_id: 채팅방 ID
+        message_id: 메시지 ID
+        username: 읽은 사용자명
+
+    Returns:
+        bool: 성공 여부
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO message_reads (message_id, username)
+            VALUES (%s, %s)
+            ON CONFLICT (message_id, username) DO NOTHING
+        ''', (int(message_id), username))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def get_message_read_by(message_id):
+    """
+    특정 메시지의 읽은 사용자 목록 조회
+
+    Args:
+        message_id: 메시지 ID
+
+    Returns:
+        list: 읽은 사용자 username 리스트
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT username FROM message_reads
+            WHERE message_id = %s
+            ORDER BY read_at
+        ''', (int(message_id),))
+        return [row['username'] for row in cursor.fetchall()]
+
+
+def get_chat_info(chat_id):
+    """
+    특정 채팅방 정보 조회 (참여자 목록 포함)
+
+    Args:
+        chat_id: 채팅방 ID
+
+    Returns:
+        dict: 채팅방 정보 또는 None
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # 채팅방 기본 정보
+        cursor.execute('SELECT * FROM chats WHERE id = %s', (int(chat_id),))
+        chat_row = cursor.fetchone()
+
+        if not chat_row:
+            return None
+
+        # 참여자 목록
+        cursor.execute(
+            'SELECT username FROM chat_participants WHERE chat_id = %s',
+            (int(chat_id),)
+        )
+        participants = [row['username'] for row in cursor.fetchall()]
+
+        return {
+            'id': chat_row['id'],
+            'title': chat_row['title'],
+            'creator': chat_row['creator'],
+            'created_at': str(chat_row['created_at']),
+            'participants': participants
+        }
+
+
 # ==================== 프로모션 관리 (최적화) ====================
 
 def load_promotions():

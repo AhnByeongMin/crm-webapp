@@ -1189,66 +1189,72 @@ def handle_message(data):
     chat_id = data['chat_id']
     username = data['username']
     message = data['message']
-    file_info = data.get('file_info')  # 파일 정보 (추후 구현)
+    file_info = data.get('file_info')  # 파일 정보
 
-    # 메시지 저장
-    chats = load_chats()
-    if chat_id in chats:
-        msg_obj = {
-            'username': username,
-            'message': message,
-            'timestamp': datetime.now().isoformat(),
-            'read_by': [username],  # 보낸 사람은 자동으로 읽음 처리
-            'file_info': file_info  # 파일 정보 (이미지, 문서 등)
-        }
+    # 메시지 객체 생성
+    msg_obj = {
+        'username': username,
+        'message': message,
+        'timestamp': datetime.now().isoformat(),
+        'read_by': [username],  # 보낸 사람은 자동으로 읽음 처리
+        'file_info': file_info  # 파일 정보 (이미지, 문서 등)
+    }
 
-        # file_info를 file_path/file_name으로 변환 (DB 저장용)
-        if file_info and len(file_info) > 0:
-            first_file = file_info[0]
-            msg_obj['file_path'] = first_file.get('url')
-            msg_obj['file_name'] = first_file.get('filename')
+    # file_info를 file_path/file_name으로 변환 (DB 저장용)
+    if file_info and len(file_info) > 0:
+        first_file = file_info[0]
+        msg_obj['file_path'] = first_file.get('url')
+        msg_obj['file_name'] = first_file.get('filename')
 
-        chats[chat_id]['messages'].append(msg_obj)
-        save_chats(chats)
+    # 최적화: 개별 메시지만 DB에 저장 (전체 로드/저장 제거)
+    try:
+        msg_id = database.save_message(chat_id, msg_obj)
+        msg_obj['id'] = msg_id  # 클라이언트에 ID 전달
+    except Exception as e:
+        logger.error(f'메시지 저장 실패: {e}')
+        return
 
-        # 방의 모든 사용자에게 브로드캐스트
-        emit('new_message', msg_obj, room=chat_id)
+    # 방의 모든 사용자에게 브로드캐스트
+    emit('new_message', msg_obj, room=chat_id)
 
-        # 채팅 참여자들에게 알림 브로드캐스트 (채팅방 밖에 있는 사람들을 위해)
-        chat_info = chats[chat_id]
-        for participant in chat_info['participants']:
-            if participant != username:  # 보낸 사람 제외
-                # 최적화: participants 배열 제거, 필요한 데이터만 전송
-                emit('global_new_message', {
-                    'chat_id': chat_id,
-                    'chat_title': chat_info['title'],
-                    'sender': username,
-                    'message': message[:100],  # 메시지 미리보기만 전송 (100자)
-                    'is_one_to_one': chat_info.get('is_one_to_one', False)
-                }, room=f'user_{participant}')
+    # 채팅방 정보 조회 (최적화: 필요한 정보만 조회)
+    chat_info = database.get_chat_info(chat_id)
+    if not chat_info:
+        return
 
-                # 네비게이션 배지 실시간 업데이트 (읽지 않은 채팅 +1)
-                with app.app_context():
-                    participant_counts = calculate_nav_counts(participant)
-                    emit('nav_counts_update', participant_counts, room=f'user_{participant}')
+    # 채팅 참여자들에게 알림 브로드캐스트
+    for participant in chat_info['participants']:
+        if participant != username:  # 보낸 사람 제외
+            emit('global_new_message', {
+                'chat_id': chat_id,
+                'chat_title': chat_info['title'],
+                'sender': username,
+                'message': message[:100],
+                'is_one_to_one': len(chat_info['participants']) == 2
+            }, room=f'user_{participant}')
 
-                # 푸시 알림 발송 (백그라운드)
-                def send_push_async():
-                    try:
-                        push_helper.send_push_notification(
-                            username=participant,
-                            title=f'{username}님의 메시지',
-                            body=message[:100],
-                            data={
-                                'type': 'chat',
-                                'chatId': chat_id,
-                                'url': f'/chat/{chat_id}'
-                            }
-                        )
-                    except Exception as e:
-                        logger.error(f'푸시 알림 발송 실패: {e}')
+            # 네비게이션 배지 실시간 업데이트
+            participant_counts = calculate_nav_counts(participant)
+            emit('nav_counts_update', participant_counts, room=f'user_{participant}')
 
-                threading.Thread(target=send_push_async).start()
+            # 푸시 알림 발송 (백그라운드)
+            target_user = participant  # 클로저 문제 방지
+            def send_push_async(target=target_user):
+                try:
+                    push_helper.send_push_notification(
+                        username=target,
+                        title=f'{username}님의 메시지',
+                        body=message[:100],
+                        data={
+                            'type': 'chat',
+                            'chatId': chat_id,
+                            'url': f'/chat/{chat_id}'
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f'푸시 알림 발송 실패: {e}')
+
+            threading.Thread(target=send_push_async).start()
 
 @socketio.on('typing_start')
 def handle_typing_start(data):
@@ -1266,47 +1272,32 @@ def handle_typing_stop(data):
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
-    """메시지를 읽음으로 표시"""
+    """메시지를 읽음으로 표시 (최적화: 직접 DB 업데이트)"""
     chat_id = data['chat_id']
     username = data['username']
-    message_index = data.get('message_index')  # 특정 메시지 인덱스 (옵션)
+    message_id = data.get('message_id')  # 특정 메시지 ID (옵션)
 
-    chats = load_chats()
-    if chat_id in chats:
-        messages = chats[chat_id]['messages']
-
-        if message_index is not None:
+    try:
+        if message_id is not None:
             # 특정 메시지만 읽음 처리
-            if message_index < len(messages):
-                if 'read_by' not in messages[message_index]:
-                    messages[message_index]['read_by'] = []
-                if username not in messages[message_index]['read_by']:
-                    messages[message_index]['read_by'].append(username)
-        else:
-            # 모든 메시지를 읽음 처리
-            for msg in messages:
-                if 'read_by' not in msg:
-                    msg['read_by'] = []
-                if username not in msg['read_by']:
-                    msg['read_by'].append(username)
-
-        save_chats(chats)
-
-        # 같은 방의 다른 사용자들에게 읽음 상태 브로드캐스트
-        if message_index is not None and message_index >= 0:
-            # 특정 메시지 읽음 처리
+            database.mark_single_message_as_read(chat_id, message_id, username)
+            # 읽음 상태 조회
+            read_by = database.get_message_read_by(message_id)
             emit('read_receipt_update', {
                 'chat_id': chat_id,
                 'username': username,
-                'message_index': message_index,
-                'read_by': messages[message_index]['read_by']
+                'message_id': message_id,
+                'read_by': read_by
             }, room=chat_id, include_self=False)
         else:
-            # 모든 메시지 읽음 처리 - 전체 메시지 배열의 read_by 정보 전송
+            # 모든 메시지를 읽음 처리 (최적화된 함수 사용)
+            affected = database.mark_messages_as_read(chat_id, username)
+            logger.debug(f'채팅방 {chat_id}에서 {affected}개 메시지 읽음 처리 by {username}')
+
             emit('read_receipt_update', {
                 'chat_id': chat_id,
                 'username': username,
-                'message_index': -1,
+                'message_id': None,
                 'all_messages_read': True
             }, room=chat_id, include_self=False)
 
@@ -1314,6 +1305,8 @@ def handle_mark_as_read(data):
         with app.app_context():
             user_counts = calculate_nav_counts(username)
             emit('nav_counts_update', user_counts, room=f'user_{username}')
+    except Exception as e:
+        logger.error(f'읽음 처리 실패 (chat_id={chat_id}): {e}')
 
 # ============== 프로모션 게시판 ==============
 
