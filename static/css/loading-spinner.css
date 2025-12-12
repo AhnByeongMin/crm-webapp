@@ -149,3 +149,14 @@
     border-color: rgba(0,0,0,0.2);
     border-top-color: #333;
 }
+
+/* ========== 모바일 토스트 위치 조정 ========== */
+/* 플로팅 버튼과 겹치지 않도록 */
+@media (max-width: 768px) {
+    .toast-container {
+        bottom: 90px !important; /* 플로팅 버튼 위로 */
+        left: 10px !important;
+        right: 10px !important;
+        max-width: none !important;
+    }
+}
