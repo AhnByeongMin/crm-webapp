@@ -643,11 +643,131 @@
             gap: 8px;
         }
 
+        /* ========== 필터 토글 (데스크탑에서는 숨김) ========== */
+        .filter-toggle-row {
+            display: none;
+        }
+        .search-box-mobile {
+            display: none;
+        }
+        .filter-chips {
+            display: none;
+        }
+
         /* ========== 모바일 반응형 (768px 이하) ========== */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
                 font-size: 14px;
+            }
+
+            /* 필터 토글 버튼 (모바일에서만 표시) */
+            .filter-toggle-row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 12px;
+            }
+            .filter-toggle-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 16px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            .filter-toggle-btn:active {
+                background: #5568d3;
+            }
+            .filter-count {
+                background: #ff6b6b;
+                color: white;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 12px;
+                min-width: 20px;
+                text-align: center;
+            }
+            .filter-count:empty {
+                display: none;
+            }
+            .toggle-icon {
+                font-size: 10px;
+                transition: transform 0.3s;
+            }
+            .filter-toggle-btn.active .toggle-icon {
+                transform: rotate(180deg);
+            }
+            .search-box-mobile {
+                display: block;
+                flex: 1;
+                padding: 12px 16px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 16px;
+            }
+            .search-box-mobile:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+
+            /* 필터 영역 접기/펼치기 */
+            .filter-area {
+                display: none;
+                padding-top: 12px;
+                border-top: 1px solid #e9ecef;
+                margin-top: 12px;
+            }
+            .filter-area.show {
+                display: block;
+            }
+
+            /* 데스크탑 검색창 숨김 */
+            .search-desktop {
+                display: none !important;
+            }
+
+            /* 적용된 필터 칩 */
+            .filter-chips {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+            .filter-chips:empty {
+                display: none;
+            }
+            .filter-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                background: #e9ecef;
+                border-radius: 20px;
+                font-size: 13px;
+                color: #495057;
+            }
+            .filter-chip-remove {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 18px;
+                height: 18px;
+                background: #adb5bd;
+                color: white;
+                border: none;
+                border-radius: 50%;
+                font-size: 12px;
+                cursor: pointer;
+                line-height: 1;
+            }
+            .filter-chip-remove:active {
+                background: #6c757d;
             }
 
             /* 컨트롤 영역 */
@@ -858,29 +978,45 @@
     <div class="container">
         {% include 'includes/header.html' %}
         <div class="controls">
-            <!-- 1줄: 필터 드롭다운 -->
-            <div class="controls-row">
-                <select id="categoryFilter">
-                    <option value="">전체 대분류</option>
-                </select>
-                <select id="promotionFilter">
-                    <option value="">전체 프로모션</option>
-                </select>
-                <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f8f9fa; border-radius: 4px; cursor: pointer; white-space: nowrap;">
-                    <input type="checkbox" id="showEndedPromotions" onchange="applyStatusFilter()" style="cursor: pointer; width: 18px; height: 18px;">
-                    <span style="font-size: 15px; color: #555;">종료된 프로모션 포함</span>
-                </label>
-                <button class="btn btn-secondary" onclick="clearFilters()">필터 초기화</button>
+            <!-- 모바일 필터 토글 버튼 -->
+            <div class="filter-toggle-row">
+                <button class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleFilters()">
+                    <span>🔍 필터</span>
+                    <span class="filter-count" id="filterCount"></span>
+                    <span class="toggle-icon" id="toggleIcon">▼</span>
+                </button>
+                <input type="text" id="searchInputMobile" class="search-box-mobile" placeholder="검색..." oninput="syncSearch(this)">
             </div>
-            <!-- 2줄: 상품 필터 (가변 크기) -->
-            <div class="controls-row">
-                <select id="productFilter" style="flex: 1;">
-                    <option value="">전체 상품</option>
-                </select>
-            </div>
-            <!-- 3줄: 검색창 -->
-            <div class="controls-row">
-                <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력..." style="flex: 1;">
+
+            <!-- 적용된 필터 칩 -->
+            <div class="filter-chips" id="filterChips"></div>
+
+            <!-- 필터 영역 (모바일에서 접기/펼치기) -->
+            <div class="filter-area" id="filterArea">
+                <!-- 1줄: 필터 드롭다운 -->
+                <div class="controls-row">
+                    <select id="categoryFilter">
+                        <option value="">전체 대분류</option>
+                    </select>
+                    <select id="promotionFilter">
+                        <option value="">전체 프로모션</option>
+                    </select>
+                    <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #f8f9fa; border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="showEndedPromotions" onchange="applyStatusFilter()" style="cursor: pointer; width: 18px; height: 18px;">
+                        <span style="font-size: 15px; color: #555;">종료된 프로모션 포함</span>
+                    </label>
+                    <button class="btn btn-secondary" onclick="clearFilters()">필터 초기화</button>
+                </div>
+                <!-- 2줄: 상품 필터 (가변 크기) -->
+                <div class="controls-row">
+                    <select id="productFilter" style="flex: 1;">
+                        <option value="">전체 상품</option>
+                    </select>
+                </div>
+                <!-- 3줄: 검색창 (데스크탑) -->
+                <div class="controls-row search-desktop">
+                    <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력..." style="flex: 1;">
+                </div>
             </div>
             {% if is_admin %}
             <!-- 4줄: 관리자 버튼 -->
@@ -1168,6 +1304,9 @@
             if (selectedChannel) params.append('channel', selectedChannel);
             if (promotion) params.append('promotion_name', promotion);
 
+            // 필터 칩 업데이트
+            updateFilterChips();
+
             fetch(`/api/promotions?${params}`)
                 .then(res => res.json())
                 .then(data => {
@@ -1292,11 +1431,100 @@
         // 필터 초기화
         function clearFilters() {
             document.getElementById('searchInput').value = '';
+            document.getElementById('searchInputMobile').value = '';
             document.getElementById('categoryFilter').value = '';
             document.getElementById('productFilter').value = '';
             document.getElementById('promotionFilter').value = '';
             selectedChannel = null;
             renderChannelFilter();
+            updateFilterChips();
+            loadPromotions();
+        }
+
+        // 모바일 필터 토글
+        function toggleFilters() {
+            const filterArea = document.getElementById('filterArea');
+            const toggleBtn = document.getElementById('filterToggleBtn');
+            filterArea.classList.toggle('show');
+            toggleBtn.classList.toggle('active');
+        }
+
+        // 검색창 동기화 (모바일 <-> 데스크탑)
+        function syncSearch(input) {
+            const desktopSearch = document.getElementById('searchInput');
+            const mobileSearch = document.getElementById('searchInputMobile');
+            if (input === mobileSearch) {
+                desktopSearch.value = mobileSearch.value;
+            } else {
+                mobileSearch.value = desktopSearch.value;
+            }
+            loadPromotions();
+        }
+
+        // 적용된 필터 칩 업데이트
+        function updateFilterChips() {
+            const container = document.getElementById('filterChips');
+            const chips = [];
+
+            const category = document.getElementById('categoryFilter');
+            const product = document.getElementById('productFilter');
+            const promotion = document.getElementById('promotionFilter');
+            const search = document.getElementById('searchInput').value;
+
+            if (category.value) {
+                const text = category.options[category.selectedIndex].text;
+                chips.push({ type: 'category', label: text, value: category.value });
+            }
+            if (product.value) {
+                const text = product.options[product.selectedIndex].text;
+                chips.push({ type: 'product', label: text, value: product.value });
+            }
+            if (promotion.value) {
+                const text = promotion.options[promotion.selectedIndex].text;
+                chips.push({ type: 'promotion', label: text, value: promotion.value });
+            }
+            if (selectedChannel) {
+                chips.push({ type: 'channel', label: selectedChannel, value: selectedChannel });
+            }
+            if (search) {
+                chips.push({ type: 'search', label: `"${search}"`, value: search });
+            }
+
+            // 필터 개수 표시
+            const filterCount = document.getElementById('filterCount');
+            filterCount.textContent = chips.length > 0 ? chips.length : '';
+
+            // 칩 렌더링
+            container.innerHTML = chips.map(chip => `
+                <span class="filter-chip">
+                    ${chip.label}
+                    <button class="filter-chip-remove" onclick="removeFilter('${chip.type}')">&times;</button>
+                </span>
+            `).join('');
+        }
+
+        // 개별 필터 제거
+        function removeFilter(type) {
+            switch(type) {
+                case 'category':
+                    document.getElementById('categoryFilter').value = '';
+                    break;
+                case 'product':
+                    document.getElementById('productFilter').value = '';
+                    break;
+                case 'promotion':
+                    document.getElementById('promotionFilter').value = '';
+                    break;
+                case 'channel':
+                    selectedChannel = null;
+                    renderChannelFilter();
+                    break;
+                case 'search':
+                    document.getElementById('searchInput').value = '';
+                    document.getElementById('searchInputMobile').value = '';
+                    break;
+            }
+            updateFilterChips();
             loadPromotions();
         }
 
@@ -1710,18 +1938,6 @@
                 console.error('Error:', error);
                 showSimpleToast('오류', '오류가 발생했습니다.', 'error');
             }
-        }
-
-        // 필터 초기화
-        function clearFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('categoryFilter').value = '';
-            document.getElementById('productFilter').value = '';
-            document.getElementById('promotionFilter').value = '';
-            document.getElementById('showEndedPromotions').checked = false;
-            selectedChannel = '';
-            renderChannelFilter(); // 채널 필터 버튼 상태 초기화
-            loadPromotions();
         }
 
         // 이벤트 리스너
