@@ -1234,7 +1234,8 @@ def handle_message(data):
                 'is_one_to_one': len(chat_info['participants']) == 2
             }, room=f'user_{participant}')
 
-            # 네비게이션 배지 실시간 업데이트
+            # 캐시 무효화 후 네비게이션 배지 업데이트
+            invalidate_cache(f'nav_counts:{participant}')
             participant_counts = calculate_nav_counts(participant)
             emit('nav_counts_update', participant_counts, room=f'user_{participant}')
 
@@ -1273,7 +1274,7 @@ def handle_typing_stop(data):
 
 @socketio.on('mark_as_read')
 def handle_mark_as_read(data):
-    """메시지를 읽음으로 표시 (최적화: 직접 DB 업데이트)"""
+    """메시지를 읽음으로 표시 (최적화: 직접 DB 업데이트 + 캐시 무효화)"""
     chat_id = data['chat_id']
     username = data['username']
     message_id = data.get('message_id')  # 특정 메시지 ID (옵션)
@@ -1302,10 +1303,10 @@ def handle_mark_as_read(data):
                 'all_messages_read': True
             }, room=chat_id, include_self=False)
 
-        # 네비게이션 배지 실시간 업데이트 (메시지 읽음 처리 후)
-        with app.app_context():
-            user_counts = calculate_nav_counts(username)
-            emit('nav_counts_update', user_counts, room=f'user_{username}')
+        # 캐시 무효화 후 네비게이션 배지 업데이트
+        invalidate_cache(f'nav_counts:{username}')
+        user_counts = calculate_nav_counts(username)
+        emit('nav_counts_update', user_counts, room=f'user_{username}')
     except Exception as e:
         logger.error(f'읽음 처리 실패 (chat_id={chat_id}): {e}')
 
@@ -2425,9 +2426,9 @@ def push_unsubscribe():
         logger.error(f'푸시 구독 해제 실패: {e}', exc_info=True)
         return jsonify({'error': '구독 해제 중 오류가 발생했습니다'}), 500
 
-@cached(ttl=30, key_prefix='nav_counts')
+@cached(ttl=10, key_prefix='nav_counts')
 def calculate_nav_counts(username):
-    """네비게이션 바 카운트 계산 (헬퍼 함수) - 30초 캐시"""
+    """네비게이션 바 카운트 계산 (최적화: 전용 쿼리 사용, 10초 캐시)"""
     counts = {
         'pending_tasks': 0,
         'unread_chats': 0,
@@ -2435,15 +2436,8 @@ def calculate_nav_counts(username):
     }
 
     try:
-        # 읽지 않은 채팅 메시지 개수 계산
-        chats = database.load_chats()
-        for chat_id, chat in chats.items():
-            if username in chat['participants']:
-                for msg in chat.get('messages', []):
-                    if msg.get('username') != username:
-                        read_by = msg.get('read_by', [])
-                        if username not in read_by:
-                            counts['unread_chats'] += 1
+        # 읽지 않은 채팅 메시지 개수 (최적화: 전용 카운트 쿼리)
+        counts['unread_chats'] = database.get_unread_chat_count(username)
 
         # 상담사: 내게 할당된 미완료 할일 개수 (assigned_to 사용)
         if username not in get_admin_accounts():

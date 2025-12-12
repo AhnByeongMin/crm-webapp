@@ -795,6 +795,36 @@ def get_chat_info(chat_id):
         }
 
 
+def get_unread_chat_count(username):
+    """
+    특정 사용자의 읽지 않은 채팅 메시지 개수 조회 (최적화: 단일 쿼리)
+
+    Args:
+        username: 사용자명
+
+    Returns:
+        int: 읽지 않은 메시지 개수
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # 내가 참여한 채팅방에서, 내가 보내지 않은 메시지 중, 내가 읽지 않은 메시지 개수
+        cursor.execute('''
+            SELECT COUNT(*) as count
+            FROM messages m
+            INNER JOIN chat_participants cp ON m.chat_id = cp.chat_id
+            WHERE cp.username = %s
+            AND m.username != %s
+            AND NOT EXISTS (
+                SELECT 1 FROM message_reads mr
+                WHERE mr.message_id = m.id AND mr.username = %s
+            )
+        ''', (username, username, username))
+
+        row = cursor.fetchone()
+        return row['count'] if row else 0
+
+
 # ==================== 프로모션 관리 (최적화) ====================
 
 def load_promotions():
