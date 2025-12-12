@@ -21,6 +21,7 @@
     <!-- 그 다음 auto-update와 push-notifications -->
     <script src="/static/js/sw-auto-update.js"></script>
     <script src="/static/js/push-notifications.js" defer></script>
+    <link rel="stylesheet" href="/static/css/loading-spinner.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; font-size: 16px; padding: 20px; }
@@ -893,7 +894,11 @@
         <!-- 채널 필터 버튼 -->
         <div class="channel-filter" id="channelFilter"></div>
 
-        <div class="group-tabs" id="groupTabs"></div>
+        <!-- 그룹 탭 + 검색 결과 개수 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+            <div class="group-tabs" id="groupTabs" style="margin-bottom: 0;"></div>
+            <div id="resultCount" style="color: #666; font-size: 14px; font-weight: 600;"></div>
+        </div>
 
         <div id="promotionList"></div>
     </div>
@@ -1141,6 +1146,16 @@
 
         // 프로모션 목록 로드
         function loadPromotions() {
+            const container = document.getElementById('promotionList');
+
+            // 로딩 스피너 표시
+            container.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">프로모션 로딩 중...</div>
+                </div>
+            `;
+
             const params = new URLSearchParams();
             const search = document.getElementById('searchInput').value;
             const category = document.getElementById('categoryFilter').value;
@@ -1158,6 +1173,16 @@
                 .then(data => {
                     allPromotions = data;
                     applyStatusFilter();
+                })
+                .catch(error => {
+                    console.error('프로모션 로딩 실패:', error);
+                    container.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">⚠️</div>
+                            <p>프로모션을 불러오는데 실패했습니다.</p>
+                            <button class="btn btn-primary" onclick="loadPromotions()" style="margin-top: 15px;">다시 시도</button>
+                        </div>
+                    `;
                 });
         }
 
@@ -1264,17 +1289,57 @@
             renderPromotions();
         }
 
+        // 필터 초기화
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('productFilter').value = '';
+            document.getElementById('promotionFilter').value = '';
+            selectedChannel = null;
+            renderChannelFilter();
+            loadPromotions();
+        }
+
         // 프로모션 목록 렌더링
         function renderPromotions() {
             const container = document.getElementById('promotionList');
+            const resultCountEl = document.getElementById('resultCount');
+
+            // 검색 결과 개수 업데이트
+            const totalCount = allPromotions.length;
+            const filteredCount = filteredPromotions.length;
+            if (totalCount === filteredCount) {
+                resultCountEl.textContent = `총 ${totalCount}건`;
+            } else {
+                resultCountEl.textContent = `검색 결과: ${filteredCount}건 / 전체 ${totalCount}건`;
+            }
 
             if (filteredPromotions.length === 0) {
-                container.innerHTML = `
-                    <div class="empty">
-                        <div class="empty-icon">📢</div>
-                        <p>등록된 프로모션이 없습니다.</p>
-                    </div>
-                `;
+                // 필터/검색 조건에 따른 맞춤 메시지
+                const search = document.getElementById('searchInput').value;
+                const category = document.getElementById('categoryFilter').value;
+                const product = document.getElementById('productFilter').value;
+                const promotion = document.getElementById('promotionFilter').value;
+                const hasFilter = search || category || product || promotion || selectedChannel;
+
+                let emptyMessage = '';
+                if (hasFilter) {
+                    emptyMessage = `
+                        <div class="empty">
+                            <div class="empty-icon">🔍</div>
+                            <p>검색 조건에 맞는 프로모션이 없습니다.</p>
+                            <button class="btn btn-secondary" onclick="clearFilters()" style="margin-top: 15px;">필터 초기화</button>
+                        </div>
+                    `;
+                } else {
+                    emptyMessage = `
+                        <div class="empty">
+                            <div class="empty-icon">📢</div>
+                            <p>등록된 프로모션이 없습니다.</p>
+                        </div>
+                    `;
+                }
+                container.innerHTML = emptyMessage;
                 return;
             }
 

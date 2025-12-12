@@ -21,6 +21,7 @@
     <!-- 그 다음 auto-update와 push-notifications -->
     <script src="/static/js/sw-auto-update.js"></script>
     <script src="/static/js/push-notifications.js" defer></script>
+    <link rel="stylesheet" href="/static/css/loading-spinner.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
@@ -328,9 +329,15 @@
 
         <div class="action-bar">
             <button class="btn-new-chat" onclick="location.href='/chat/create'">새 채팅방 만들기</button>
+            <span id="chatCount" style="color: #666; font-size: 14px;"></span>
         </div>
 
-        <div id="chatList"></div>
+        <div id="chatList">
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">채팅방 로딩 중...</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -505,13 +512,17 @@
 
         function loadChats() {
             const endpoint = (isAdmin && currentTab === 'all') ? '/api/chats/all' : '/api/chats';
+            const container = document.getElementById('chatList');
+            const chatCountEl = document.getElementById('chatCount');
 
             fetch(endpoint)
                 .then(res => res.json())
                 .then(chats => {
                     allChatsData = chats;  // 캐시 저장
-                    const container = document.getElementById('chatList');
                     let chatArray = Object.entries(chats);
+
+                    // 채팅방 개수 표시
+                    chatCountEl.textContent = `총 ${chatArray.length}개`;
 
                     // 새 채팅방 알림 (내 채팅 탭일 때만)
                     if (currentTab === 'my' && previousChatCount > 0 && chatArray.length > previousChatCount) {

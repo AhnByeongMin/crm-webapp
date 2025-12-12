@@ -212,6 +212,22 @@
             margin-top: 6px;
         }
 
+        .capslock-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-top: 8px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         @media (max-width: 480px) {
             .login-container {
                 padding: 40px 30px;
@@ -275,6 +291,9 @@
                     <span class="password-toggle" onclick="togglePassword()">👁️</span>
                 </div>
                 <div class="password-hint">초기 비밀번호를 모르시면 관리자에게 문의하세요</div>
+                <div class="capslock-warning" id="capslockWarning" style="display: none;">
+                    ⚠️ Caps Lock이 켜져 있습니다
+                </div>
             </div>
 
             <button type="submit" class="btn-login">로그인</button>
@@ -318,6 +337,24 @@
             const button = document.querySelector('.btn-login');
             button.textContent = '로그인 중...';
             button.disabled = true;
+        });
+
+        // Caps Lock 감지
+        const passwordInput = document.getElementById('password');
+        const capslockWarning = document.getElementById('capslockWarning');
+
+        passwordInput.addEventListener('keyup', function(e) {
+            if (e.getModifierState && e.getModifierState('CapsLock')) {
+                capslockWarning.style.display = 'block';
+            } else {
+                capslockWarning.style.display = 'none';
+            }
+        });
+
+        passwordInput.addEventListener('keydown', function(e) {
+            if (e.getModifierState && e.getModifierState('CapsLock')) {
+                capslockWarning.style.display = 'block';
+            }
         });
     </script>
 
