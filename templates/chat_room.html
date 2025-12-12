@@ -497,109 +497,7 @@
         body.has-banner #notificationBanner { margin-top: 50px; }
         body.has-banner .header { margin-top: 50px; }
 
-        /* 도움말 버튼 - 모바일에서 당일예약 버튼 위에 배치 */
-        .help-button {
-            position: fixed;
-            bottom: 160px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 28px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            z-index: 9997;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .help-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
-        }
-        .help-button:active {
-            transform: scale(0.95);
-        }
-
-        /* 모바일: 버튼 크기 및 위치 조정 */
-        @media (max-width: 768px) {
-            .help-button {
-                bottom: 145px;
-                right: 15px;
-                width: 50px;
-                height: 50px;
-                font-size: 24px;
-            }
-        }
-
-        /* 도움말 모달 */
-        .help-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10001;
-            align-items: center;
-            justify-content: center;
-        }
-        .help-modal.active {
-            display: flex;
-        }
-        .help-modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            animation: slideUpModal 0.3s ease-out;
-        }
-        @keyframes slideUpModal {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .help-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-        }
-        .help-modal-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .help-modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            color: #999;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .help-modal-close:hover {
-            color: #333;
-        }
+        /* 도움말 섹션 (채팅방 전용) */
         .help-section {
             margin-bottom: 25px;
         }
@@ -611,32 +509,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-        .help-content {
-            color: #555;
-            line-height: 1.8;
-            font-size: 15px;
-        }
-        .help-content ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        .help-content li {
-            margin: 8px 0;
-        }
-        .help-content strong {
-            color: #333;
-            font-weight: 600;
-        }
-        .help-tip {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 12px 15px;
-            margin: 15px 0;
-            border-radius: 4px;
-        }
-        .help-tip strong {
-            color: #667eea;
         }
 
         .nav-badge {
@@ -870,6 +742,125 @@
         .calendar-day.no-messages {
             color: #ccc;
             cursor: not-allowed;
+        }
+
+        /* ===== 모바일 반응형 (768px 이하) ===== */
+        @media (max-width: 768px) {
+            /* 검색 패널 모바일 최적화 */
+            .search-panel {
+                padding: 10px;
+                gap: 8px;
+            }
+            .search-row {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .search-input-wrap {
+                flex: 1 1 100%;
+                order: 1;
+            }
+            .search-input-wrap input {
+                padding: 12px 40px 12px 15px;
+                font-size: 16px; /* iOS 줌 방지 */
+                min-height: 44px;
+            }
+            .search-btn {
+                flex: 1;
+                order: 2;
+                min-height: 44px;
+                font-size: 15px;
+            }
+            .date-btn {
+                flex: 1;
+                order: 3;
+                min-height: 44px;
+                font-size: 14px;
+                padding: 10px 12px;
+            }
+            .close-search-btn {
+                order: 4;
+                min-height: 44px;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            .search-results-info {
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: space-between;
+            }
+            .search-results-info .nav-btns {
+                width: 100%;
+                justify-content: center;
+            }
+            .search-results-info .nav-btns button {
+                flex: 1;
+                min-height: 40px;
+                font-size: 14px;
+            }
+
+            /* 메시지 영역 */
+            .message {
+                max-width: 85%;
+            }
+            #messages {
+                padding: 15px 10px;
+            }
+
+            /* 입력 영역 모바일 최적화 */
+            .input-area {
+                padding: 10px;
+                gap: 8px;
+            }
+            #messageInput {
+                font-size: 16px; /* iOS 줌 방지 */
+                padding: 10px 14px;
+                min-height: 44px;
+            }
+            #sendBtn {
+                padding: 10px 18px;
+                font-size: 14px;
+                min-height: 44px;
+            }
+            #attachBtn, #emojiBtn {
+                min-width: 44px;
+                min-height: 44px;
+            }
+
+            /* 채팅 컨테이너 */
+            .chat-container {
+                max-height: calc(100vh - 60px);
+            }
+
+            /* 날짜 선택 모달 */
+            .date-picker-content {
+                width: 95%;
+                max-width: 350px;
+            }
+            .calendar-day {
+                padding: 8px;
+                font-size: 13px;
+            }
+        }
+
+        /* ===== 작은 모바일 (480px 이하) ===== */
+        @media (max-width: 480px) {
+            .search-panel {
+                padding: 8px;
+            }
+            .search-btn, .date-btn, .close-search-btn {
+                padding: 10px 10px;
+                font-size: 13px;
+            }
+            .date-btn {
+                flex: 0 0 auto;
+            }
+            #sendBtn {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+            .message {
+                max-width: 90%;
+            }
         }
     </style>
     <script src="/static/js/banner.js" defer></script>
@@ -1968,10 +1959,12 @@
         // 도움말 모달 제어
         function openHelpModal() {
             document.getElementById('helpModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
 
         function closeHelpModal() {
             document.getElementById('helpModal').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
         // 모달 외부 클릭 시 닫기
@@ -2404,6 +2397,7 @@
             <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
         </div>
 
+        <div class="help-modal-body">
         <div class="help-section">
             <div class="help-section-title">💬 메시지 보내기</div>
             <div class="help-content">
@@ -2467,6 +2461,7 @@
         <div class="help-tip">
             <strong>💡 팁:</strong> 이미지를 클릭하면 크게 볼 수 있으며, 파일명을 클릭하면 다운로드됩니다. Shift + Enter로 여러 줄 메시지를 작성할 수 있습니다.
         </div>
+        </div><!-- help-modal-body 끝 -->
     </div>
 </div>
 

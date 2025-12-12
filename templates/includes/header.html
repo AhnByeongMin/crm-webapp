@@ -20,7 +20,13 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        position: relative;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+    /* 배너가 있을 때 헤더 위치 조정 */
+    body.has-banner .header {
+        top: 50px;
     }
     .header h1 {
         font-size: 24px;
@@ -208,16 +214,20 @@ function toggleMobileNav() {
     toggle.setAttribute('aria-label', nav.classList.contains('active') ? '메뉴 닫기' : '메뉴 열기');
 }
 
-// 네비게이션 링크 클릭 시 메뉴 닫기
-document.querySelectorAll('.nav a').forEach(link => {
-    link.addEventListener('click', () => {
-        const nav = document.getElementById('mainNav');
-        const toggle = document.getElementById('navToggle');
-        if (window.innerWidth <= 768) {
-            nav.classList.remove('active');
-            toggle.textContent = '☰';
-        }
-    });
+// 모바일 메뉴 닫기 함수
+function closeMobileNav() {
+    const nav = document.getElementById('mainNav');
+    const toggle = document.getElementById('navToggle');
+    if (window.innerWidth <= 768) {
+        nav.classList.remove('active');
+        toggle.textContent = '☰';
+        toggle.setAttribute('aria-label', '메뉴 열기');
+    }
+}
+
+// 네비게이션 링크 및 버튼 클릭 시 메뉴 닫기
+document.querySelectorAll('.nav a, .nav button').forEach(item => {
+    item.addEventListener('click', closeMobileNav);
 });
 
 // 화면 밖 클릭 시 메뉴 닫기

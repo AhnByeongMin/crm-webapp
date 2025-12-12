@@ -1,76 +1,9 @@
 {% include 'includes/reminder_modal.html' %}
 
+<!-- 플로팅 버튼 공통 스타일 (도움말, 당일예약 버튼) -->
+<link rel="stylesheet" href="/static/css/floating-buttons.css">
+
 <style>
-/* 당일 예약 버튼 */
-.today-reminders-button {
-    position: fixed;
-    bottom: 90px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
-    z-index: 9998;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.today-reminders-button:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.6);
-}
-.today-reminders-button:active {
-    transform: scale(0.95);
-}
-.reminder-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #dc3545;
-    color: white;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: bold;
-    border: 2px solid white;
-}
-
-/* 모바일: 채팅 입력창과 겹치지 않도록 위치 조정 */
-@media (max-width: 768px) {
-    .today-reminders-button {
-        bottom: 85px;
-        right: 15px;
-        width: 50px;
-        height: 50px;
-        font-size: 22px;
-    }
-    .reminder-badge {
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
-    }
-}
-
-/* 채팅방 전용: 입력창 위에 위치 */
-body.chat-room-page .today-reminders-button {
-    bottom: 90px;
-}
-@media (max-width: 768px) {
-    body.chat-room-page .today-reminders-button {
-        bottom: 80px;
-    }
-}
-
 /* 당일 예약 모달 */
 .today-reminders-modal {
     display: none;
@@ -169,6 +102,7 @@ body.chat-room-page .today-reminders-button {
     padding: 20px 30px;
     overflow-y: auto;
     flex: 1;
+    min-height: 0; /* flex 컨테이너 내 스크롤 작동 필수 */
 }
 .reminder-item {
     background: white;
@@ -318,11 +252,13 @@ body.chat-room-page .today-reminders-button {
 // 당일 예약 모달 제어
 function openTodayRemindersModal() {
     document.getElementById('todayRemindersModal').classList.add('active');
+    document.body.style.overflow = 'hidden'; // 배경 스크롤 방지
     loadTodayReminders();
 }
 
 function closeTodayRemindersModal() {
     document.getElementById('todayRemindersModal').classList.remove('active');
+    document.body.style.overflow = ''; // 배경 스크롤 복원
 }
 
 // 빠른 예약 추가 (기본값: 오늘)

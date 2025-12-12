@@ -1,0 +1,351 @@
+/**
+ * 공통 플로팅 버튼 스타일
+ * - 도움말 버튼 (?)
+ * - 당일예약 버튼 (달력)
+ *
+ * 데스크탑/모바일 환경 통일
+ * 채팅방은 입력창 위에 배치되어야 하므로 별도 클래스 사용
+ */
+
+/* ===== 기본 플로팅 버튼 스타일 ===== */
+.floating-btn {
+    position: fixed;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 9997;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.floating-btn:hover {
+    transform: scale(1.1);
+}
+
+.floating-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== 도움말 버튼 ===== */
+.help-button {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    z-index: 9997;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+}
+
+.help-button:active {
+    transform: scale(0.95);
+}
+
+/* ===== 당일예약 버튼 ===== */
+.today-reminders-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    z-index: 9998;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.today-reminders-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.6);
+}
+
+.today-reminders-button:active {
+    transform: scale(0.95);
+}
+
+/* 배지 */
+.reminder-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid white;
+}
+
+/* ===== 모바일 반응형 (768px 이하) ===== */
+@media (max-width: 768px) {
+    /* 도움말 버튼 */
+    .help-button {
+        bottom: 80px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+
+    /* 당일예약 버튼 */
+    .today-reminders-button {
+        bottom: 15px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+    }
+
+    .reminder-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+        top: -3px;
+        right: -3px;
+    }
+}
+
+/* ===== 채팅방 전용: 입력창 위에 배치 ===== */
+body.chat-room-page .help-button {
+    bottom: 160px;
+}
+
+body.chat-room-page .today-reminders-button {
+    bottom: 90px;
+}
+
+@media (max-width: 768px) {
+    body.chat-room-page .help-button {
+        bottom: 145px;
+    }
+
+    body.chat-room-page .today-reminders-button {
+        bottom: 80px;
+    }
+}
+
+/* ===== 도움말 모달 공통 스타일 ===== */
+.help-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10002;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-modal.active {
+    display: flex;
+}
+
+/* 모달 열릴 때 body 스크롤 방지 */
+body:has(.help-modal.active),
+body:has(.today-reminders-modal.active) {
+    overflow: hidden;
+}
+
+.help-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: slideUpModal 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.help-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 2px solid #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.help-modal-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+}
+
+.help-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: white;
+    cursor: pointer;
+    transition: color 0.2s;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-modal-close:hover {
+    color: #fff3cd;
+}
+
+.help-modal-body {
+    padding: 25px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0; /* flex 컨테이너 내 스크롤 작동을 위해 필수 */
+    /* 스크롤바 항상 표시 (스크롤 가능 여부 시각적 힌트) */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #ccc #f0f0f0; /* Firefox */
+}
+
+/* 스크롤바 스타일 (Webkit 브라우저) */
+.help-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+.help-modal-body::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+.help-modal-body::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+.help-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* 스크롤 가능 힌트 - 하단 그라데이션 */
+.help-modal-body::after {
+    content: '';
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(transparent, rgba(255,255,255,0.9));
+    pointer-events: none;
+    display: block;
+    margin-top: -30px;
+}
+
+.help-content h4 {
+    color: #667eea;
+    font-size: 16px;
+    margin: 20px 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.help-content h4:first-child {
+    margin-top: 0;
+}
+
+.help-content p {
+    color: #666;
+    line-height: 1.6;
+    margin: 8px 0;
+}
+
+.help-content ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.help-content li {
+    margin: 8px 0;
+    color: #555;
+    line-height: 1.5;
+}
+
+.help-content strong {
+    color: #333;
+    font-weight: 600;
+}
+
+.help-tip {
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.help-tip strong {
+    color: #667eea;
+}
+
+/* 모바일에서 모달 크기 조정 */
+@media (max-width: 768px) {
+    .help-modal-content {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .help-modal-header {
+        padding: 15px 20px;
+    }
+
+    .help-modal-title {
+        font-size: 18px;
+    }
+
+    .help-modal-body {
+        padding: 20px;
+    }
+
+    .help-content h4 {
+        font-size: 15px;
+    }
+}

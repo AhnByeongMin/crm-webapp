@@ -23,53 +23,70 @@
     <script src="/static/js/push-notifications.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; font-size: 16px; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; font-size: 16px; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
 
         .controls {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
         }
         .controls-row {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
+            align-items: center;
         }
         .controls-row:last-child { margin-bottom: 0; }
         .search-box {
             flex: 1;
             min-width: 200px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         select {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
             background: white;
             min-width: 150px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         .btn {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
         }
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         .btn-primary:hover {
-            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
         }
         .btn-secondary {
             background: #6c757d;
@@ -77,66 +94,66 @@
         }
         .btn-secondary:hover {
             background: #5a6268;
+            transform: translateY(-1px);
         }
         .btn-danger {
-            background: #dc3545;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
         .btn-danger:hover {
-            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
         }
         .btn-success {
-            background: #28a745;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
         }
         .btn-success:hover {
-            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
         }
 
         .group-tabs {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
         .group-tab {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background: white;
-            border: 2px solid #ddd;
-            border-radius: 4px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 15px;
+            font-weight: 600;
             transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .group-tab.active {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border-color: #667eea;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
-        .group-tab:hover {
+        .group-tab:hover:not(.active) {
             border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-1px);
         }
 
         .table-wrapper {
             overflow-x: auto;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
         table {
             width: 100%;
             background: white;
             border-collapse: collapse;
-        }
-
-        /* 프로모션 블록 */
-        .promo-block {
-            border-bottom: 3px solid #e0e0e0;
-            margin-bottom: 2px;
-        }
-        .promo-block:hover {
-            background: #f8f9fa;
         }
 
         /* 상세 정보 */
@@ -149,55 +166,222 @@
         .info-grid {
             display: grid;
             grid-template-columns: auto 1fr auto 1fr auto 1fr;
-            gap: 10px 20px;
-            align-items: start;
+            gap: 12px 24px;
+            align-items: center;
+            padding: 5px 0;
         }
 
         .info-label {
-            font-weight: bold;
-            color: #666;
+            font-weight: 600;
+            color: #555;
             white-space: nowrap;
-            font-size: 16px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
         .info-value {
             color: #333;
-            font-size: 17px;
+            font-size: 15px;
+            padding: 4px 0;
         }
 
         .info-value.highlight {
             color: #667eea;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 16px;
         }
 
         .content-text {
             white-space: pre-wrap;
             word-break: break-word;
-            line-height: 1.5;
+            line-height: 1.6;
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+            margin-top: 8px;
+        }
+
+        /* 내용 섹션 - 그리드 외부, 전체 너비 */
+        .content-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px dashed #e0e0e0;
+        }
+        .content-section .info-label {
+            margin-bottom: 8px;
+        }
+
+        /* 채널 배지 강조 */
+        .channel-badge {
+            display: inline-block;
+            color: white !important;
+            padding: 5px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 채널 필터 버튼 영역 */
+        .channel-filter {
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            align-items: center;
+        }
+        .channel-filter-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        .channel-filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .channel-filter-btn:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-1px);
+        }
+        .channel-filter-btn.active {
+            border-color: var(--channel-color, #667eea);
+            background: var(--channel-color, #667eea);
+            color: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+        .channel-filter-btn .filter-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--channel-color, #667eea);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .channel-filter-btn.active .filter-dot {
+            background: white;
+        }
+        /* 전체 버튼 특별 스타일 */
+        .channel-filter-btn.all-btn {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+        .channel-filter-btn.all-btn:not(.active) {
+            background: #f8f9fa;
+            border-color: #e0e0e0;
+            color: #333;
+        }
+        .channel-filter-btn.all-btn:not(.active):hover {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+        /* 기안필수 태그 */
+        .channel-filter-btn .approval-tag {
+            font-size: 10px;
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 2px;
+        }
+        .channel-filter-btn.active .approval-tag {
+            background: rgba(255,255,255,0.9);
+            color: #dc3545;
+        }
+
+        /* 채널 배지 내 기안필수 태그 */
+        .channel-badge .approval-tag {
+            display: inline-block;
+            font-size: 10px;
+            background: rgba(255,255,255,0.95);
+            color: #dc3545;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-left: 6px;
+            vertical-align: middle;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
 
         .actions-cell {
             text-align: right;
             white-space: nowrap;
         }
+
+        /* 프로모션 카드 호버 효과 개선 */
+        .promo-block {
+            transition: all 0.2s ease;
+        }
+        .promo-block:hover {
+            background: linear-gradient(to right, #f8f9ff, #fff);
+        }
+
+        /* 구분선 스타일 개선 */
+        .promo-block {
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 0;
+        }
+        .promo-block:last-child {
+            border-bottom: none;
+        }
         .status-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
         }
         .status-active {
-            background: #d4edda;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.15);
+        }
+        .status-active::before {
+            content: '●';
+            font-size: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         .status-expired {
-            background: #f8d7da;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
             color: #721c24;
+            box-shadow: 0 2px 4px rgba(220, 53, 69, 0.15);
         }
         .status-unlimited {
-            background: #d1ecf1;
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
             color: #0c5460;
+            box-shadow: 0 2px 4px rgba(23, 162, 184, 0.15);
+        }
+        .status-unlimited::before {
+            content: '∞';
+            font-size: 14px;
+            font-weight: bold;
         }
 
         .modal {
@@ -390,28 +574,34 @@
 
         /* 클립보드 복사 버튼 */
         .copy-btn {
-            display: inline-block;
-            margin-left: 8px;
-            padding: 4px 10px;
-            background: #667eea;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 10px;
+            padding: 5px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 11px;
+            font-weight: 600;
             transition: all 0.2s;
             vertical-align: middle;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
         }
         .copy-btn:hover {
-            background: #5568d3;
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, #5568d3 0%, #6a4190 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
         }
         .copy-btn:active {
             transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
         }
         .copy-btn.copied {
-            background: #28a745;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
         }
 
         /* 당일 예약 배너 */
@@ -438,98 +628,7 @@
         #reminderBanner .banner-link { background: white; color: #dc3545; padding: 6px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-left: 10px; }
         #reminderBanner .banner-link:hover { background: #f8f9fa; }
 
-        /* 도움말 버튼 */
-        .help-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 28px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            z-index: 9997;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .help-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
-        }
-        .help-button:active {
-            transform: scale(0.95);
-        }
-
-        /* 도움말 모달 */
-        .help-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10001;
-            align-items: center;
-            justify-content: center;
-        }
-        .help-modal.active {
-            display: flex;
-        }
-        .help-modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            animation: slideUpModal 0.3s ease-out;
-        }
-        @keyframes slideUpModal {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .help-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-        }
-        .help-modal-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .help-modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            color: #999;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .help-modal-close:hover {
-            color: #333;
-        }
+        /* 도움말 섹션 (프로모션 페이지 전용) */
         .help-section {
             margin-bottom: 25px;
         }
@@ -542,31 +641,205 @@
             align-items: center;
             gap: 8px;
         }
-        .help-content {
-            color: #555;
-            line-height: 1.8;
-            font-size: 15px;
+
+        /* ========== 모바일 반응형 (768px 이하) ========== */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            /* 컨트롤 영역 */
+            .controls {
+                padding: 15px;
+            }
+            .controls-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .search-box, select {
+                width: 100%;
+                min-width: unset;
+            }
+
+            /* 그룹 탭 */
+            .group-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 8px;
+                padding-bottom: 5px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .group-tab {
+                padding: 8px 14px;
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+
+            /* 프로모션 카드 - 그리드를 세로 레이아웃으로 변경 */
+            .info-grid {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+            .info-grid > div {
+                grid-column: span 1 !important;
+            }
+            .info-label {
+                font-size: 12px;
+                color: #888;
+                margin-top: 8px;
+            }
+            .info-label:first-child {
+                margin-top: 0;
+            }
+            .info-value {
+                font-size: 15px;
+            }
+            .info-value.highlight {
+                font-size: 16px;
+            }
+            .info-value.content-text {
+                margin-top: 4px;
+                padding: 10px;
+                background: #f8f9fa;
+                border-radius: 6px;
+            }
+
+            /* 내용 섹션 모바일 */
+            .content-section {
+                margin-top: 12px;
+                padding-top: 12px;
+            }
+
+            /* 채널 배지 모바일 */
+            .channel-badge {
+                font-size: 13px;
+                padding: 4px 10px;
+            }
+
+            /* 채널 필터 버튼 모바일 */
+            .channel-filter {
+                padding: 12px 15px;
+                gap: 8px;
+                margin-bottom: 15px;
+            }
+            .channel-filter-label {
+                width: 100%;
+                margin-bottom: 4px;
+                font-size: 13px;
+            }
+            .channel-filter-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+                min-height: 44px;
+            }
+            .channel-filter-btn .filter-dot {
+                width: 8px;
+                height: 8px;
+            }
+            .channel-filter-btn .approval-tag {
+                font-size: 9px;
+                padding: 1px 4px;
+            }
+
+            /* 복사 버튼 */
+            .copy-btn {
+                margin-left: 0;
+                margin-top: 6px;
+                display: block;
+                width: fit-content;
+            }
+
+            /* 상태 배지 */
+            .status-badge {
+                font-size: 12px;
+                padding: 3px 10px;
+            }
+
+            /* 액션 버튼 */
+            .actions-cell {
+                text-align: left;
+                margin-top: 12px;
+                display: flex;
+                gap: 8px;
+            }
+            .actions-cell .btn {
+                min-height: 44px;
+                padding: 10px 16px !important;
+                font-size: 14px !important;
+            }
+
+            /* 프로모션 블록 간격 */
+            .promo-block {
+                margin-bottom: 4px;
+            }
+            .detail-row td {
+                padding: 15px !important;
+            }
+
+            /* 버튼 터치 영역 */
+            .btn {
+                min-height: 44px;
+                padding: 12px 16px;
+            }
+
+            /* 토스트 알림 */
+            .toast-container {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+                bottom: 80px;
+            }
+
+            /* 플로팅 버튼 위치 조정 */
+            .notification-toggle {
+                bottom: 140px;
+                right: 15px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            /* 모달 */
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+                max-height: 85vh;
+            }
+            .modal-header h2 {
+                font-size: 18px;
+            }
+            .form-group label {
+                font-size: 14px;
+            }
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                font-size: 16px; /* iOS 줌 방지 */
+            }
         }
-        .help-content ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        .help-content li {
-            margin: 8px 0;
-        }
-        .help-content strong {
-            color: #333;
-            font-weight: 600;
-        }
-        .help-tip {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 12px 15px;
-            margin: 15px 0;
-            border-radius: 4px;
-        }
-        .help-tip strong {
-            color: #667eea;
+
+        /* ========== 작은 모바일 (480px 이하) ========== */
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+            .controls {
+                padding: 12px;
+            }
+            .group-tab {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+            .info-value {
+                font-size: 14px;
+            }
+            .info-value.highlight {
+                font-size: 15px;
+            }
+            .detail-row td {
+                padding: 12px !important;
+            }
         }
     </style>
     <script src="/static/js/banner.js" defer></script>
@@ -584,11 +857,8 @@
     <div class="container">
         {% include 'includes/header.html' %}
         <div class="controls">
-            <!-- 1줄: 고정 크기 필터 -->
+            <!-- 1줄: 필터 드롭다운 -->
             <div class="controls-row">
-                <select id="channelFilter">
-                    <option value="">전체 채널</option>
-                </select>
                 <select id="categoryFilter">
                     <option value="">전체 대분류</option>
                 </select>
@@ -600,12 +870,8 @@
                     <span style="font-size: 15px; color: #555;">종료된 프로모션 포함</span>
                 </label>
                 <button class="btn btn-secondary" onclick="clearFilters()">필터 초기화</button>
-                {% if is_admin %}
-                <button class="btn btn-success" onclick="openBulkUploadModal()">📊 일괄등록</button>
-                <button class="btn btn-primary" onclick="openCreateModal()">+ 새 프로모션</button>
-                {% endif %}
             </div>
-            <!-- 2줄: 가변 크기 필터 (제품명) -->
+            <!-- 2줄: 상품 필터 (가변 크기) -->
             <div class="controls-row">
                 <select id="productFilter" style="flex: 1;">
                     <option value="">전체 상품</option>
@@ -615,7 +881,17 @@
             <div class="controls-row">
                 <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력..." style="flex: 1;">
             </div>
+            {% if is_admin %}
+            <!-- 4줄: 관리자 버튼 -->
+            <div class="controls-row" style="justify-content: flex-end; margin-top: 8px; padding-top: 16px; border-top: 1px solid #e9ecef;">
+                <button class="btn btn-success" onclick="openBulkUploadModal()">📊 일괄등록</button>
+                <button class="btn btn-primary" onclick="openCreateModal()">+ 새 프로모션</button>
+            </div>
+            {% endif %}
         </div>
+
+        <!-- 채널 필터 버튼 -->
+        <div class="channel-filter" id="channelFilter"></div>
 
         <div class="group-tabs" id="groupTabs"></div>
 
@@ -736,6 +1012,94 @@
         let groupBy = 'none'; // none, product, channel, promotion
         let allFilterData = {}; // 전체 필터 데이터 저장
         let categoryProductMap = {}; // 대분류별 상품 매핑
+        let channelColorMap = {}; // 채널별 색상 매핑
+        let selectedChannel = ''; // 현재 선택된 채널 필터
+
+        // 채널별 색상 고정 매핑
+        // 전사: 기안 불필요 (초록)
+        // 그 외 (라운지, 온라인, 홈쇼핑): 기안 필수
+        const CHANNEL_COLOR_MAP = {
+            '전사': { bg: '#28a745', name: '초록', needsApproval: false },      // 전사 - 기안 불필요
+            '라운지': { bg: '#e91e63', name: '핑크', needsApproval: true },     // 라운지 - 기안 필수
+            '온라인': { bg: '#3f51b5', name: '인디고', needsApproval: true },   // 온라인 - 기안 필수
+            '홈쇼핑': { bg: '#ff9800', name: '오렌지', needsApproval: true },   // 홈쇼핑 - 기안 필수
+        };
+
+        // 채널 표시 순서 (전사가 제일 앞)
+        const CHANNEL_ORDER = ['전사', '라운지', '온라인', '홈쇼핑'];
+
+        // 기본 색상 (신규 채널용)
+        const DEFAULT_CHANNEL_COLOR = { bg: '#6c757d', name: '기본', needsApproval: true };
+
+        // 채널에 색상 할당 (API에서 받은 채널 목록으로 필터 버튼 렌더링)
+        function assignChannelColors(channels) {
+            channelColorMap = {};
+            channels.forEach(channel => {
+                // 고정 매핑에 있으면 사용, 없으면 기본값
+                channelColorMap[channel] = CHANNEL_COLOR_MAP[channel] || DEFAULT_CHANNEL_COLOR;
+            });
+            renderChannelFilter();
+        }
+
+        // 채널 색상 가져오기
+        function getChannelColor(channel) {
+            return CHANNEL_COLOR_MAP[channel] || DEFAULT_CHANNEL_COLOR;
+        }
+
+        // 채널 필터 버튼 렌더링
+        function renderChannelFilter() {
+            const filterContainer = document.getElementById('channelFilter');
+            if (!filterContainer) return;
+
+            const channels = Object.keys(channelColorMap);
+            if (channels.length === 0) {
+                filterContainer.style.display = 'none';
+                return;
+            }
+
+            // 채널 순서 정렬: CHANNEL_ORDER에 있는 것 먼저, 나머지는 뒤에
+            const sortedChannels = [...channels].sort((a, b) => {
+                const indexA = CHANNEL_ORDER.indexOf(a);
+                const indexB = CHANNEL_ORDER.indexOf(b);
+                // 둘 다 ORDER에 있으면 순서대로
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                // ORDER에 있는 것이 앞으로
+                if (indexA !== -1) return -1;
+                if (indexB !== -1) return 1;
+                // 둘 다 없으면 알파벳순
+                return a.localeCompare(b);
+            });
+
+            filterContainer.style.display = 'flex';
+
+            // 전체 버튼 + 각 채널 버튼
+            let html = '<span class="channel-filter-label">채널 선택</span>';
+
+            // 전체 버튼
+            html += `<button class="channel-filter-btn all-btn ${selectedChannel === '' ? 'active' : ''}"
+                onclick="filterByChannel('')">전체</button>`;
+
+            // 각 채널 버튼 (정렬된 순서로)
+            html += sortedChannels.map(channel => {
+                const color = channelColorMap[channel];
+                const isActive = selectedChannel === channel;
+                const approvalTag = color.needsApproval ? '<span class="approval-tag">기안필수</span>' : '';
+                return `<button class="channel-filter-btn ${isActive ? 'active' : ''}"
+                    style="--channel-color: ${color.bg}"
+                    onclick="filterByChannel('${channel}')">
+                    <span class="filter-dot"></span>${channel}${approvalTag}
+                </button>`;
+            }).join('');
+
+            filterContainer.innerHTML = html;
+        }
+
+        // 채널 필터 적용
+        function filterByChannel(channel) {
+            selectedChannel = channel;
+            renderChannelFilter(); // 버튼 상태 업데이트
+            loadPromotions();
+        }
 
         // 당일 + 지난 예약 배너 체크
         async function checkTodayReminders() {
@@ -781,13 +1145,12 @@
             const search = document.getElementById('searchInput').value;
             const category = document.getElementById('categoryFilter').value;
             const product = document.getElementById('productFilter').value;
-            const channel = document.getElementById('channelFilter').value;
             const promotion = document.getElementById('promotionFilter').value;
 
             if (search) params.append('search', search);
             if (category) params.append('category', category);
             if (product) params.append('product_name', product);
-            if (channel) params.append('channel', channel);
+            if (selectedChannel) params.append('channel', selectedChannel);
             if (promotion) params.append('promotion_name', promotion);
 
             fetch(`/api/promotions?${params}`)
@@ -835,7 +1198,6 @@
 
                     const categoryFilter = document.getElementById('categoryFilter');
                     const productFilter = document.getElementById('productFilter');
-                    const channelFilter = document.getElementById('channelFilter');
                     const promotionFilter = document.getElementById('promotionFilter');
 
                     categoryFilter.innerHTML = '<option value="">전체 대분류</option>' +
@@ -844,11 +1206,11 @@
                     productFilter.innerHTML = '<option value="">전체 상품</option>' +
                         data.products.map(p => `<option value="${p}">${p}</option>`).join('');
 
-                    channelFilter.innerHTML = '<option value="">전체 채널</option>' +
-                        data.channels.map(c => `<option value="${c}">${c}</option>`).join('');
-
                     promotionFilter.innerHTML = '<option value="">전체 프로모션</option>' +
                         data.promotion_names.map(n => `<option value="${n}">${n}</option>`).join('');
+
+                    // 채널별 색상 할당 및 필터 버튼 렌더링
+                    assignChannelColors(data.channels || []);
                 });
         }
 
@@ -889,9 +1251,6 @@
                 </div>
                 <div class="group-tab ${groupBy === 'product' ? 'active' : ''}" onclick="setGroupBy('product')">
                     상품별
-                </div>
-                <div class="group-tab ${groupBy === 'channel' ? 'active' : ''}" onclick="setGroupBy('channel')">
-                    채널별
                 </div>
                 <div class="group-tab ${groupBy === 'promotion' ? 'active' : ''}" onclick="setGroupBy('promotion')">
                     프로모션별
@@ -974,7 +1333,7 @@
                                                         </div>
 
                                                         <div class="info-label">채널:</div>
-                                                        <div class="info-value">${p.channel}</div>
+                                                        <div class="info-value highlight channel-badge" style="background: ${getChannelColor(p.channel).bg}">${p.channel}${getChannelColor(p.channel).needsApproval ? '<span class="approval-tag">기안필수</span>' : ''}</div>
 
                                                         <div class="info-label">프로모션:</div>
                                                         <div class="info-value highlight" onclick="event.stopPropagation();">
@@ -1010,9 +1369,11 @@
                                                                 <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px; margin-left: 5px;" onclick="confirmDelete(${p.id})">삭제</button>
                                                             </div>
                                                         ` : ''}
-
+                                                    </div>
+                                                    <!-- 내용 영역 - 그리드 외부에서 전체 너비로 표시 -->
+                                                    <div class="content-section">
                                                         <div class="info-label">내용:</div>
-                                                        <div class="info-value content-text" style="grid-column: span 5;">${p.content}</div>
+                                                        <div class="info-value content-text">${p.content}</div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1291,9 +1652,10 @@
             document.getElementById('searchInput').value = '';
             document.getElementById('categoryFilter').value = '';
             document.getElementById('productFilter').value = '';
-            document.getElementById('channelFilter').value = '';
             document.getElementById('promotionFilter').value = '';
             document.getElementById('showEndedPromotions').checked = false;
+            selectedChannel = '';
+            renderChannelFilter(); // 채널 필터 버튼 상태 초기화
             loadPromotions();
         }
 
@@ -1305,7 +1667,6 @@
 
         document.getElementById('categoryFilter').addEventListener('change', updateProductFilter);
         document.getElementById('productFilter').addEventListener('change', loadPromotions);
-        document.getElementById('channelFilter').addEventListener('change', loadPromotions);
         document.getElementById('promotionFilter').addEventListener('change', loadPromotions);
 
         // 초기 로드
@@ -1647,10 +2008,12 @@
         // 도움말 모달 제어
         function openHelpModal() {
             document.getElementById('helpModal').classList.add('active');
+            document.body.style.overflow = 'hidden'; // 배경 스크롤 방지
         }
 
         function closeHelpModal() {
             document.getElementById('helpModal').classList.remove('active');
+            document.body.style.overflow = ''; // 배경 스크롤 복원
         }
 
         // 모달 외부 클릭 시 닫기
@@ -1688,6 +2051,7 @@
                 <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
             </div>
 
+            <div class="help-modal-body">
             <div class="help-section">
                 <div class="help-section-title">🔍 프로모션 검색 및 필터</div>
                 <div class="help-content">
@@ -1773,6 +2137,7 @@
 
             <div class="help-tip">
                 <strong>💡 Tip:</strong> 대분류를 선택하면 해당 대분류의 상품만 상품 필터에 표시됩니다. 필터를 조합하여 원하는 프로모션을 빠르게 찾을 수 있습니다! 프로모션이 많아지면 종료된 프로모션을 숨겨서 깔끔하게 관리하세요.
+            </div>
             </div>
         </div>
     </div>

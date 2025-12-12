@@ -68,98 +68,7 @@
         .password-hint { font-size: 13px; color: #6c757d; margin-top: 8px; }
         .localhost-notice { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin-bottom: 20px; color: #856404; }
 
-        /* 도움말 버튼 */
-        .help-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 28px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            z-index: 10001;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .help-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
-        }
-        .help-button:active {
-            transform: scale(0.95);
-        }
-
-        /* 도움말 모달 */
-        .help-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10002;
-            align-items: center;
-            justify-content: center;
-        }
-        .help-modal.active {
-            display: flex;
-        }
-        .help-modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            animation: slideUpModal 0.3s ease-out;
-        }
-        @keyframes slideUpModal {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .help-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-        }
-        .help-modal-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .help-modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            color: #999;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        .help-modal-close:hover {
-            color: #333;
-        }
+        /* 도움말 섹션 (마이페이지 전용) */
         .help-section {
             margin-bottom: 25px;
         }
@@ -171,32 +80,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-        .help-content {
-            color: #555;
-            line-height: 1.8;
-            font-size: 15px;
-        }
-        .help-content ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        .help-content li {
-            margin: 8px 0;
-        }
-        .help-content strong {
-            color: #333;
-            font-weight: 600;
-        }
-        .help-tip {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 12px 15px;
-            margin: 15px 0;
-            border-radius: 4px;
-        }
-        .help-tip strong {
-            color: #667eea;
         }
     </style>
     <script src="/static/js/banner.js" defer></script>
@@ -329,10 +212,12 @@
         // 도움말 모달 제어
         function openHelpModal() {
             document.getElementById('helpModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
 
         function closeHelpModal() {
             document.getElementById('helpModal').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
         // 모달 외부 클릭 시 닫기
@@ -364,6 +249,7 @@
                 <button class="help-modal-close" onclick="closeHelpModal()">&times;</button>
             </div>
 
+            <div class="help-modal-body">
             <div class="help-section">
                 <div class="help-section-title">👤 내 정보 확인</div>
                 <div class="help-content">
@@ -405,6 +291,7 @@
             <div class="help-tip">
                 <strong>💡 Tip:</strong> 주기적으로 비밀번호를 변경하여 계정 보안을 강화하세요. 다른 사람과 비밀번호를 공유하지 마세요!
             </div>
+            </div><!-- help-modal-body 끝 -->
         </div>
     </div>
 
