@@ -27,14 +27,14 @@
     <script src="/static/js/push-notifications.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { margin-bottom: 30px; color: #333; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; min-height: 44px; box-sizing: border-box; }
         textarea { min-height: 80px; resize: vertical; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; }
+        button { padding: 12px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; margin-right: 10px; min-height: 44px; }
         button:hover { background: #0056b3; }
         button.delete { background: #dc3545; }
         button.delete:hover { background: #c82333; }
@@ -46,6 +46,21 @@
         tr:hover { background: #f8f9fa; }
         .actions { white-space: nowrap; }
         #addForm { background: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
+
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 0 5px; }
+            table { font-size: 14px; }
+            th, td { padding: 8px 6px; }
+            .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            button { padding: 10px 14px; font-size: 14px; margin-right: 5px; margin-bottom: 5px; }
+        }
+        @media (max-width: 480px) {
+            h1 { font-size: 20px; }
+            .filter-section { flex-direction: column !important; }
+            .filter-section > * { width: 100% !important; }
+        }
 
         /* 토스트 알림 */
         .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 350px; }

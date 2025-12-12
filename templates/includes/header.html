@@ -20,6 +20,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        position: relative;
     }
     .header h1 {
         font-size: 24px;
@@ -37,46 +38,126 @@
         font-size: 12px;
         font-weight: normal;
     }
+
+    /* 햄버거 메뉴 토글 */
+    .nav-toggle {
+        display: none;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 14px;
+        font-size: 20px;
+        cursor: pointer;
+        min-height: 44px;
+        min-width: 44px;
+    }
+    .nav-toggle:hover {
+        background: #5568d3;
+    }
+
     .nav {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
+        align-items: center;
     }
-    .nav a {
-        padding: 8px 16px;
+    .nav a, .nav button {
+        padding: 10px 16px;
         background: #667eea;
         color: white;
         text-decoration: none;
         border-radius: 4px;
-        font-size: 16px;
+        font-size: 15px;
         transition: background 0.2s;
         display: flex;
         align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
     }
-    .nav a:hover {
+    .nav a:hover, .nav button:hover {
         background: #5568d3;
     }
     .nav a.active {
         background: #5568d3;
         font-weight: bold;
     }
-    .nav a.secondary {
+    .nav a.secondary, .nav button.secondary {
         background: #6c757d;
     }
-    .nav a.secondary:hover {
+    .nav a.secondary:hover, .nav button.secondary:hover {
         background: #5a6268;
+    }
+    .nav button.success {
+        background: #28a745;
+    }
+    .nav button.success:hover {
+        background: #218838;
     }
     .nav-badge {
         display: inline-block;
         background: #dc3545;
         color: white;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: bold;
         padding: 2px 6px;
         border-radius: 10px;
         margin-left: 5px;
         min-width: 18px;
         text-align: center;
+    }
+
+    /* 모바일 반응형 (768px 이하) */
+    @media (max-width: 768px) {
+        .header {
+            padding: 10px 15px;
+            flex-wrap: wrap;
+        }
+        .header h1 {
+            font-size: 18px;
+            flex: 1;
+        }
+        .nav-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            flex-direction: column;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            gap: 8px;
+        }
+        .nav.active {
+            display: flex;
+        }
+        .nav a, .nav button {
+            width: 100%;
+            justify-content: center;
+            padding: 12px 16px;
+            font-size: 16px;
+        }
+    }
+
+    /* 작은 모바일 (480px 이하) */
+    @media (max-width: 480px) {
+        .header h1 {
+            font-size: 16px;
+        }
+        .admin-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+        }
     }
 </style>
 
@@ -87,11 +168,12 @@
         <span class="admin-badge">관리자</span>
         {% endif %}
     </h1>
-    <div class="nav">
+    <button class="nav-toggle" id="navToggle" onclick="toggleMobileNav()" aria-label="메뉴 열기">☰</button>
+    <div class="nav" id="mainNav">
         {% if current_page == 'chat_room' %}
-        <button onclick="toggleSearchPanel()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">🔍 검색</button>
-        <button id="participantsBtn" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">👥 참여자</button>
-        <a href="/chats" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 16px;">← 채팅목록</a>
+        <button class="success" onclick="toggleSearchPanel()">🔍 검색</button>
+        <button id="participantsBtn">👥 참여자</button>
+        <a href="/chats" class="secondary">← 목록</a>
         {% endif %}
         {% if is_admin %}
         <a href="/admin" {% if current_page == 'admin' %}class="active"{% endif %}>할일관리</a>
@@ -102,7 +184,7 @@
             <span id="navTasksBadge" class="nav-badge" style="display: none;"></span>
         </a>
         {% endif %}
-        <a href="/promotions" {% if current_page == 'promotions' %}class="active"{% endif %}>프로모션게시판</a>
+        <a href="/promotions" {% if current_page == 'promotions' %}class="active"{% endif %}>프로모션</a>
         <a href="/chats" id="navChats" {% if current_page == 'chats' or current_page == 'chat_room' %}class="active"{% endif %}>
             채팅
             <span id="navChatsBadge" class="nav-badge" style="display: none;"></span>
@@ -115,6 +197,40 @@
         <a href="/logout" class="secondary">로그아웃</a>
     </div>
 </div>
+
+<script>
+// 모바일 네비게이션 토글
+function toggleMobileNav() {
+    const nav = document.getElementById('mainNav');
+    const toggle = document.getElementById('navToggle');
+    nav.classList.toggle('active');
+    toggle.textContent = nav.classList.contains('active') ? '✕' : '☰';
+    toggle.setAttribute('aria-label', nav.classList.contains('active') ? '메뉴 닫기' : '메뉴 열기');
+}
+
+// 네비게이션 링크 클릭 시 메뉴 닫기
+document.querySelectorAll('.nav a').forEach(link => {
+    link.addEventListener('click', () => {
+        const nav = document.getElementById('mainNav');
+        const toggle = document.getElementById('navToggle');
+        if (window.innerWidth <= 768) {
+            nav.classList.remove('active');
+            toggle.textContent = '☰';
+        }
+    });
+});
+
+// 화면 밖 클릭 시 메뉴 닫기
+document.addEventListener('click', (e) => {
+    const nav = document.getElementById('mainNav');
+    const toggle = document.getElementById('navToggle');
+    const header = document.querySelector('.header');
+    if (window.innerWidth <= 768 && !header.contains(e.target)) {
+        nav.classList.remove('active');
+        toggle.textContent = '☰';
+    }
+});
+</script>
 
 <!-- 배지 업데이트 스크립트 -->
 <script>

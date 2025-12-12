@@ -4,7 +4,7 @@
 /* 당일 예약 버튼 */
 .today-reminders-button {
     position: fixed;
-    bottom: 80px;
+    bottom: 90px;
     right: 20px;
     width: 56px;
     height: 56px;
@@ -43,6 +43,32 @@
     font-size: 12px;
     font-weight: bold;
     border: 2px solid white;
+}
+
+/* 모바일: 채팅 입력창과 겹치지 않도록 위치 조정 */
+@media (max-width: 768px) {
+    .today-reminders-button {
+        bottom: 85px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+    }
+    .reminder-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+}
+
+/* 채팅방 전용: 입력창 위에 위치 */
+body.chat-room-page .today-reminders-button {
+    bottom: 90px;
+}
+@media (max-width: 768px) {
+    body.chat-room-page .today-reminders-button {
+        bottom: 80px;
+    }
 }
 
 /* 당일 예약 모달 */
