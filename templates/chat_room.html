@@ -95,6 +95,8 @@
         .message-text {
             font-size: 14px;
             line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .message-text.emoji-only {
             font-size: 48px;
@@ -112,6 +114,29 @@
             display: flex;
             align-items: center;
             gap: 5px;
+        }
+        /* 메시지 복사 버튼 */
+        .message-copy-btn {
+            opacity: 0;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: opacity 0.2s;
+            background: rgba(0,0,0,0.1);
+        }
+        .message:hover .message-copy-btn {
+            opacity: 0.7;
+        }
+        .message-copy-btn:hover {
+            opacity: 1 !important;
+            background: rgba(0,0,0,0.2);
+        }
+        .message.own .message-copy-btn {
+            background: rgba(255,255,255,0.2);
+        }
+        .message.own .message-copy-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
         .read-count {
             font-size: 12px;
@@ -164,6 +189,11 @@
             font-size: 16px; /* iOS 줌 방지 */
             outline: none;
             min-height: 44px;
+            max-height: 120px;
+            resize: none;
+            overflow-y: auto;
+            font-family: inherit;
+            line-height: 1.4;
         }
         #messageInput:focus {
             border-color: #667eea;
@@ -920,7 +950,7 @@
                 </svg>
             </button>
             <button id="emojiBtn" title="이모지">😊</button>
-            <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <textarea id="messageInput" placeholder="메시지를 입력하세요... (Shift+Enter: 줄바꿈)" autocomplete="off" rows="1"></textarea>
             <button id="sendBtn">전송</button>
         </div>
         <div id="emojiPicker" class="emoji-picker">
@@ -1443,11 +1473,13 @@
                 }
             }
 
+            const copyBtn = msg.message ? `<span class="message-copy-btn" onclick="copyMessage(this, '${escapeHtml(msg.message).replace(/'/g, "\\'")}')">복사</span>` : '';
+
             messageDiv.innerHTML = `
                 ${!isOwn ? `<div class="message-header">${msg.username}</div>` : ''}
                 <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${escapeHtml(msg.message)}</div>
                 ${fileHtml}
-                <div class="message-time">${unreadBadge}${time}</div>
+                <div class="message-time">${copyBtn}${unreadBadge}${time}</div>
             `;
 
             return messageDiv;
@@ -1486,10 +1518,17 @@
         sendBtn.addEventListener('click', () => {
             sendMessageWithFiles();
         });
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 sendMessageWithFiles();
             }
+        });
+
+        // textarea 자동 높이 조절
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
 
         // 타이핑 감지
@@ -1664,14 +1703,47 @@
                 }
             }
 
+            const copyBtn = msg.message ? `<span class="message-copy-btn" onclick="copyMessage(this, '${escapeHtml(msg.message).replace(/'/g, "\\'")}')">복사</span>` : '';
+
             messageDiv.innerHTML = `
                 ${!isOwn ? `<div class="message-header">${msg.username}</div>` : ''}
                 <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${escapeHtml(msg.message)}</div>
                 ${fileHtml}
-                <div class="message-time">${unreadBadge}${time}</div>
+                <div class="message-time">${copyBtn}${unreadBadge}${time}</div>
             `;
 
             messagesDiv.appendChild(messageDiv);
+        }
+
+        // 메시지 복사 함수
+        function copyMessage(btn, text) {
+            // HTML 엔티티 디코딩
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            const decodedText = textarea.value;
+
+            navigator.clipboard.writeText(decodedText).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = '복사됨!';
+                btn.style.opacity = '1';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.opacity = '';
+                }, 1500);
+            }).catch(() => {
+                // 폴백: execCommand 사용
+                const tempInput = document.createElement('textarea');
+                tempInput.value = decodedText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+
+                btn.textContent = '복사됨!';
+                setTimeout(() => {
+                    btn.textContent = '복사';
+                }, 1500);
+            });
         }
 
         function addSystemMessage(text) {
@@ -1692,9 +1764,14 @@
         }
 
         function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            if (!text) return '';
+            // HTML 특수문자 이스케이프 (줄바꿈은 CSS white-space: pre-wrap으로 처리)
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         // 이미지 모달 열기
@@ -1942,6 +2019,7 @@
             }
 
             // 메시지 전송
+            console.log('전송할 메시지:', JSON.stringify(message)); // 디버그용
             socket.emit('send_message', {
                 chat_id: chatId,
                 username: username,
@@ -1951,6 +2029,7 @@
 
             // 초기화
             messageInput.value = '';
+            messageInput.style.height = 'auto'; // textarea 높이 초기화
             selectedFiles = [];
             filePreview.innerHTML = '';
             filePreview.classList.remove('show');

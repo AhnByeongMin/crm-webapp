@@ -42,9 +42,13 @@
             align-items: center;
         }
         .controls-row:last-child { margin-bottom: 0; }
-        .search-box {
+        .search-wrapper {
             flex: 1;
             min-width: 200px;
+            position: relative;
+        }
+        .search-box {
+            width: 100%;
             padding: 12px 16px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
@@ -55,6 +59,67 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        /* 최근 검색어 드롭다운 */
+        .recent-searches {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            display: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .recent-searches.show {
+            display: block;
+        }
+        .recent-search-header {
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #666;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .recent-search-clear {
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .recent-search-clear:hover {
+            text-decoration: underline;
+        }
+        .recent-search-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .recent-search-item:hover {
+            background: #f8f9fa;
+        }
+        .recent-search-item:last-child {
+            border-bottom: none;
+        }
+        .recent-search-text {
+            color: #333;
+        }
+        .recent-search-delete {
+            color: #999;
+            font-size: 14px;
+            padding: 2px 6px;
+        }
+        .recent-search-delete:hover {
+            color: #dc3545;
         }
         select {
             padding: 12px 16px;
@@ -1016,7 +1081,10 @@
                 </div>
                 <!-- 3줄: 검색창 (데스크탑) -->
                 <div class="controls-row search-desktop">
-                    <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력..." style="flex: 1;">
+                    <div class="search-wrapper">
+                        <input type="text" id="searchInput" class="search-box" placeholder="검색어 입력..." autocomplete="off">
+                        <div class="recent-searches" id="recentSearches"></div>
+                    </div>
                 </div>
             </div>
             {% if is_admin %}
@@ -1941,11 +2009,113 @@
             }
         }
 
+        // ========== 최근 검색어 기능 ==========
+        const RECENT_SEARCHES_KEY = 'recentSearches_promotions';
+        const MAX_RECENT_SEARCHES = 10;
+
+        function getRecentSearches() {
+            const saved = localStorage.getItem(RECENT_SEARCHES_KEY);
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveRecentSearch(term) {
+            if (!term || term.trim().length < 2) return;
+            term = term.trim();
+
+            let searches = getRecentSearches();
+            // 중복 제거
+            searches = searches.filter(s => s !== term);
+            // 앞에 추가
+            searches.unshift(term);
+            // 최대 개수 제한
+            if (searches.length > MAX_RECENT_SEARCHES) {
+                searches = searches.slice(0, MAX_RECENT_SEARCHES);
+            }
+            localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+        }
+
+        function deleteRecentSearch(term, event) {
+            event.stopPropagation();
+            let searches = getRecentSearches();
+            searches = searches.filter(s => s !== term);
+            localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+            renderRecentSearches();
+        }
+
+        function clearAllRecentSearches(event) {
+            event.stopPropagation();
+            localStorage.removeItem(RECENT_SEARCHES_KEY);
+            renderRecentSearches();
+        }
+
+        function renderRecentSearches() {
+            const container = document.getElementById('recentSearches');
+            const searches = getRecentSearches();
+
+            if (searches.length === 0) {
+                container.innerHTML = '';
+                container.classList.remove('show');
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="recent-search-header">
+                    <span>최근 검색어</span>
+                    <span class="recent-search-clear" onclick="clearAllRecentSearches(event)">전체 삭제</span>
+                </div>
+                ${searches.map(term => `
+                    <div class="recent-search-item" onclick="selectRecentSearch('${term.replace(/'/g, "\\'")}')">
+                        <span class="recent-search-text">🔍 ${term}</span>
+                        <span class="recent-search-delete" onclick="deleteRecentSearch('${term.replace(/'/g, "\\'")}', event)">✕</span>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function selectRecentSearch(term) {
+            document.getElementById('searchInput').value = term;
+            document.getElementById('searchInputMobile').value = term;
+            hideRecentSearches();
+            loadPromotions();
+        }
+
+        function showRecentSearches() {
+            const container = document.getElementById('recentSearches');
+            const input = document.getElementById('searchInput');
+            if (input.value.trim() === '' && getRecentSearches().length > 0) {
+                renderRecentSearches();
+                container.classList.add('show');
+            }
+        }
+
+        function hideRecentSearches() {
+            const container = document.getElementById('recentSearches');
+            // 약간의 딜레이를 줘서 클릭 이벤트가 먼저 처리되도록
+            setTimeout(() => {
+                container.classList.remove('show');
+            }, 200);
+        }
+
         // 이벤트 리스너
-        document.getElementById('searchInput').addEventListener('input', () => {
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', () => {
             clearTimeout(window.searchTimeout);
-            window.searchTimeout = setTimeout(loadPromotions, 500);
+            const container = document.getElementById('recentSearches');
+            if (searchInput.value.trim() === '') {
+                showRecentSearches();
+            } else {
+                container.classList.remove('show');
+            }
+            window.searchTimeout = setTimeout(() => {
+                const term = searchInput.value.trim();
+                if (term.length >= 2) {
+                    saveRecentSearch(term);
+                }
+                loadPromotions();
+            }, 500);
         });
+        searchInput.addEventListener('focus', showRecentSearches);
+        searchInput.addEventListener('blur', hideRecentSearches);
 
         document.getElementById('categoryFilter').addEventListener('change', updateProductFilter);
         document.getElementById('productFilter').addEventListener('change', loadPromotions);

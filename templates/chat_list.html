@@ -172,6 +172,34 @@
             gap: 5px;
         }
         .chat-participants::before { content: '👥'; }
+
+        /* 채팅방 고정(핀) 스타일 */
+        .chat-item.pinned {
+            border-left-color: #ffc107;
+            background: #fffef5;
+        }
+        .chat-item.pinned .chat-title::before {
+            content: '📌';
+            margin-right: 5px;
+        }
+        .pin-btn {
+            padding: 5px 10px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .pin-btn:hover {
+            background: #e0e0e0;
+        }
+        .pin-btn.pinned {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         .empty {
             text-align: center;
             padding: 60px 20px;
@@ -550,13 +578,24 @@
                         return;
                     }
 
-                    // 최신 메시지 순으로 정렬
+                    // 고정된 채팅방 목록 가져오기
+                    const pinnedChats = getPinnedChats();
+
+                    // 정렬: 고정된 채팅방 먼저, 그 다음 최신 메시지 순
                     chatArray.sort((a, b) => {
-                        const aLastMsg = a[1].messages[a[1].messages.length - 1];
-                        const bLastMsg = b[1].messages[b[1].messages.length - 1];
-                        const aTime = aLastMsg ? new Date(aLastMsg.timestamp) : new Date(a[1].created_at);
-                        const bTime = bLastMsg ? new Date(bLastMsg.timestamp) : new Date(b[1].created_at);
-                        return bTime - aTime;  // 최신순
+                        const aIsPinned = pinnedChats.includes(a[0]);
+                        const bIsPinned = pinnedChats.includes(b[0]);
+
+                        // 둘 다 고정이거나 둘 다 비고정인 경우 시간순 정렬
+                        if (aIsPinned === bIsPinned) {
+                            const aLastMsg = a[1].messages[a[1].messages.length - 1];
+                            const bLastMsg = b[1].messages[b[1].messages.length - 1];
+                            const aTime = aLastMsg ? new Date(aLastMsg.timestamp) : new Date(a[1].created_at);
+                            const bTime = bLastMsg ? new Date(bLastMsg.timestamp) : new Date(b[1].created_at);
+                            return bTime - aTime;  // 최신순
+                        }
+                        // 고정된 채팅방을 상단에
+                        return aIsPinned ? -1 : 1;
                     });
 
                     container.innerHTML = '<div class="chat-list">' +
@@ -634,9 +673,10 @@
                                 timestamp = lastMessage.timestamp;
                             }
 
+                            const isPinned = pinnedChats.includes(chatId);
                             return `
-                            <div class="chat-item" onclick="enterChat('${chatId}')">
-                                <div class="chat-info">
+                            <div class="chat-item ${isPinned ? 'pinned' : ''}" data-chat-id="${chatId}">
+                                <div class="chat-info" onclick="enterChat('${chatId}')">
                                     <div class="chat-header">
                                         <div class="chat-title">
                                             <span>${displayTitle}</span>
@@ -647,6 +687,9 @@
                                     <div class="chat-preview">${preview}</div>
                                     <div class="chat-participants">${chat.participants.join(', ')}</div>
                                 </div>
+                                <button class="pin-btn ${isPinned ? 'pinned' : ''}" onclick="togglePin('${chatId}', event)" title="${isPinned ? '고정 해제' : '상단 고정'}">
+                                    ${isPinned ? '📌' : '📍'}
+                                </button>
                             </div>
                         `;
                         }).join('') +
@@ -657,6 +700,35 @@
         function enterChat(chatId) {
             // 채팅방 입장하면 chat_room.html에서 자동으로 mark_as_read 처리됨
             location.href = `/chat/${chatId}`;
+        }
+
+        // 채팅방 고정 관련 함수
+        function getPinnedChats() {
+            const pinned = localStorage.getItem('pinnedChats_' + currentUsername);
+            return pinned ? JSON.parse(pinned) : [];
+        }
+
+        function savePinnedChats(pinnedList) {
+            localStorage.setItem('pinnedChats_' + currentUsername, JSON.stringify(pinnedList));
+        }
+
+        function togglePin(chatId, event) {
+            event.stopPropagation();
+            const pinnedChats = getPinnedChats();
+            const index = pinnedChats.indexOf(chatId);
+
+            if (index > -1) {
+                // 고정 해제
+                pinnedChats.splice(index, 1);
+                showAlert('채팅방 고정이 해제되었습니다.', 'info');
+            } else {
+                // 고정 추가
+                pinnedChats.unshift(chatId); // 앞에 추가
+                showAlert('채팅방이 상단에 고정되었습니다.', 'success');
+            }
+
+            savePinnedChats(pinnedChats);
+            loadChats(); // 목록 새로고침
         }
 
         function deleteChat(chatId, event) {
