@@ -3,15 +3,33 @@ PostgreSQL 데이터베이스 헬퍼 함수 (최적화 버전)
 - N+1 쿼리 제거 (JOIN 사용)
 - 부분 조회 기능 추가
 - 연결 풀링
+- 느린 쿼리 로깅
 """
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
 import threading
 import logging
+import time
 from contextlib import contextmanager
+from functools import wraps
 
 logger = logging.getLogger('crm')
+
+# 느린 쿼리 임계값 (초)
+SLOW_QUERY_THRESHOLD = 0.5
+
+def log_slow_query(func):
+    """느린 쿼리 로깅 데코레이터"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        elapsed = time.time() - start_time
+        if elapsed > SLOW_QUERY_THRESHOLD:
+            logger.warning(f"SLOW QUERY [{elapsed:.3f}s]: {func.__name__}({args[:2] if args else ''}{', ...' if len(args) > 2 else ''})")
+        return result
+    return wrapper
 
 # PostgreSQL 연결 설정
 DB_CONFIG = {
@@ -60,6 +78,7 @@ def get_db_connection():
 
 # ==================== 할일 관리 ====================
 
+@log_slow_query
 def load_data():
     """할일 목록 조회 (users와 JOIN하여 team 정보 포함)"""
     with get_db_connection() as conn:
@@ -759,6 +778,7 @@ def get_message_read_by(message_id):
         return [row['username'] for row in cursor.fetchall()]
 
 
+@log_slow_query
 def get_chat_info(chat_id):
     """
     특정 채팅방 정보 조회 (참여자 목록 포함)
@@ -795,6 +815,7 @@ def get_chat_info(chat_id):
         }
 
 
+@log_slow_query
 def get_unread_chat_count(username):
     """
     특정 사용자의 읽지 않은 채팅 메시지 개수 조회 (최적화: 단일 쿼리)

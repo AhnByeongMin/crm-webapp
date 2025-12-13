@@ -2683,6 +2683,15 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_server_error(error):
+    import traceback
+    logger.error(f"500 Error: {request.path} - {error}\n{traceback.format_exc()}")
+    return send_file('/svc/web/nginx/html/errors/500.html'), 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    """처리되지 않은 모든 예외 로깅"""
+    import traceback
+    logger.error(f"Unhandled Exception: {request.path} - {type(error).__name__}: {error}\n{traceback.format_exc()}")
     return send_file('/svc/web/nginx/html/errors/500.html'), 500
 
 @app.errorhandler(502)
