@@ -2435,8 +2435,14 @@
         loadFilters();
         loadPromotions();
 
-        // Socket.IO 및 채팅 알림 기능
-        const socket = io();
+        // Socket.IO 초기화 (자동 재연결 설정)
+        const socket = io({
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity,
+            timeout: 20000
+        });
         let notificationsEnabled = localStorage.getItem('chatNotifications') !== 'false';
         const currentUsername = '{{ session.get("username", "") }}';
         let unreadCount = 0;
