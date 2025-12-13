@@ -1,6 +1,6 @@
 <!-- 통합 헤더 컴포넌트 -->
 <!-- 다크 모드 & 폰트 설정 (가장 먼저 로드) -->
-<link rel="stylesheet" href="/static/css/dark-mode.css?v=20241213f">
+<link rel="stylesheet" href="/static/css/dark-mode.css?v=20241213g">
 <script src="/static/js/dark-mode.js?v=20241213"></script>
 <script src="/static/js/font-settings.js?v=20241213b"></script>
 <!-- UX 향상 컴포넌트 -->
@@ -212,6 +212,43 @@
         border-right-color: #4b5563;
     }
 
+    /* 튜토리얼 버튼 */
+    .header-tutorial-btn {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 6px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 14px;
+        transition: all 0.3s;
+        min-height: 36px;
+        color: #666;
+    }
+    .header-tutorial-btn:hover {
+        background: #667eea;
+        border-color: #667eea;
+        color: white;
+    }
+    .header-tutorial-btn .icon {
+        font-size: 14px;
+    }
+    .header-tutorial-btn .label {
+        font-size: 12px;
+    }
+    [data-theme="dark"] .header-tutorial-btn {
+        background: #374151;
+        border-color: #4b5563;
+        color: #d1d5db;
+    }
+    [data-theme="dark"] .header-tutorial-btn:hover {
+        background: #667eea;
+        border-color: #667eea;
+        color: white;
+    }
+
     /* 모바일 반응형 (768px 이하) */
     @media (max-width: 768px) {
         .header {
@@ -225,10 +262,12 @@
         .header-settings {
             margin-right: 8px;
         }
-        .header-dark-toggle .label {
+        .header-dark-toggle .label,
+        .header-tutorial-btn .label {
             display: none;
         }
-        .header-dark-toggle {
+        .header-dark-toggle,
+        .header-tutorial-btn {
             padding: 6px 10px;
         }
         .nav-toggle {
@@ -294,6 +333,12 @@
             <button class="header-font-btn active" data-size="medium" onclick="headerSetFontSize('medium')">가</button>
             <button class="header-font-btn" data-size="large" onclick="headerSetFontSize('large')">가</button>
         </div>
+
+        <!-- 튜토리얼 버튼 -->
+        <button class="header-tutorial-btn" id="headerTutorialBtn" onclick="restartTutorial()" title="사용법 튜토리얼 다시 보기">
+            <span class="icon">📖</span>
+            <span class="label">가이드</span>
+        </button>
     </div>
 
     <button class="nav-toggle" id="navToggle" onclick="toggleMobileNav()" aria-label="메뉴 열기">☰</button>
@@ -461,6 +506,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedSize = localStorage.getItem('crm_font_size') || 'medium';
     updateHeaderFontSizeUI(savedSize);
 });
+
+// 튜토리얼 재시작 함수
+function restartTutorial() {
+    // 현재 페이지의 튜토리얼 키 찾기
+    const pageKeys = {
+        '/admin': 'crm_onboarding_admin',
+        '/': 'crm_onboarding_user',
+        '/users': 'crm_onboarding_users',
+        '/reminders': 'crm_onboarding_reminders',
+        '/promotions': 'crm_onboarding_promotions',
+        '/chats': 'crm_onboarding_chat_list'
+    };
+
+    const path = window.location.pathname;
+    let storageKey = null;
+
+    // 정확한 경로 매칭
+    if (pageKeys[path]) {
+        storageKey = pageKeys[path];
+    }
+
+    if (storageKey) {
+        // 완료 상태 리셋
+        localStorage.removeItem(storageKey);
+
+        // 페이지 새로고침하여 튜토리얼 시작
+        location.reload();
+    } else {
+        // 튜토리얼이 없는 페이지
+        if (window.toast) {
+            toast.info('이 페이지에는 튜토리얼이 없습니다.');
+        } else {
+            alert('이 페이지에는 튜토리얼이 없습니다.');
+        }
+    }
+}
 </script>
 
 <!-- 배지 업데이트 스크립트 -->
