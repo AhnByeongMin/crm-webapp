@@ -3161,11 +3161,14 @@ def push_unsubscribe():
 
 @cached(ttl=10, key_prefix='nav_counts')
 def calculate_nav_counts(username: str) -> dict[str, int]:
-    """네비게이션 바 카운트 계산 (최적화: 전용 쿼리 사용, 10초 캐시)"""
+    """네비게이션 바 카운트 계산 (최적화: 전용 쿼리 사용, 10초 캐시)
+
+    Note: today_reminders는 /api/reminders/banner-check에서 통합 처리
+    (퀵버튼, 헤더 배지, 내 예약 페이지 배너 모두 동일 API 사용)
+    """
     counts = {
         'pending_tasks': 0,
-        'unread_chats': 0,
-        'today_reminders': 0
+        'unread_chats': 0
     }
 
     try:
@@ -3183,14 +3186,6 @@ def calculate_nav_counts(username: str) -> dict[str, int]:
                 ''', (username,))
                 row = cursor.fetchone()
                 counts['pending_tasks'] = row['count'] if row else 0
-
-        # 당일 예약 개수만 표시 (과거 예약 제외)
-        from datetime import date
-        today = str(date.today())
-        reminders = database.load_reminders(username)
-        # 당일 예약 (미완료)만 카운트
-        today_reminders = [r for r in reminders if r.get('scheduled_date') == today and not r.get('completed')]
-        counts['today_reminders'] = len(today_reminders)
 
     except Exception as e:
         logger.error(f"Error calculating nav counts for {username}: {e}")

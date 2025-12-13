@@ -588,7 +588,8 @@
 
             renderReminders(reminders);
             updateStats(allReminders); // 항상 전체 데이터로 통계 계산
-            updateAlertBanners(reminders);
+            // 배너는 checkTodayReminders()에서 통합 처리 (today_reminders.html)
+            if (typeof checkTodayReminders === 'function') checkTodayReminders();
             renderCalendar(); // 캘린더 업데이트
         }
 
@@ -702,38 +703,8 @@
             document.getElementById('completedCount').textContent = completed;
         }
 
-        // 알림 배너 업데이트
-        function updateAlertBanners(reminders) {
-            const container = document.getElementById('alertBanners');
-            const today = new Date().toISOString().split('T')[0];
-            const now = new Date();
-
-            const todayReminders = reminders.filter(r => r.scheduled_date === today && r.is_completed === 0);
-            const pastReminders = reminders.filter(r => {
-                const reminderDateTime = new Date(`${r.scheduled_date}T${r.scheduled_time}`);
-                return reminderDateTime < now && r.is_completed === 0 && r.scheduled_date !== today;
-            });
-
-            let html = '';
-
-            if (todayReminders.length > 0) {
-                html += `
-                    <div class="alert-banner danger">
-                        <strong>🔴 오늘 예약 ${todayReminders.length}건</strong>이 있습니다!
-                    </div>
-                `;
-            }
-
-            if (pastReminders.length > 0) {
-                html += `
-                    <div class="alert-banner warning">
-                        <strong>⚠️ 지난 예약 ${pastReminders.length}건</strong>이 미완료 상태입니다.
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
+        // 알림 배너는 today_reminders.html의 checkTodayReminders()에서 통합 처리
+        // (banner-check API 결과를 전역 변수 window.reminderCounts로 공유)
 
         // 완료 상태 토글
         async function toggleComplete(id) {
