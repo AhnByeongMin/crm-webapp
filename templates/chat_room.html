@@ -445,6 +445,30 @@
             border-radius: 8px;
             display: block;
         }
+        /* Lazy Loading 이미지 스타일 */
+        .message-file img.lazy-chat-img {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: lazyShimmer 1.5s infinite;
+            min-width: 100px;
+            min-height: 100px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .message-file img.lazy-chat-img.lazy-loaded {
+            background: none;
+            animation: none;
+            opacity: 1;
+        }
+        @keyframes lazyShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        /* 다크모드 Lazy 이미지 */
+        [data-theme="dark"] .message-file img.lazy-chat-img {
+            background: linear-gradient(90deg, #3a3a3a 25%, #444 50%, #3a3a3a 75%);
+            background-size: 200% 100%;
+        }
         .message-file.document {
             display: flex;
             align-items: center;
@@ -1512,7 +1536,7 @@
                     if (isImage) {
                         return `
                             <div class="message-file" onclick="openImageModal('${file.url}', '${escapeHtml(file.filename)}')">
-                                <img src="${file.url}" alt="${escapeHtml(file.filename)}">
+                                <img data-src="${file.url}" alt="${escapeHtml(file.filename)}" class="lazy-chat-img" loading="lazy">
                             </div>
                         `;
                     } else {
@@ -1535,7 +1559,7 @@
                 if (isImage) {
                     fileHtml = `
                         <div class="message-file" onclick="openImageModal('${msg.file_path}', '${escapeHtml(msg.file_name)}')">
-                            <img src="${msg.file_path}" alt="${escapeHtml(msg.file_name)}">
+                            <img data-src="${msg.file_path}" alt="${escapeHtml(msg.file_name)}" class="lazy-chat-img" loading="lazy">
                         </div>
                     `;
                 } else {
@@ -1558,6 +1582,16 @@
                 ${fileHtml}
                 <div class="message-time">${copyBtn}${unreadBadge}${time}</div>
             `;
+
+            // Lazy Loading 적용
+            messageDiv.querySelectorAll('.lazy-chat-img').forEach(img => {
+                if (window.lazyImageLoader) {
+                    window.lazyImageLoader.observe(img);
+                } else {
+                    // 폴백: 직접 로드
+                    img.src = img.dataset.src;
+                }
+            });
 
             return messageDiv;
         }
@@ -1750,7 +1784,7 @@
                     if (isImage) {
                         return `
                             <div class="message-file" onclick="openImageModal('${file.url}', '${escapeHtml(file.filename)}')">
-                                <img src="${file.url}" alt="${escapeHtml(file.filename)}">
+                                <img data-src="${file.url}" alt="${escapeHtml(file.filename)}" class="lazy-chat-img" loading="lazy">
                             </div>
                         `;
                     } else {
@@ -1773,7 +1807,7 @@
                 if (isImage) {
                     fileHtml = `
                         <div class="message-file" onclick="openImageModal('${msg.file_path}', '${escapeHtml(msg.file_name)}')">
-                            <img src="${msg.file_path}" alt="${escapeHtml(msg.file_name)}">
+                            <img data-src="${msg.file_path}" alt="${escapeHtml(msg.file_name)}" class="lazy-chat-img" loading="lazy">
                         </div>
                     `;
                 } else {
@@ -1798,6 +1832,15 @@
             `;
 
             messagesDiv.appendChild(messageDiv);
+
+            // Lazy Loading 적용
+            messageDiv.querySelectorAll('.lazy-chat-img').forEach(img => {
+                if (window.lazyImageLoader) {
+                    window.lazyImageLoader.observe(img);
+                } else {
+                    img.src = img.dataset.src;
+                }
+            });
         }
 
         // 메시지 복사 함수
