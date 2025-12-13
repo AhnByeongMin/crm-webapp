@@ -381,7 +381,7 @@ function quickAddTodayReminder() {
 })();
 
 // 당일 예약 확인 (배지 업데이트) - 5분 캐싱
-const BANNER_CHECK_CACHE_KEY = 'crm_banner_check_cache';
+const BANNER_CHECK_CACHE_KEY = 'crm_banner_check_cache_v2'; // v2: overdue 포함
 const BANNER_CHECK_CACHE_TTL = 5 * 60 * 1000; // 5분
 
 async function checkTodayReminders(forceRefresh = false) {
