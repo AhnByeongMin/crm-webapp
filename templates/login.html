@@ -13,6 +13,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="하루CRM">
 
+    <!-- CSRF 토큰 -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/static/manifest.json">
 
@@ -259,6 +262,7 @@
         {% endif %}
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="username">이름</label>
                 <div class="input-wrapper">

@@ -45,8 +45,10 @@ def exempt_csrf(view):
 CSRF_EXEMPT_ENDPOINTS = [
     # Socket.IO는 자체 인증 사용
     'socket.io',
-    # 푸시 알림 콜백
-    '/api/push/callback',
+    # 내부 API (세션 인증으로 보호됨)
+    '/api/',
+    # 파일 업로드 (세션 인증으로 보호됨)
+    '/upload',
     # 서비스 워커 관련
     '/service-worker.js',
     '/sw.js',

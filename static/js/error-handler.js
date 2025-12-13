@@ -449,6 +449,11 @@
                 const target = event.target;
                 const src = target.src || target.href || '';
 
+                // 무시할 URL 패턴 (페이지 URL이 잘못 감지되는 경우)
+                if (!src || src === window.location.href || src.match(/\/chat\/\d+$/)) {
+                    return;
+                }
+
                 const errorInfo = {
                     message: `리소스 로딩 실패: ${src}`,
                     source: 'resource',

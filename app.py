@@ -22,7 +22,7 @@ from rate_limiter import (
     create_limiter, get_limit_string, get_client_ip,
     check_login_lockout, record_login_attempt, get_remaining_attempts
 )
-from csrf_protection import init_csrf, exempt_csrf
+from csrf_protection import init_csrf, exempt_csrf, is_csrf_exempt
 
 # 로깅 설정
 def setup_logging():
@@ -96,7 +96,7 @@ limiter = create_limiter(app)
 # CSRF 보호 초기화
 csrf = init_csrf(app)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar', 'md', 'csv', 'json', 'xml', 'html', 'css', 'log'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
 
 # 파일 시그니처 (Magic Bytes) 검증
@@ -753,6 +753,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/upload', methods=['POST'])
+@csrf.exempt  # 내부 AJAX API - 세션 인증으로 보호
 @limiter.limit(get_limit_string('upload'))
 def upload_file():
     if 'file' not in request.files:
@@ -2564,6 +2565,7 @@ def get_vapid_public_key():
         return jsonify({'error': '공개키 조회 중 오류가 발생했습니다'}), 500
 
 @app.route('/api/push/subscribe', methods=['POST'])
+@csrf.exempt  # 내부 AJAX API - 세션 인증으로 보호
 def push_subscribe():
     """푸시 알림 구독"""
     if 'username' not in session:

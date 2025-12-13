@@ -1541,9 +1541,10 @@
                         `;
                     } else {
                         const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                        const fileIcon = getFileIcon(file.filename);
                         return `
-                            <div class="message-file document" onclick="window.open('${file.url}', '_blank')">
-                                <span>📄</span>
+                            <div class="message-file document" onclick="openFileViewer('${file.url}', '${escapeHtml(file.filename)}')">
+                                <span>${fileIcon}</span>
                                 <div>
                                     <div>${escapeHtml(file.filename)}</div>
                                     <small style="opacity: 0.7;">${fileSize}</small>
@@ -1563,9 +1564,10 @@
                         </div>
                     `;
                 } else {
+                    const fileIcon = getFileIcon(msg.file_name);
                     fileHtml = `
-                        <div class="message-file document" onclick="window.open('${msg.file_path}', '_blank')">
-                            <span>📄</span>
+                        <div class="message-file document" onclick="openFileViewer('${msg.file_path}', '${escapeHtml(msg.file_name)}')">
+                            <span>${fileIcon}</span>
                             <div>
                                 <div>${escapeHtml(msg.file_name)}</div>
                             </div>
@@ -1789,9 +1791,10 @@
                         `;
                     } else {
                         const fileSize = (file.size / 1024).toFixed(1) + ' KB';
+                        const fileIcon = getFileIcon(file.filename);
                         return `
-                            <div class="message-file document" onclick="window.open('${file.url}', '_blank')">
-                                <span>📄</span>
+                            <div class="message-file document" onclick="openFileViewer('${file.url}', '${escapeHtml(file.filename)}')">
+                                <span>${fileIcon}</span>
                                 <div>
                                     <div>${escapeHtml(file.filename)}</div>
                                     <small style="opacity: 0.7;">${fileSize}</small>
@@ -1811,9 +1814,10 @@
                         </div>
                     `;
                 } else {
+                    const fileIcon = getFileIcon(msg.file_name);
                     fileHtml = `
-                        <div class="message-file document" onclick="window.open('${msg.file_path}', '_blank')">
-                            <span>📄</span>
+                        <div class="message-file document" onclick="openFileViewer('${msg.file_path}', '${escapeHtml(msg.file_name)}')">
+                            <span>${fileIcon}</span>
                             <div>
                                 <div>${escapeHtml(msg.file_name)}</div>
                             </div>
@@ -1943,6 +1947,19 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        // 파일 아이콘 가져오기
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'md': '📝', 'txt': '📄', 'csv': '📊', 'json': '🔧',
+                'xml': '📋', 'html': '🌐', 'css': '🎨', 'js': '⚡',
+                'py': '🐍', 'sql': '🗃️', 'log': '📜', 'yaml': '⚙️',
+                'yml': '⚙️', 'pdf': '📕', 'doc': '📘', 'docx': '📘',
+                'xls': '📗', 'xlsx': '📗', 'zip': '🗜️', 'rar': '🗜️'
+            };
+            return icons[ext] || '📄';
         }
 
         // 이미지 모달 열기
