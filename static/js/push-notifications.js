@@ -1,6 +1,7 @@
 /**
  * 푸시 알림 관리 모듈
  * 브라우저 푸시 알림 권한 요청 및 구독 관리
+ * iOS 16.4+ PWA 지원 포함
  */
 
 class PushNotificationManager {
@@ -8,6 +9,25 @@ class PushNotificationManager {
         this.vapidPublicKey = null;
         this.isSubscribed = false;
         this.swRegistration = null;
+        this.isIOS = this.detectIOS();
+        this.isIOSPWA = this.detectIOSPWA();
+    }
+
+    /**
+     * iOS 디바이스 감지
+     */
+    detectIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    /**
+     * iOS PWA 모드 감지 (홈 화면에서 실행)
+     */
+    detectIOSPWA() {
+        return this.detectIOS() &&
+               (window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches);
     }
 
     /**
@@ -15,12 +35,20 @@ class PushNotificationManager {
      */
     async initialize() {
         console.log('[Push Notifications] initialize() 시작');
+        console.log('[Push Notifications] iOS 감지:', this.isIOS, 'PWA:', this.isIOSPWA);
 
         // 브라우저가 푸시 알림을 지원하는지 확인
         console.log('[Push Notifications] 브라우저 지원 체크:', {
             serviceWorker: 'serviceWorker' in navigator,
-            pushManager: 'PushManager' in window
+            pushManager: 'PushManager' in window,
+            notification: 'Notification' in window
         });
+
+        // iOS Safari (비-PWA)에서는 푸시 지원 안 함
+        if (this.isIOS && !this.isIOSPWA) {
+            console.log('[Push Notifications] iOS Safari - PWA로 설치 필요');
+            return false;
+        }
 
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.log('[Push Notifications] 푸시 알림이 지원되지 않는 브라우저입니다.');
@@ -234,6 +262,10 @@ class PushNotificationManager {
      * 푸시 알림 지원 여부 확인
      */
     isSupported() {
+        // iOS Safari는 PWA 모드에서만 지원
+        if (this.isIOS && !this.isIOSPWA) {
+            return false;
+        }
         return ('serviceWorker' in navigator) && ('PushManager' in window);
     }
 
@@ -241,10 +273,57 @@ class PushNotificationManager {
      * 알림 권한 상태 확인
      */
     getPermissionStatus() {
+        // iOS Safari 브라우저 (비-PWA)
+        if (this.isIOS && !this.isIOSPWA) {
+            return 'ios-safari';
+        }
         if (!('Notification' in window)) {
             return 'unsupported';
         }
         return Notification.permission;
+    }
+
+    /**
+     * iOS PWA 설치 안내 표시
+     */
+    showIOSInstallPrompt() {
+        if (!this.isIOS || this.isIOSPWA) return;
+
+        // 이미 표시한 적 있으면 스킵
+        if (localStorage.getItem('crm_ios_install_prompt_shown')) return;
+
+        const prompt = document.createElement('div');
+        prompt.id = 'ios-install-prompt';
+        prompt.innerHTML = `
+            <div style="position: fixed; bottom: 20px; left: 20px; right: 20px; background: white; border-radius: 16px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 10000; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+                <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('crm_ios_install_prompt_shown', 'true');"
+                        style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 24px; color: #999; cursor: pointer;">×</button>
+                <div style="display: flex; align-items: flex-start; gap: 16px;">
+                    <div style="font-size: 40px;">📲</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #333;">
+                            푸시 알림을 받으시겠어요?
+                        </div>
+                        <div style="color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
+                            홈 화면에 앱을 추가하면 푸시 알림을 받을 수 있습니다.
+                        </div>
+                        <div style="background: #f5f5f5; border-radius: 8px; padding: 12px; font-size: 13px; color: #555;">
+                            <div style="margin-bottom: 6px;">1. 하단의 <strong>공유</strong> 버튼 <span style="font-size: 16px;">⎙</span> 탭</div>
+                            <div>2. <strong>"홈 화면에 추가"</strong> 선택</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(prompt);
+
+        // 30초 후 자동 닫기
+        setTimeout(() => {
+            if (prompt.parentElement) {
+                prompt.remove();
+                localStorage.setItem('crm_ios_install_prompt_shown', 'true');
+            }
+        }, 30000);
     }
 }
 
@@ -273,6 +352,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await window.pushNotificationManager.subscribe();
             }
         }
+    } else if (window.pushNotificationManager.isIOS && !window.pushNotificationManager.isIOSPWA) {
+        // iOS Safari 사용자에게 PWA 설치 안내 (3초 후)
+        setTimeout(() => {
+            window.pushNotificationManager.showIOSInstallPrompt();
+        }, 3000);
     }
 });
 

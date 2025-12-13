@@ -2,6 +2,7 @@
   "name": "하루CRM - 고객관리 시스템",
   "short_name": "하루CRM",
   "description": "스마트한 고객 관리와 팀 협업을 위한 CRM 시스템",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -13,13 +14,16 @@
       "src": "/static/icon-192.png?v=2",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/static/icon-512.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "ko-KR",
+  "dir": "ltr"
 }
