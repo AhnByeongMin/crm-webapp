@@ -16,6 +16,7 @@ import time
 from contextlib import contextmanager
 from functools import wraps
 from typing import Any, Callable, Generator, TypeVar, Optional
+from password_helper import hash_password, verify_password, is_hashed
 
 logger = logging.getLogger('crm')
 
@@ -340,7 +341,10 @@ def load_all_users_detail() -> list[dict[str, Any]]:
         return [dict(row) for row in cursor.fetchall()]
 
 def create_user(username: str, password: str, role: str, status: str = 'active', team: Optional[str] = None) -> bool:
-    """새 사용자 생성 (관리자용)"""
+    """새 사용자 생성 (관리자용) - 비밀번호는 bcrypt로 해싱"""
+    # 비밀번호 해싱
+    hashed_pw = hash_password(password)
+
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -348,8 +352,9 @@ def create_user(username: str, password: str, role: str, status: str = 'active',
                 cursor.execute('''
                     INSERT INTO users (username, password, role, status, team)
                     VALUES (%s, %s, %s, %s, %s)
-                ''', (username, password, role, status, team))
+                ''', (username, hashed_pw, role, status, team))
                 conn.commit()
+                logger.info(f"User created: {username} (role: {role})")
                 return True
             except psycopg2.IntegrityError:
                 conn.rollback()
@@ -404,8 +409,10 @@ def update_user_role(user_id: int, role: str) -> bool:
             return cursor.rowcount > 0
 
 def reset_user_password(user_id: int, role: str) -> bool:
-    """사용자 비밀번호 초기화"""
+    """사용자 비밀번호 초기화 - bcrypt로 해싱"""
     default_password = 'admin1234' if role == '관리자' else 'body123!'
+    hashed_pw = hash_password(default_password)
+
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -413,21 +420,59 @@ def reset_user_password(user_id: int, role: str) -> bool:
                 UPDATE users
                 SET password = %s
                 WHERE id = %s
-            ''', (default_password, user_id))
+            ''', (hashed_pw, user_id))
             conn.commit()
+            if cursor.rowcount > 0:
+                logger.info(f"Password reset for user_id: {user_id}")
             return cursor.rowcount > 0
 
 def verify_user_login(username: str, password: str) -> Optional[dict[str, Any]]:
-    """사용자 로그인 검증 (비밀번호 확인 + 활성 상태 확인)"""
+    """
+    사용자 로그인 검증 (bcrypt 해시 비밀번호 지원)
+    - 해싱된 비밀번호: bcrypt로 검증
+    - 평문 비밀번호 (레거시): 직접 비교 후 자동 마이그레이션
+    """
     with get_db_connection() as conn:
         cursor = conn.cursor()
+        # 먼저 사용자 정보 조회
         cursor.execute('''
-            SELECT username, role, status
+            SELECT username, password, role, status
             FROM users
-            WHERE username = %s AND password = %s AND status = 'active'
-        ''', (username, password))
+            WHERE username = %s AND status = 'active'
+        ''', (username,))
         row = cursor.fetchone()
-        return dict(row) if row else None
+
+        if not row:
+            return None
+
+        stored_password = row['password']
+
+        # bcrypt 해시인지 확인
+        if is_hashed(stored_password):
+            # bcrypt로 검증
+            if verify_password(password, stored_password):
+                return {'username': row['username'], 'role': row['role'], 'status': row['status']}
+        else:
+            # 레거시 평문 비밀번호 (기존 사용자 호환)
+            if stored_password == password:
+                # 로그인 성공 시 자동으로 해시로 마이그레이션
+                _migrate_password_to_hash(username, password)
+                logger.info(f"Password migrated to bcrypt for user: {username}")
+                return {'username': row['username'], 'role': row['role'], 'status': row['status']}
+
+        return None
+
+
+def _migrate_password_to_hash(username: str, plain_password: str) -> None:
+    """평문 비밀번호를 해시로 마이그레이션 (내부 함수)"""
+    hashed_pw = hash_password(plain_password)
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users SET password = %s WHERE username = %s
+            ''', (hashed_pw, username))
+            conn.commit()
 
 def get_user_info(username: str) -> Optional[dict[str, Any]]:
     """사용자 정보 조회"""
@@ -442,27 +487,42 @@ def get_user_info(username: str) -> Optional[dict[str, Any]]:
         return dict(row) if row else None
 
 def change_user_password(username: str, current_password: str, new_password: str) -> tuple[bool, str]:
-    """사용자 비밀번호 변경 (본인만 가능)"""
+    """사용자 비밀번호 변경 (본인만 가능) - bcrypt 해싱 적용"""
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            # 현재 비밀번호 확인
+            # 현재 비밀번호 조회
             cursor.execute('''
-                SELECT id FROM users
-                WHERE username = %s AND password = %s
-            ''', (username, current_password))
+                SELECT id, password FROM users
+                WHERE username = %s
+            ''', (username,))
+            row = cursor.fetchone()
 
-            if not cursor.fetchone():
+            if not row:
+                return False, '사용자를 찾을 수 없습니다.'
+
+            stored_password = row['password']
+
+            # 비밀번호 검증 (해시 또는 평문)
+            password_valid = False
+            if is_hashed(stored_password):
+                password_valid = verify_password(current_password, stored_password)
+            else:
+                password_valid = (stored_password == current_password)
+
+            if not password_valid:
                 return False, '현재 비밀번호가 일치하지 않습니다.'
 
-            # 비밀번호 업데이트
+            # 새 비밀번호 해싱 후 업데이트
+            hashed_new_pw = hash_password(new_password)
             cursor.execute('''
                 UPDATE users
                 SET password = %s
                 WHERE username = %s
-            ''', (new_password, username))
+            ''', (hashed_new_pw, username))
             conn.commit()
 
+            logger.info(f"Password changed for user: {username}")
             return True, '비밀번호가 변경되었습니다.'
 
 # ==================== 채팅 관리 (최적화) ====================
