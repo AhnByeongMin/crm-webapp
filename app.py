@@ -18,6 +18,11 @@ import pandas as pd
 import random
 from cache_manager import app_cache, cached, invalidate_cache, generate_etag
 import push_helper  # 웹 푸시 알림 헬퍼
+from rate_limiter import (
+    create_limiter, get_limit_string, get_client_ip,
+    check_login_lockout, record_login_attempt, get_remaining_attempts
+)
+from csrf_protection import init_csrf, exempt_csrf
 
 # 로깅 설정
 def setup_logging():
@@ -69,6 +74,12 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB 최대 파일 크기
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1년 캐시 (asset versioning으로 제어)
 app.config['TEMPLATES_AUTO_RELOAD'] = True  # 템플릿 자동 리로드
 
+# 세션 보안 설정
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS에서만 쿠키 전송
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # JavaScript에서 쿠키 접근 차단
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF 방지
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 세션 타임아웃: 1시간 (초)
+
 # Compression 설정
 app.config['COMPRESS_MIMETYPES'] = [
     'text/html', 'text/css', 'text/javascript',
@@ -78,6 +89,12 @@ app.config['COMPRESS_LEVEL'] = 6
 app.config['COMPRESS_MIN_SIZE'] = 500
 
 Compress(app)
+
+# Rate Limiter 초기화
+limiter = create_limiter(app)
+
+# CSRF 보호 초기화
+csrf = init_csrf(app)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
@@ -227,9 +244,26 @@ def utility_processor():
 
     return dict(asset_version=asset_version)
 
+@app.before_request
+def session_management():
+    """세션 관리: 활동 갱신 및 보안 헤더"""
+    # 정적 파일은 세션 체크 불필요
+    if request.path.startswith('/static/') or request.path.startswith('/favicon'):
+        return
+
+    # 로그인된 사용자의 세션 활동 갱신
+    if 'username' in session:
+        session.modified = True  # 세션 타임아웃 갱신
+
 @app.after_request
-def add_cache_headers(response):
-    """캐시 헤더 최적화: 정적 파일은 캐싱, 동적 콘텐츠는 no-cache"""
+def add_security_headers(response):
+    """보안 및 캐시 헤더 추가"""
+    # 보안 헤더
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
     # 정적 파일 (CSS, JS, 이미지, 폰트 등)은 1시간 캐싱
     if request.path.startswith('/static/') or request.path.startswith('/uploads/'):
         response.headers['Cache-Control'] = 'public, max-age=3600'
@@ -262,6 +296,7 @@ def index():
                          current_page='tasks')
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit(get_limit_string('login'))
 def login():
     if is_localhost():
         return redirect(url_for('admin'))
@@ -276,17 +311,45 @@ def login():
         if not password:
             return render_template('login.html', error='비밀번호를 입력하세요.', username=username)
 
+        # 로그인 잠금 상태 확인
+        locked, remaining = check_login_lockout(username)
+        if locked:
+            return render_template('login.html',
+                error=f'너무 많은 로그인 시도로 {remaining}초간 잠겼습니다.',
+                username=username,
+                locked=True)
+
         # 데이터베이스에서 사용자 검증
         user = database.verify_user_login(username, password)
 
         if user:
-            # 로그인 성공
+            # 로그인 성공 - 시도 기록 초기화
+            record_login_attempt(username, success=True)
+
+            # 세션 재생성 (세션 고정 공격 방지)
+            session.clear()
             session['username'] = user['username']
             session['role'] = user['role']
+            session['login_time'] = datetime.now().isoformat()  # 로그인 시간 기록
+            session.permanent = True  # 영구 세션 (PERMANENT_SESSION_LIFETIME 적용)
+
+            logger.info(f"Login success: {username} from {get_client_ip()}")
             return redirect(url_for('index'))
         else:
-            # 로그인 실패 (잘못된 이름/비밀번호 또는 비활성 계정)
-            return render_template('login.html', error='이름 또는 비밀번호가 올바르지 않거나 비활성 계정입니다.', username=username)
+            # 로그인 실패 - 시도 기록
+            is_locked = record_login_attempt(username, success=False)
+            remaining_attempts = get_remaining_attempts(username)
+            logger.warning(f"Login failed: {username} from {get_client_ip()}, remaining: {remaining_attempts}")
+
+            if is_locked:
+                return render_template('login.html',
+                    error='너무 많은 로그인 시도로 5분간 잠겼습니다.',
+                    username=username,
+                    locked=True)
+
+            return render_template('login.html',
+                error=f'이름 또는 비밀번호가 올바르지 않습니다. (남은 시도: {remaining_attempts}회)',
+                username=username)
 
     return render_template('login.html')
 
@@ -524,6 +587,7 @@ def bulk_assign_items():
         return jsonify({'error': '일괄 배정 중 오류가 발생했습니다'}), 500
 
 @app.route('/api/items/bulk-upload', methods=['POST'])
+@limiter.limit(get_limit_string('upload'))
 def bulk_upload_items():
     """엑셀 파일로 할일 일괄 등록 (관리자 전용)"""
     if not is_admin():
@@ -689,6 +753,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/upload', methods=['POST'])
+@limiter.limit(get_limit_string('upload'))
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': '파일이 없습니다'}), 400
@@ -978,6 +1043,7 @@ def get_chat_messages(chat_id):
     })
 
 @app.route('/api/chats/<chat_id>/search', methods=['GET'])
+@limiter.limit(get_limit_string('search'))
 def search_chat_messages(chat_id):
     """
     채팅방 메시지 검색 API
@@ -1143,6 +1209,7 @@ def get_message_context(chat_id, msg_id):
 
 
 @app.route('/api/search_users', methods=['GET'])
+@limiter.limit(get_limit_string('search'))
 def search_users():
     # 로그인한 사용자는 누구나 검색 가능
     if 'username' not in session and not is_localhost():
@@ -1764,6 +1831,7 @@ def download_promotion_template():
     )
 
 @app.route('/api/promotions/bulk-upload', methods=['POST'])
+@limiter.limit(get_limit_string('upload'))
 def bulk_upload_promotions():
     """엑셀 파일을 파싱하여 JSON 형태로 반환 (저장하지 않음)"""
     if not is_admin():
@@ -2079,6 +2147,7 @@ def mypage():
                          current_page='mypage')
 
 @app.route('/api/change-password', methods=['POST'])
+@limiter.limit("3 per minute")  # 비밀번호 변경은 엄격하게 제한
 def change_password():
     """비밀번호 변경"""
     if 'username' not in session and not is_localhost():

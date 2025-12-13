@@ -1,4 +1,7 @@
 <!-- 통합 헤더 컴포넌트 -->
+<!-- CSRF 토큰 -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="/static/js/csrf-helper.js?v=20241213"></script>
 <!-- 다크 모드 & 폰트 설정 (가장 먼저 로드 - 렌더링 차단 방지) -->
 <link rel="stylesheet" href="/static/css/dark-mode.css?v=20241213g">
 <script src="/static/js/dark-mode.js?v=20241213"></script>
