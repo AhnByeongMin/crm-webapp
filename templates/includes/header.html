@@ -1,19 +1,19 @@
 <!-- 통합 헤더 컴포넌트 -->
-<!-- 다크 모드 & 폰트 설정 (가장 먼저 로드) -->
+<!-- 다크 모드 & 폰트 설정 (가장 먼저 로드 - 렌더링 차단 방지) -->
 <link rel="stylesheet" href="/static/css/dark-mode.css?v=20241213g">
 <script src="/static/js/dark-mode.js?v=20241213"></script>
 <script src="/static/js/font-settings.js?v=20241213b"></script>
-<!-- UX 향상 컴포넌트 -->
-<script src="/static/js/toast.js?v=20241213"></script>
-<script src="/static/js/autocomplete.js?v=20241213"></script>
-<script src="/static/js/swipe-actions.js?v=20241213"></script>
-<script src="/static/js/onboarding.js?v=20241213"></script>
-<script src="/static/js/page-transitions.js?v=20241213"></script>
-<script src="/static/js/keyboard-shortcuts.js?v=20241213b"></script>
-<script src="/static/js/notification-center.js?v=20241213"></script>
-<script src="/static/js/search-history.js?v=20241213"></script>
-<script src="/static/js/data-cache.js?v=20241213"></script>
-<script src="/static/js/drag-drop.js?v=20241213"></script>
+<!-- UX 향상 컴포넌트 (defer로 비동기 로드) -->
+<script defer src="/static/js/toast.js?v=20241213b"></script>
+<script defer src="/static/js/autocomplete.js?v=20241213"></script>
+<script defer src="/static/js/swipe-actions.js?v=20241213"></script>
+<script defer src="/static/js/onboarding.js?v=20241213"></script>
+<script defer src="/static/js/page-transitions.js?v=20241213"></script>
+<script defer src="/static/js/keyboard-shortcuts.js?v=20241213b"></script>
+<script defer src="/static/js/notification-center.js?v=20241213"></script>
+<script defer src="/static/js/search-history.js?v=20241213"></script>
+<script defer src="/static/js/data-cache.js?v=20241213"></script>
+<script defer src="/static/js/drag-drop.js?v=20241213"></script>
 <script>
 // 최소 침습 보안: console 출력만 차단 (error/warn 유지, 개발자도구 완전 허용)
 (function() {
@@ -258,15 +258,17 @@
     /* 모바일 반응형 (768px 이하) */
     @media (max-width: 768px) {
         .header {
-            padding: 10px 15px;
-            flex-wrap: wrap;
+            padding: 8px 12px;
+            gap: 8px;
         }
         .header h1 {
-            font-size: 18px;
+            font-size: 17px;
             flex: 1;
+            min-width: 0; /* 텍스트 오버플로우 방지 */
         }
         .header-settings {
-            margin-right: 8px;
+            margin-right: 4px;
+            gap: 4px;
         }
         .header-dark-toggle .label,
         .header-tutorial-btn .label {
@@ -274,12 +276,31 @@
         }
         .header-dark-toggle,
         .header-tutorial-btn {
-            padding: 6px 10px;
+            padding: 6px 8px;
+            min-height: 40px;
+            min-width: 40px;
+        }
+        .header-dark-toggle .icon,
+        .header-tutorial-btn .icon {
+            font-size: 18px;
+        }
+        /* 폰트 크기 조절 - 모바일에서 더 컴팩트 */
+        .header-font-controls {
+            border-radius: 16px;
+        }
+        .header-font-btn {
+            padding: 4px 8px;
+            min-height: 36px;
+            min-width: 32px;
+            font-size: 13px;
         }
         .nav-toggle {
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 8px 12px;
+            min-height: 40px;
+            min-width: 44px;
         }
         .nav {
             display: none;
@@ -289,10 +310,12 @@
             right: 0;
             background: white;
             flex-direction: column;
-            padding: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1000;
-            gap: 8px;
+            gap: 6px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
         .nav.active {
             display: flex;
@@ -300,19 +323,63 @@
         .nav a, .nav button {
             width: 100%;
             justify-content: center;
-            padding: 12px 16px;
-            font-size: 16px;
+            padding: 14px 16px;
+            font-size: 15px;
+            border-radius: 8px;
+        }
+        /* 다크모드 모바일 메뉴 */
+        [data-theme="dark"] .nav {
+            background: #1e1e1e;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
     }
 
     /* 작은 모바일 (480px 이하) */
     @media (max-width: 480px) {
+        .header {
+            padding: 6px 10px;
+        }
         .header h1 {
-            font-size: 16px;
+            font-size: 15px;
         }
         .admin-badge {
-            font-size: 10px;
-            padding: 3px 8px;
+            font-size: 9px;
+            padding: 2px 6px;
+        }
+        .header-settings {
+            gap: 3px;
+        }
+        /* 튜토리얼 버튼 숨김 - 작은 화면에서 */
+        .header-tutorial-btn {
+            display: none;
+        }
+        .header-dark-toggle,
+        .header-font-btn {
+            min-height: 36px;
+            min-width: 36px;
+        }
+        .header-font-btn {
+            padding: 3px 6px;
+            font-size: 12px;
+        }
+        .nav-toggle {
+            min-height: 36px;
+            padding: 6px 10px;
+            font-size: 18px;
+        }
+    }
+
+    /* 초소형 모바일 (360px 이하) */
+    @media (max-width: 360px) {
+        .header h1 {
+            font-size: 14px;
+        }
+        .admin-badge {
+            display: none;
+        }
+        /* 폰트 조절 숨김 */
+        .header-font-controls {
+            display: none;
         }
     }
 </style>
@@ -586,8 +653,15 @@ function restartTutorial() {
         }
     }
 
-    // 네비게이션 카운트 조회
+    // 네비게이션 카운트 조회 (캐시 활용)
+    let lastNavFetch = 0;
+    const NAV_FETCH_COOLDOWN = 5000; // 5초 쿨다운
+
     function fetchNavCounts() {
+        const now = Date.now();
+        if (now - lastNavFetch < NAV_FETCH_COOLDOWN) return;
+        lastNavFetch = now;
+
         fetch('/api/nav-counts')
             .then(res => res.json())
             .then(counts => {
