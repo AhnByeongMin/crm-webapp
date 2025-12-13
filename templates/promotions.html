@@ -1027,6 +1027,118 @@
                 padding: 12px !important;
             }
         }
+
+        /* ========== 일괄 관리 바 스타일 ========== */
+        .bulk-manage-bar {
+            display: flex;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 2px solid #e9ecef;
+        }
+        .bulk-manage-bar.has-selection {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .bulk-manage-bar.has-selection .select-all-label,
+        .bulk-manage-bar.has-selection .selected-count-text {
+            color: white;
+        }
+        .bulk-manage-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .select-all-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+        }
+        .select-all-label input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        .selected-count-text {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .bulk-manage-right {
+            display: flex;
+            gap: 10px;
+        }
+        .bulk-manage-right .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .bulk-manage-right .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+            color: #212529;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+        }
+        .btn-warning:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
+        }
+
+        /* 체크박스 셀 스타일 */
+        .checkbox-cell {
+            width: 50px;
+            text-align: center;
+        }
+        .checkbox-cell input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        /* 선택된 행 하이라이트 */
+        .promo-block.selected {
+            background: linear-gradient(to right, #e8f0fe, #fff) !important;
+            border-left: 4px solid #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .bulk-manage-bar {
+                flex-direction: column;
+                text-align: center;
+                padding: 15px;
+                gap: 12px;
+            }
+            .bulk-manage-left {
+                justify-content: center;
+                width: 100%;
+            }
+            .bulk-manage-right {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+            .bulk-manage-right .btn {
+                flex: 1;
+                min-width: 100px;
+            }
+        }
     </style>
     <script src="/static/js/banner.js" defer></script>
     <script src="/static/js/keyboard-shortcuts.js" defer></script>
@@ -1099,6 +1211,24 @@
         <!-- 채널 필터 버튼 -->
         <div class="channel-filter" id="channelFilter"></div>
 
+        {% if is_admin %}
+        <!-- 일괄 관리 컨트롤 바 (관리자 전용) - 항상 표시 -->
+        <div class="bulk-manage-bar" id="bulkManageBar">
+            <div class="bulk-manage-left">
+                <label class="select-all-label">
+                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                    <span>전체 선택</span>
+                </label>
+                <span class="selected-count-text">(<span id="selectedCount">0</span>개 선택됨)</span>
+            </div>
+            <div class="bulk-manage-right">
+                <button class="btn btn-warning" onclick="openBulkEditModal()" id="bulkEditBtn" disabled>📝 일괄 수정</button>
+                <button class="btn btn-danger" onclick="bulkDeletePromotions()" id="bulkDeleteBtn" disabled>🗑️ 일괄 삭제</button>
+                <button class="btn btn-secondary" onclick="clearAllSelections()" id="clearSelectionBtn" style="display: none;">선택 해제</button>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- 그룹 탭 + 검색 결과 개수 -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
             <div class="group-tabs" id="groupTabs" style="margin-bottom: 0;"></div>
@@ -1110,6 +1240,11 @@
 
     <!-- 일괄등록 모달 포함 -->
     {% include 'includes/bulk_upload_modal.html' %}
+
+    {% if is_admin %}
+    <!-- 일괄 수정 모달 포함 -->
+    {% include 'includes/bulk_edit_modal.html' %}
+    {% endif %}
 
     <!-- 생성/수정 모달 -->
     <div class="modal" id="editModal">
@@ -1679,10 +1814,15 @@
                     <table>
                         <tbody>
                             ${promos.map(p => `
-                                <tr class="promo-block">
+                                <tr class="promo-block" data-promo-id="${p.id}">
                                     <td colspan="100">
                                         <table style="width: 100%; border-collapse: collapse;">
                                             <tr class="detail-row">
+                                                ${isAdmin ? `
+                                                <td class="checkbox-cell" style="width: 50px; vertical-align: top; padding-top: 20px;" onclick="event.stopPropagation();">
+                                                    <input type="checkbox" class="promo-checkbox" data-id="${p.id}" onchange="handlePromoCheckboxChange(${p.id})" style="width: 20px; height: 20px; cursor: pointer; accent-color: #667eea;">
+                                                </td>
+                                                ` : ''}
                                                 <td onclick="viewDetail(${p.id})" style="cursor: pointer;">
                                                     <div class="info-grid">
                                                         <div class="info-label">대분류:</div>
@@ -2457,6 +2597,99 @@
         // 초기 토글 버튼 상태 설정
         updateToggleButton();
 
+        // ========== 체크박스 선택 관련 함수 (관리자 전용) ==========
+        let selectedPromotionIds = new Set();
+
+        // 체크박스 변경 핸들러
+        function handlePromoCheckboxChange(promoId) {
+            const checkbox = document.querySelector(`.promo-checkbox[data-id="${promoId}"]`);
+            const row = document.querySelector(`.promo-block[data-promo-id="${promoId}"]`);
+
+            if (checkbox.checked) {
+                selectedPromotionIds.add(promoId);
+                if (row) row.classList.add('selected');
+            } else {
+                selectedPromotionIds.delete(promoId);
+                if (row) row.classList.remove('selected');
+            }
+
+            updateSelectionUI();
+        }
+
+        // 전체 선택/해제
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const allCheckboxes = document.querySelectorAll('.promo-checkbox');
+
+            if (selectAllCheckbox.checked) {
+                allCheckboxes.forEach(cb => {
+                    const id = parseInt(cb.dataset.id);
+                    cb.checked = true;
+                    selectedPromotionIds.add(id);
+                    const row = document.querySelector(`.promo-block[data-promo-id="${id}"]`);
+                    if (row) row.classList.add('selected');
+                });
+            } else {
+                clearAllSelections();
+            }
+
+            updateSelectionUI();
+        }
+
+        // 모든 선택 해제
+        function clearAllSelections() {
+            selectedPromotionIds.clear();
+            document.querySelectorAll('.promo-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            document.querySelectorAll('.promo-block.selected').forEach(row => {
+                row.classList.remove('selected');
+            });
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            updateSelectionUI();
+        }
+
+        // 선택 UI 업데이트
+        function updateSelectionUI() {
+            const count = selectedPromotionIds.size;
+            const bulkManageBar = document.getElementById('bulkManageBar');
+            const countSpan = document.getElementById('selectedCount');
+            const bulkEditBtn = document.getElementById('bulkEditBtn');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+            // 선택 개수 표시
+            if (countSpan) countSpan.textContent = count;
+
+            // 선택 여부에 따라 스타일 및 버튼 상태 변경
+            if (bulkManageBar) {
+                if (count > 0) {
+                    bulkManageBar.classList.add('has-selection');
+                } else {
+                    bulkManageBar.classList.remove('has-selection');
+                }
+            }
+
+            // 버튼 활성화/비활성화
+            if (bulkEditBtn) bulkEditBtn.disabled = count === 0;
+            if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
+            if (clearSelectionBtn) clearSelectionBtn.style.display = count > 0 ? 'inline-block' : 'none';
+
+            // 전체 선택 체크박스 상태 업데이트
+            const allCheckboxes = document.querySelectorAll('.promo-checkbox');
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox && allCheckboxes.length > 0) {
+                selectAllCheckbox.checked = allCheckboxes.length === selectedPromotionIds.size && allCheckboxes.length > 0;
+                selectAllCheckbox.indeterminate = count > 0 && count < allCheckboxes.length;
+            }
+        }
+
+        // 선택된 프로모션 ID 목록 반환
+        function getSelectedPromotionIds() {
+            return Array.from(selectedPromotionIds);
+        }
+
         // 도움말 모달 제어
         function openHelpModal() {
             document.getElementById('helpModal').classList.add('active');
@@ -2606,5 +2839,88 @@
     </div>
 
     {% include 'includes/today_reminders.html' %}
+
+    <!-- UX 향상 기능 초기화 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 검색 자동완성 초기화
+        const searchInput = document.querySelector('.search-box');
+        if (searchInput && window.CRMAutocomplete) {
+            new CRMAutocomplete(searchInput, {
+                minLength: 1,
+                delay: 150,
+                maxResults: 8,
+                dataSource: async (query) => {
+                    if (!window.allData) return [];
+                    const lowerQuery = query.toLowerCase();
+                    const results = [];
+                    const seen = new Set();
+
+                    window.allData.forEach(item => {
+                        // 제목 매칭
+                        if (item.title && item.title.toLowerCase().includes(lowerQuery)) {
+                            if (!seen.has('title:' + item.title)) {
+                                seen.add('title:' + item.title);
+                                results.push({
+                                    label: item.title,
+                                    sublabel: item.product || '상품 없음',
+                                    icon: '📢',
+                                    value: item.title
+                                });
+                            }
+                        }
+                        // 상품명 매칭
+                        if (item.product && item.product.toLowerCase().includes(lowerQuery)) {
+                            if (!seen.has('product:' + item.product)) {
+                                seen.add('product:' + item.product);
+                                results.push({
+                                    label: item.product,
+                                    sublabel: '상품',
+                                    icon: '📦',
+                                    value: item.product
+                                });
+                            }
+                        }
+                    });
+
+                    return results.slice(0, 8);
+                },
+                onSelect: (item) => {
+                    if (typeof filterAndRender === 'function') {
+                        filterAndRender();
+                    }
+                }
+            });
+        }
+
+        // 온보딩 튜토리얼
+        if (window.CRMOnboarding) {
+            const onboarding = new CRMOnboarding({
+                storageKey: 'crm_onboarding_promotions',
+                steps: [
+                    {
+                        target: '.search-wrapper',
+                        title: '프로모션 검색',
+                        description: '제목이나 상품명으로 프로모션을 빠르게 검색할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.channel-filter',
+                        title: '채널 필터',
+                        description: '채널별로 프로모션을 필터링할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.group-tabs',
+                        title: '대분류 탭',
+                        description: '대분류별로 프로모션을 분류하여 볼 수 있습니다.',
+                        position: 'bottom'
+                    }
+                ]
+            });
+            setTimeout(() => onboarding.start(), 1000);
+        }
+    });
+    </script>
 </body>
 </html>

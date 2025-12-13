@@ -1567,3 +1567,431 @@
     background: rgba(255,255,255,0.2) !important;
     color: var(--text-primary) !important;
 }
+
+/* ========== 관리자 할일 페이지 - 인라인 스타일 오버라이드 ========== */
+/* 필터/검색 영역, 할일 추가 폼 등 인라인 background: white 오버라이드 */
+[data-theme="dark"] #content-manage > div[style*="background: white"],
+[data-theme="dark"] #content-manage > div[style*="background:white"],
+[data-theme="dark"] div[style*="background: white"],
+[data-theme="dark"] div[style*="background:#fff"],
+[data-theme="dark"] div[style*="background: #fff"] {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 할일 관리 페이지 전체 div 배경 */
+[data-theme="dark"] #content-manage {
+    background: transparent !important;
+}
+
+[data-theme="dark"] #content-manage h2 {
+    color: var(--text-primary) !important;
+}
+
+/* 필터 드롭다운 select */
+[data-theme="dark"] #assignmentFilter,
+[data-theme="dark"] #statusFilter,
+[data-theme="dark"] #priorityFilter,
+[data-theme="dark"] #userFilter {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 동적 생성 필터 영역 */
+[data-theme="dark"] [id^="filterOperator_"],
+[data-theme="dark"] [id^="filterValue_"],
+[data-theme="dark"] [id^="filterValue1_"],
+[data-theme="dark"] [id^="filterValue2_"],
+[data-theme="dark"] [id^="filterLogic_"] {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 컬럼 설정 모달 아이템 */
+[data-theme="dark"] .column-item,
+[data-theme="dark"] div[draggable="true"] {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 사용자 목록 컨테이너 */
+[data-theme="dark"] #userListContainer {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 테이블 고정 열 */
+[data-theme="dark"] td[style*="position: sticky"] {
+    background: var(--card-bg) !important;
+}
+
+/* 토스트 알림 */
+[data-theme="dark"] .toast {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 배너 링크 */
+[data-theme="dark"] #reminderBanner .banner-link {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+/* ========== 일반 사용자 할일 페이지 (user.html) ========== */
+/* 할일 아이템 카드 */
+[data-theme="dark"] .item {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--shadow-sm) !important;
+    border-left-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .item h3 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .item-content {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .item-status {
+    border-top-color: var(--border-color) !important;
+}
+
+/* 빈 상태 메시지 */
+[data-theme="dark"] .empty {
+    background: var(--card-bg) !important;
+    color: var(--text-muted) !important;
+}
+
+/* 상태 버튼 */
+[data-theme="dark"] .status-button {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .status-button:hover {
+    background: var(--accent-hover) !important;
+}
+
+/* 토스트 알림 */
+[data-theme="dark"] .toast {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    box-shadow: var(--shadow-lg) !important;
+    border-left-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .toast-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .toast-message {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .toast-close {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .toast-close:hover {
+    color: var(--text-primary) !important;
+}
+
+/* 검색 및 필터 영역 - 인라인 스타일 오버라이드 */
+[data-theme="dark"] .container > div[style*="padding: 20px"][style*="background: white"] {
+    background: var(--card-bg) !important;
+}
+
+/* 검색 입력 */
+[data-theme="dark"] #searchInput {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+[data-theme="dark"] #searchInput::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* 필터 셀렉트 */
+[data-theme="dark"] #statusFilter,
+[data-theme="dark"] #sortOrder {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 필터 라벨 */
+[data-theme="dark"] .container label {
+    color: var(--text-primary) !important;
+}
+
+/* 체크박스 라벨 */
+[data-theme="dark"] #hideCompleted + span {
+    color: var(--text-primary) !important;
+}
+
+/* 관리자 페이지 모바일 카드 뷰 다크모드 */
+@media (max-width: 768px) {
+    /* 카드 컨테이너 */
+    [data-theme="dark"] #itemsTable tbody tr {
+        background: var(--card-bg) !important;
+        border-color: var(--border-color) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+    }
+    [data-theme="dark"] #itemsTable tbody tr:hover {
+        background: var(--bg-hover) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+    }
+
+    /* 제목 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="title"] {
+        color: var(--text-primary) !important;
+    }
+
+    /* 담당자 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="assigned_to"] {
+        color: var(--text-primary) !important;
+    }
+    [data-theme="dark"] #itemsTable tbody td[data-col="assigned_to"]::before {
+        color: var(--text-muted) !important;
+    }
+    [data-theme="dark"] #itemsTable tbody td[data-col="assigned_to"] span[style*="color: #999"] {
+        color: var(--text-muted) !important;
+    }
+
+    /* 상태 배지 - 유지 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="status"] span {
+        /* 상태 배지는 색상 유지 */
+    }
+
+    /* 등록일 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="created_at"] {
+        color: var(--text-secondary) !important;
+        border-top-color: var(--border-color) !important;
+    }
+    [data-theme="dark"] #itemsTable tbody td[data-col="created_at"]::before {
+        color: var(--text-muted) !important;
+    }
+    [data-theme="dark"] #itemsTable tbody td[data-col="created_at"] span {
+        color: var(--text-secondary) !important;
+    }
+
+    /* 액션 버튼 - 기존 색상 유지하되 hover 효과 조정 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="actions"] button {
+        opacity: 0.95;
+    }
+    [data-theme="dark"] #itemsTable tbody td[data-col="actions"] button:hover {
+        opacity: 1;
+        filter: brightness(1.1);
+    }
+
+    /* 체크박스 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="checkbox"] input[type="checkbox"] {
+        accent-color: var(--accent-primary);
+    }
+
+    /* ID, 팀, 내용 등 기타 컬럼 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="id"],
+    [data-theme="dark"] #itemsTable tbody td[data-col="team"],
+    [data-theme="dark"] #itemsTable tbody td[data-col="content"] {
+        color: var(--text-secondary) !important;
+    }
+
+    /* 날짜 관련 컬럼들 */
+    [data-theme="dark"] #itemsTable tbody td[data-col="assigned_at"],
+    [data-theme="dark"] #itemsTable tbody td[data-col="updated_at"],
+    [data-theme="dark"] #itemsTable tbody td[data-col="completed_at"] {
+        color: var(--text-secondary) !important;
+    }
+    [data-theme="dark"] #itemsTable tbody td[data-col="assigned_at"] span,
+    [data-theme="dark"] #itemsTable tbody td[data-col="updated_at"] span,
+    [data-theme="dark"] #itemsTable tbody td[data-col="completed_at"] span {
+        color: var(--text-secondary) !important;
+    }
+}
+
+/* 사용자관리 페이지 모바일 카드 뷰 다크모드 */
+@media (max-width: 768px) {
+    [data-theme="dark"] #usersTable tr {
+        background: var(--card-bg) !important;
+        border-color: var(--border-color) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    }
+    [data-theme="dark"] #usersTable td {
+        border-bottom-color: var(--border-color) !important;
+        color: var(--text-primary) !important;
+    }
+    [data-theme="dark"] #usersTable td::before {
+        color: var(--text-muted) !important;
+    }
+    [data-theme="dark"] #usersTable td.actions {
+        border-bottom: none !important;
+    }
+}
+
+/* ========== 프로모션 일괄 수정 모달 다크모드 ========== */
+[data-theme="dark"] .bulk-edit-modal-content {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .bulk-edit-modal-header {
+    background: linear-gradient(135deg, #5a6fd6 0%, #6b4f91 100%) !important;
+}
+
+[data-theme="dark"] .bulk-edit-modal-body {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .bulk-edit-tabs {
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .bulk-edit-tab {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .bulk-edit-tab:hover {
+    background: var(--hover-bg) !important;
+    color: var(--link-color) !important;
+}
+
+[data-theme="dark"] .bulk-edit-tab.active {
+    color: var(--link-color) !important;
+    background: var(--hover-bg) !important;
+}
+
+[data-theme="dark"] .bulk-edit-table th {
+    background: #5a6fd6 !important;
+}
+
+[data-theme="dark"] .bulk-edit-table td {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .bulk-edit-table tr:nth-child(even) td {
+    background: var(--bg-color) !important;
+}
+
+[data-theme="dark"] .bulk-edit-table tr:hover td {
+    background: var(--hover-bg) !important;
+}
+
+[data-theme="dark"] .bulk-edit-table input,
+[data-theme="dark"] .bulk-edit-table textarea,
+[data-theme="dark"] .bulk-edit-table select {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .quick-edit-section {
+    background: var(--bg-color) !important;
+}
+
+[data-theme="dark"] .quick-edit-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .quick-edit-field label {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .quick-edit-field input,
+[data-theme="dark"] .quick-edit-field select {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .bulk-apply-option {
+    background: rgba(255, 193, 7, 0.15) !important;
+    border-left-color: #ffc107 !important;
+}
+
+[data-theme="dark"] .bulk-apply-option label {
+    color: #ffd54f !important;
+}
+
+[data-theme="dark"] .date-extend-option {
+    background: rgba(23, 162, 184, 0.15) !important;
+    border-left-color: #17a2b8 !important;
+}
+
+[data-theme="dark"] .date-extend-option label {
+    color: #4dd0e1 !important;
+}
+
+[data-theme="dark"] .date-extend-row input,
+[data-theme="dark"] .date-extend-row select {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .selected-summary {
+    background: rgba(40, 167, 69, 0.2) !important;
+    color: #81c784 !important;
+}
+
+[data-theme="dark"] .preview-list {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .preview-list-item {
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .preview-list-item:hover {
+    background: var(--hover-bg) !important;
+}
+
+[data-theme="dark"] .preview-list-item .item-name {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .preview-list-item .item-detail {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .bulk-edit-actions {
+    background: var(--card-bg) !important;
+    border-top-color: var(--border-color) !important;
+}
+
+/* 일괄 관리 바 다크모드 */
+[data-theme="dark"] .bulk-manage-bar {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .bulk-manage-bar .select-all-label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .bulk-manage-bar .selected-count-text {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .bulk-manage-bar.has-selection {
+    background: linear-gradient(135deg, #5a6fd6 0%, #6b4f91 100%) !important;
+    border-color: transparent !important;
+}
+
+[data-theme="dark"] .bulk-manage-bar.has-selection .select-all-label,
+[data-theme="dark"] .bulk-manage-bar.has-selection .selected-count-text {
+    color: white !important;
+}
+
+/* 선택된 행 하이라이트 다크모드 */
+[data-theme="dark"] .promo-block.selected {
+    background: linear-gradient(to right, rgba(102, 126, 234, 0.2), var(--card-bg)) !important;
+    border-left-color: #667eea !important;
+}

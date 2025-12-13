@@ -55,11 +55,191 @@
             th, td { padding: 8px 6px; }
             .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
             button { padding: 10px 14px; font-size: 14px; margin-right: 5px; margin-bottom: 5px; }
+
+            /* 필터 영역 모바일 최적화 */
+            #content-manage > div:first-child {
+                padding: 15px !important;
+            }
+            #content-manage > div:first-child > div:first-child {
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+            #content-manage > div:first-child select,
+            #content-manage > div:first-child input[type="text"] {
+                width: 100% !important;
+                max-width: none !important;
+            }
+            #content-manage > div:first-child input[type="date"] {
+                width: calc(50% - 15px) !important;
+                min-width: 0 !important;
+            }
+
+            /* 일괄 작업 버튼 */
+            #content-manage > div:first-child > div:last-child {
+                flex-direction: column !important;
+            }
+            #content-manage > div:first-child > div:last-child button {
+                width: 100% !important;
+                margin-bottom: 8px;
+            }
+            #content-manage > div:first-child > div:last-child > div:last-child {
+                text-align: center !important;
+                margin-top: 8px;
+            }
+
+            /* 레이아웃 프리셋 영역 */
+            #content-manage > div:nth-child(2) {
+                padding: 12px !important;
+            }
+            #content-manage > div:nth-child(2) > div {
+                flex-direction: column !important;
+                gap: 8px !important;
+            }
+            #content-manage > div:nth-child(2) select,
+            #content-manage > div:nth-child(2) button {
+                width: 100% !important;
+                min-width: auto !important;
+            }
+
+            /* 페이징 영역 */
+            #paginationContainer {
+                flex-direction: column !important;
+                gap: 10px !important;
+                padding: 10px !important;
+            }
+            #paginationButtons {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+            }
+
+            /* 모달 */
+            .modal-box {
+                width: 95% !important;
+                max-width: none !important;
+                max-height: 90vh !important;
+                padding: 15px !important;
+            }
+            .modal-box > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* 모바일 카드형 레이아웃 */
+            #tableContainer {
+                overflow-x: visible !important;
+                overflow-y: visible !important;
+                max-height: none !important;
+            }
+            #itemsTable {
+                display: block !important;
+            }
+            #itemsTable thead {
+                display: none !important;
+            }
+            #itemsTable tbody {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+            #itemsTable tbody tr {
+                display: block !important;
+                background: white !important;
+                border-radius: 12px !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+                padding: 15px !important;
+                border: 1px solid #e0e0e0 !important;
+            }
+            #itemsTable tbody tr:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            }
+            #itemsTable tbody td {
+                display: none !important;
+                position: static !important;
+                border: none !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            /* 카드에 표시할 컬럼들 */
+            #itemsTable tbody td[data-col="checkbox"],
+            #itemsTable tbody td[data-col="title"],
+            #itemsTable tbody td[data-col="assigned_to"],
+            #itemsTable tbody td[data-col="status"],
+            #itemsTable tbody td[data-col="created_at"],
+            #itemsTable tbody td[data-col="actions"] {
+                display: block !important;
+            }
+            /* 카드 레이아웃 */
+            #itemsTable tbody td[data-col="checkbox"] {
+                position: absolute !important;
+                top: 15px;
+                right: 15px;
+            }
+            #itemsTable tbody td[data-col="title"] {
+                font-size: 16px !important;
+                font-weight: bold !important;
+                color: #333 !important;
+                margin-bottom: 10px !important;
+                padding-right: 40px !important;
+            }
+            #itemsTable tbody td[data-col="assigned_to"]::before,
+            #itemsTable tbody td[data-col="created_at"]::before {
+                font-weight: normal;
+                color: #888;
+                font-size: 12px;
+            }
+            #itemsTable tbody td[data-col="assigned_to"]::before {
+                content: "담당자: ";
+            }
+            #itemsTable tbody td[data-col="created_at"]::before {
+                content: "등록: ";
+            }
+            #itemsTable tbody td[data-col="assigned_to"],
+            #itemsTable tbody td[data-col="status"] {
+                display: inline-block !important;
+                margin-right: 12px !important;
+                font-size: 14px !important;
+            }
+            #itemsTable tbody td[data-col="created_at"] {
+                display: block !important;
+                font-size: 12px !important;
+                color: #666 !important;
+                margin-top: 8px !important;
+                padding-top: 8px !important;
+                border-top: 1px solid #eee !important;
+            }
+            #itemsTable tbody td[data-col="actions"] {
+                display: flex !important;
+                gap: 8px !important;
+                margin-top: 12px !important;
+                flex-wrap: wrap !important;
+            }
+            #itemsTable tbody td[data-col="actions"] button {
+                flex: 1 !important;
+                min-width: 70px !important;
+                padding: 10px !important;
+                font-size: 13px !important;
+            }
+            /* 카드 내 tr에 position: relative 추가 */
+            #itemsTable tbody tr {
+                position: relative !important;
+            }
         }
+
         @media (max-width: 480px) {
             h1 { font-size: 20px; }
             .filter-section { flex-direction: column !important; }
             .filter-section > * { width: 100% !important; }
+
+            /* 날짜 필터를 세로로 */
+            #content-manage > div:first-child > div:nth-child(2) {
+                flex-direction: column !important;
+            }
+            #content-manage > div:first-child > div:nth-child(2) > div {
+                width: 100% !important;
+                margin-bottom: 8px;
+            }
+            #content-manage > div:first-child input[type="date"] {
+                width: calc(50% - 10px) !important;
+            }
         }
 
         /* 토스트 알림 */
@@ -845,7 +1025,7 @@
                             cellStyle += ` position: sticky; left: 0px; background: white; z-index: 1; box-shadow: 2px 0 4px rgba(0,0,0,0.1);`;
                         }
 
-                        rowHTML += `<td style="${cellStyle}">${getCellContent(item, colKey)}</td>`;
+                        rowHTML += `<td data-col="${colKey}" style="${cellStyle}">${getCellContent(item, colKey)}</td>`;
                     });
 
                     tr.innerHTML = rowHTML;
@@ -2840,5 +3020,100 @@
 
     {% include 'includes/alert_modal.html' %}
     {% include 'includes/today_reminders.html' %}
+
+    <!-- UX 향상 기능 초기화 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. 검색 자동완성 초기화
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && window.CRMAutocomplete) {
+            new CRMAutocomplete(searchInput, {
+                minLength: 1,
+                delay: 150,
+                maxResults: 8,
+                dataSource: async (query) => {
+                    // allData에서 제목, 담당자로 검색
+                    if (!window.allData) return [];
+                    const lowerQuery = query.toLowerCase();
+                    const results = [];
+                    const seen = new Set();
+
+                    window.allData.forEach(item => {
+                        // 제목 매칭
+                        if (item.title && item.title.toLowerCase().includes(lowerQuery)) {
+                            if (!seen.has('title:' + item.title)) {
+                                seen.add('title:' + item.title);
+                                results.push({
+                                    label: item.title,
+                                    sublabel: item.assigned_to || '미배정',
+                                    icon: '📋',
+                                    value: item.title
+                                });
+                            }
+                        }
+                        // 담당자 매칭
+                        if (item.assigned_to && item.assigned_to.toLowerCase().includes(lowerQuery)) {
+                            if (!seen.has('user:' + item.assigned_to)) {
+                                seen.add('user:' + item.assigned_to);
+                                results.push({
+                                    label: item.assigned_to,
+                                    sublabel: '담당자',
+                                    icon: '👤',
+                                    value: item.assigned_to
+                                });
+                            }
+                        }
+                    });
+
+                    return results.slice(0, 8);
+                },
+                onSelect: (item) => {
+                    applyFilters();
+                }
+            });
+        }
+
+        // 2. 온보딩 튜토리얼 (관리자 첫 방문 시)
+        if (window.CRMOnboarding) {
+            const onboarding = new CRMOnboarding({
+                storageKey: 'crm_onboarding_admin',
+                steps: [
+                    {
+                        target: '#searchInput',
+                        title: '검색 기능',
+                        description: '제목, 내용, 담당자명으로 할일을 빠르게 검색할 수 있습니다. 입력하면 자동완성 제안이 표시됩니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#assignmentFilter',
+                        title: '필터링',
+                        description: '담당자, 상태, 우선순위별로 할일을 필터링할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.header-settings',
+                        title: '화면 설정',
+                        description: '다크모드 전환과 글꼴 크기 조절이 가능합니다. 설정은 자동 저장됩니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.help-button',
+                        title: '도움말',
+                        description: '더 자세한 사용법은 도움말 버튼을 눌러 확인하세요!',
+                        position: 'left'
+                    }
+                ],
+                onComplete: () => {
+                    if (window.toast) {
+                        toast.success('이제 할일 관리를 시작해보세요!');
+                    }
+                }
+            });
+
+            // 첫 방문 시 자동 시작
+            setTimeout(() => onboarding.start(), 1000);
+        }
+    });
+    </script>
 </body>
 </html>

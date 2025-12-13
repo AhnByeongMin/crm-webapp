@@ -90,6 +90,87 @@
 
         .empty-state { text-align: center; padding: 60px 20px; color: #999; }
 
+        /* ========== 모바일 반응형 ========== */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+
+            .filter-section {
+                flex-direction: column;
+                gap: 10px;
+                padding: 12px;
+            }
+            .filter-section label {
+                width: 100%;
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 4px !important;
+            }
+            .filter-section label input,
+            .filter-section label select {
+                width: 100%;
+            }
+            .filter-section button {
+                width: 100%;
+            }
+            .filter-section .btn-team-manage {
+                margin-left: 0;
+            }
+
+            /* 테이블 -> 카드형 레이아웃 */
+            .table-container { overflow-x: visible; }
+            table thead { display: none; }
+            table tbody tr {
+                display: block;
+                background: white;
+                margin-bottom: 12px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                padding: 15px;
+            }
+            table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 0;
+                border-bottom: 1px solid #eee;
+            }
+            table tbody td:last-child {
+                border-bottom: none;
+                flex-direction: column;
+                gap: 8px;
+                padding-top: 12px;
+            }
+            table tbody td::before {
+                content: attr(data-label);
+                font-weight: bold;
+                color: #666;
+                font-size: 13px;
+            }
+            table tbody td:last-child::before {
+                display: none;
+            }
+
+            .actions {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .actions button {
+                flex: 1;
+                min-width: calc(50% - 4px);
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+
+            /* 모달 */
+            .modal-box {
+                width: 95%;
+                max-height: 90vh;
+                padding: 20px;
+            }
+            .modal-title { font-size: 18px; }
+        }
+
         /* 도움말 섹션 (사용자관리 페이지 전용) */
         .help-section {
             margin-bottom: 25px;
@@ -388,6 +469,21 @@
             renderUsers(filtered);
         }
 
+        // 날짜를 yyyy-mm-dd 형식으로 포맷
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return dateStr.split(' ')[0];
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            } catch (e) {
+                return dateStr.split(' ')[0];
+            }
+        }
+
         function renderUsers(users) {
             const tbody = document.getElementById('usersTable');
 
@@ -398,12 +494,12 @@
 
             tbody.innerHTML = users.map(user => `
                 <tr>
-                    <td>${user.id}</td>
-                    <td>${user.username}</td>
-                    <td><span class="badge ${user.role === '관리자' ? 'badge-admin' : 'badge-user'}">${user.role}</span></td>
-                    <td><span class="badge ${user.status === 'active' ? 'badge-active' : 'badge-inactive'}">${user.status === 'active' ? '활성' : '비활성'}</span></td>
-                    <td>${user.team || '-'}</td>
-                    <td>${user.created_at ? user.created_at.split(' ')[0] : '-'}</td>
+                    <td data-label="ID">${user.id}</td>
+                    <td data-label="이름">${user.username}</td>
+                    <td data-label="권한"><span class="badge ${user.role === '관리자' ? 'badge-admin' : 'badge-user'}">${user.role}</span></td>
+                    <td data-label="상태"><span class="badge ${user.status === 'active' ? 'badge-active' : 'badge-inactive'}">${user.status === 'active' ? '활성' : '비활성'}</span></td>
+                    <td data-label="팀">${user.team || '-'}</td>
+                    <td data-label="생성일">${formatDate(user.created_at)}</td>
                     <td class="actions">
                         <button class="btn-secondary" onclick="toggleStatus(${user.id}, '${user.status}')">
                             ${user.status === 'active' ? '비활성화' : '활성화'}

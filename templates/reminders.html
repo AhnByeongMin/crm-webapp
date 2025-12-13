@@ -614,7 +614,7 @@
             if (completed) badge = '<span class="badge badge-completed">✅ 완료</span>';
 
             return `
-                <div class="reminder-card ${type} ${completedClass}">
+                <div class="reminder-card ${type} ${completedClass}" data-id="${reminder.id}">
                     <div class="reminder-header">
                         <div>
                             <div class="reminder-title">${escapeHtml(reminder.title)}</div>
@@ -1004,6 +1004,74 @@
             document.getElementById('dailySummaryEnabled').addEventListener('change', function() {
                 document.getElementById('dailySummarySettings').style.display = this.checked ? 'block' : 'none';
             });
+
+            // 모바일 스와이프 기능 초기화
+            if (window.SwipeActions && window.innerWidth <= 768) {
+                new SwipeActions({
+                    selector: '.reminder-card',
+                    threshold: 70,
+                    maxSwipe: 100,
+                    leftActions: [
+                        {
+                            icon: '🗑️',
+                            label: '삭제',
+                            color: '#dc3545',
+                            action: (item) => {
+                                const id = item.dataset.id;
+                                if (id) deleteReminder(parseInt(id));
+                            }
+                        }
+                    ],
+                    rightActions: [
+                        {
+                            icon: '✓',
+                            label: '완료',
+                            color: '#28a745',
+                            action: (item) => {
+                                const id = item.dataset.id;
+                                if (id) toggleComplete(parseInt(id));
+                            }
+                        },
+                        {
+                            icon: '✏️',
+                            label: '수정',
+                            color: '#667eea',
+                            action: (item) => {
+                                const id = item.dataset.id;
+                                if (id) editReminder(parseInt(id));
+                            }
+                        }
+                    ]
+                });
+            }
+
+            // 온보딩 튜토리얼
+            if (window.CRMOnboarding) {
+                const onboarding = new CRMOnboarding({
+                    storageKey: 'crm_onboarding_reminders',
+                    steps: [
+                        {
+                            target: '.calendar-section',
+                            title: '캘린더',
+                            description: '날짜를 클릭하면 해당 날짜의 예약만 필터링됩니다. 노란색은 예약이 있는 날짜입니다.',
+                            position: 'right'
+                        },
+                        {
+                            target: '.btn-primary[onclick="openAddModal()"]',
+                            title: '예약 추가',
+                            description: '새로운 예약을 추가할 수 있습니다. 시간과 내용을 입력하세요.',
+                            position: 'bottom'
+                        },
+                        {
+                            target: '.notification-settings-btn',
+                            title: '알림 설정',
+                            description: '예약 전 알림 시간, 반복 알림, 아침 일일 요약 등을 설정할 수 있습니다.',
+                            position: 'top'
+                        }
+                    ]
+                });
+                setTimeout(() => onboarding.start(), 1000);
+            }
         });
     </script>
 </body>

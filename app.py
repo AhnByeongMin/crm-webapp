@@ -1918,6 +1918,115 @@ def bulk_save_promotions():
     except Exception as e:
         return jsonify({'error': f'저장 중 오류 발생: {str(e)}'}), 500
 
+@app.route('/api/promotions/bulk-update', methods=['PUT'])
+def bulk_update_promotions():
+    """선택된 프로모션들을 일괄 수정"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    try:
+        data = request.get_json()
+        promotions_to_update = data.get('promotions', [])
+        mode = data.get('mode', 'full')  # 'full' 또는 'quick'
+
+        if not promotions_to_update:
+            return jsonify({'error': '수정할 데이터가 없습니다'}), 400
+
+        # 기존 프로모션 로드
+        existing_promotions = load_promotions()
+        promo_map = {p['id']: p for p in existing_promotions}
+
+        # 현재 사용자 정보
+        username = session.get('username', 'Admin')
+        now = datetime.now().isoformat()
+
+        updated_count = 0
+
+        for update_data in promotions_to_update:
+            promo_id = update_data.get('id')
+            if promo_id not in promo_map:
+                continue
+
+            promo = promo_map[promo_id]
+
+            if mode == 'full':
+                # 전체 수정 모드: 모든 필드 업데이트
+                for key in ['category', 'product_name', 'channel', 'promotion_name',
+                           'discount_amount', 'session_exemption', 'subscription_types',
+                           'promotion_code', 'content', 'start_date', 'end_date']:
+                    if key in update_data:
+                        promo[key] = update_data[key]
+            else:
+                # 빠른 수정 모드: 전달된 필드만 업데이트
+                # 날짜 연장 처리
+                if 'extend_days' in update_data:
+                    extend_days = update_data['extend_days']
+                    current_end_date = promo.get('end_date', '')
+                    if current_end_date and current_end_date != '무기한':
+                        try:
+                            end_date = datetime.strptime(current_end_date, '%Y-%m-%d')
+                            from datetime import timedelta
+                            new_end_date = end_date + timedelta(days=extend_days)
+                            promo['end_date'] = new_end_date.strftime('%Y-%m-%d')
+                        except ValueError:
+                            pass  # 날짜 파싱 실패 시 무시
+
+                # 다른 필드 업데이트
+                for key in ['start_date', 'end_date', 'channel', 'category']:
+                    if key in update_data and key != 'extend_days':
+                        promo[key] = update_data[key]
+
+            promo['updated_at'] = now
+            promo['updated_by'] = username
+            updated_count += 1
+
+        # 저장
+        save_promotions(existing_promotions)
+
+        return jsonify({
+            'success': True,
+            'count': updated_count,
+            'message': f'{updated_count}개의 프로모션이 수정되었습니다'
+        })
+
+    except Exception as e:
+        logger.error(f'일괄 수정 오류: {str(e)}')
+        return jsonify({'error': f'수정 중 오류 발생: {str(e)}'}), 500
+
+@app.route('/api/promotions/bulk-delete', methods=['DELETE'])
+def bulk_delete_promotions():
+    """선택된 프로모션들을 일괄 삭제"""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    try:
+        data = request.get_json()
+        ids_to_delete = set(data.get('ids', []))
+
+        if not ids_to_delete:
+            return jsonify({'error': '삭제할 프로모션이 없습니다'}), 400
+
+        # 기존 프로모션 로드
+        existing_promotions = load_promotions()
+
+        # 삭제 대상 제외
+        original_count = len(existing_promotions)
+        remaining_promotions = [p for p in existing_promotions if p.get('id') not in ids_to_delete]
+        deleted_count = original_count - len(remaining_promotions)
+
+        # 저장
+        save_promotions(remaining_promotions)
+
+        return jsonify({
+            'success': True,
+            'count': deleted_count,
+            'message': f'{deleted_count}개의 프로모션이 삭제되었습니다'
+        })
+
+    except Exception as e:
+        logger.error(f'일괄 삭제 오류: {str(e)}')
+        return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
+
 # ==================== 개인 예약 관리 ====================
 
 @app.route('/reminders')

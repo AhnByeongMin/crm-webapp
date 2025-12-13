@@ -1,0 +1,593 @@
+<style>
+/* 일괄 수정 모달 스타일 */
+.bulk-edit-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10002; align-items: center; justify-content: center; }
+.bulk-edit-modal.show { display: flex; }
+.bulk-edit-modal-content { background: white; border-radius: 12px; max-width: 95%; width: 1400px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.bulk-edit-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; border-bottom: 2px solid #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0; }
+.bulk-edit-modal-title { font-size: 24px; font-weight: bold; color: white; }
+.bulk-edit-modal-body { padding: 30px; overflow-y: auto; flex: 1; }
+
+/* 탭 스타일 */
+.bulk-edit-tabs { display: flex; gap: 0; margin-bottom: 25px; border-bottom: 2px solid #e9ecef; }
+.bulk-edit-tab { flex: 1; padding: 15px 20px; border: none; background: none; cursor: pointer; font-weight: bold; font-size: 15px; color: #999; border-bottom: 3px solid transparent; transition: all 0.3s; }
+.bulk-edit-tab:hover { color: #667eea; background: #f8f9ff; }
+.bulk-edit-tab.active { color: #667eea; border-bottom-color: #667eea; background: #f0f4ff; }
+
+/* 탭 컨텐츠 */
+.bulk-edit-tab-content { display: none; }
+.bulk-edit-tab-content.active { display: block; }
+
+/* 전체 수정 테이블 */
+.bulk-edit-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.bulk-edit-table th { background: #667eea; color: white; padding: 12px 8px; text-align: left; font-weight: bold; position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+.bulk-edit-table td { padding: 8px 6px; border: 1px solid #ddd; vertical-align: top; }
+.bulk-edit-table tr:nth-child(even) { background: #f8f9fa; }
+.bulk-edit-table tr:hover { background: #e9ecef; }
+.bulk-edit-table input, .bulk-edit-table textarea, .bulk-edit-table select { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.bulk-edit-table textarea { min-height: 50px; resize: vertical; }
+.bulk-edit-table input[type="date"] { min-width: 120px; }
+
+/* 빠른 수정 스타일 */
+.quick-edit-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+.quick-edit-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+.quick-edit-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px; }
+.quick-edit-field { flex: 1; min-width: 150px; }
+.quick-edit-field label { display: block; font-weight: 600; color: #555; margin-bottom: 5px; font-size: 13px; }
+.quick-edit-field input, .quick-edit-field select { width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; }
+.quick-edit-field input:focus, .quick-edit-field select:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+
+/* 일괄 적용 옵션 */
+.bulk-apply-option { background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 15px; }
+.bulk-apply-option label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; color: #856404; }
+.bulk-apply-option input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
+/* 날짜 연장 옵션 */
+.date-extend-option { background: #d1ecf1; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8; margin-bottom: 15px; }
+.date-extend-option label { font-weight: 600; color: #0c5460; margin-bottom: 10px; display: block; }
+.date-extend-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.date-extend-row input { width: 80px; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px; text-align: center; }
+.date-extend-row select { padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; }
+
+/* 선택된 항목 요약 */
+.selected-summary { background: #d4edda; padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; color: #155724; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.selected-summary .count { font-size: 18px; color: #28a745; }
+
+/* 미리보기 리스트 */
+.preview-list { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; }
+.preview-list-item { padding: 10px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.preview-list-item:last-child { border-bottom: none; }
+.preview-list-item:hover { background: #f8f9fa; }
+.preview-list-item .item-name { font-weight: 600; color: #333; }
+.preview-list-item .item-detail { font-size: 12px; color: #666; }
+
+/* 버튼 그룹 */
+.bulk-edit-actions { padding: 20px 30px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+.btn-warning { background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%); color: #212529; box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3); }
+.btn-warning:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4); }
+
+/* 체크박스 열 */
+.checkbox-cell { width: 40px; text-align: center; }
+.checkbox-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #667eea; }
+
+/* 선택 컨트롤 바 */
+.selection-control-bar { display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; color: white; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }
+.selection-control-bar.show { display: flex; }
+.selection-info { font-weight: 600; font-size: 15px; }
+.selection-actions { display: flex; gap: 10px; }
+.selection-actions .btn { padding: 8px 16px; font-size: 14px; }
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .bulk-edit-modal-content { width: 98%; max-height: 95vh; }
+    .bulk-edit-modal-body { padding: 15px; }
+    .quick-edit-row { flex-direction: column; }
+    .quick-edit-field { min-width: 100%; }
+    .bulk-edit-actions { flex-direction: column; }
+    .selection-control-bar { flex-direction: column; text-align: center; }
+}
+</style>
+
+<!-- 일괄 수정 모달 -->
+<div class="bulk-edit-modal" id="bulkEditModal">
+    <div class="bulk-edit-modal-content">
+        <div class="bulk-edit-modal-header">
+            <div class="bulk-edit-modal-title">📝 프로모션 일괄 수정</div>
+            <button class="close-btn" onclick="closeBulkEditModal()" style="color: white; font-size: 28px;">&times;</button>
+        </div>
+        <div class="bulk-edit-modal-body">
+            <!-- 선택된 항목 요약 -->
+            <div class="selected-summary">
+                <span><span class="count" id="bulkEditCount">0</span>개의 프로모션이 선택되었습니다</span>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="togglePreviewList()">선택 항목 보기</button>
+            </div>
+
+            <!-- 선택된 항목 미리보기 (접힌 상태) -->
+            <div class="preview-list" id="bulkEditPreviewList" style="display: none;"></div>
+
+            <!-- 탭 전환 -->
+            <div class="bulk-edit-tabs">
+                <button class="bulk-edit-tab active" id="fullEditTab" onclick="switchBulkEditTab('full')">
+                    📋 전체 내용 수정
+                </button>
+                <button class="bulk-edit-tab" id="quickEditTab" onclick="switchBulkEditTab('quick')">
+                    ⚡ 빠른 수정 (상태/날짜)
+                </button>
+            </div>
+
+            <!-- 탭1: 전체 내용 수정 -->
+            <div class="bulk-edit-tab-content active" id="fullEditContent">
+                <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong>💡 전체 수정 모드:</strong> 각 프로모션의 모든 필드를 개별적으로 수정할 수 있습니다.
+                </div>
+                <div style="overflow-x: auto; max-height: 400px;">
+                    <table class="bulk-edit-table" id="bulkEditTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th style="width: 100px;">대분류</th>
+                                <th style="width: 120px;">상품명</th>
+                                <th style="width: 80px;">채널</th>
+                                <th style="width: 150px;">프로모션명</th>
+                                <th style="width: 90px;">금액할인</th>
+                                <th style="width: 90px;">회차면제</th>
+                                <th style="width: 100px;">중복여부</th>
+                                <th style="width: 100px;">정책번호</th>
+                                <th style="width: 180px;">내용</th>
+                                <th style="width: 110px;">시작일</th>
+                                <th style="width: 110px;">종료일</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulkEditTableBody">
+                            <!-- 동적으로 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 탭2: 빠른 수정 -->
+            <div class="bulk-edit-tab-content" id="quickEditContent">
+                <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong>⚡ 빠른 수정 모드:</strong> 선택한 모든 프로모션에 동일한 값을 일괄 적용합니다. 변경하지 않을 필드는 비워두세요.
+                </div>
+
+                <!-- 상태 변경 -->
+                <div class="quick-edit-section">
+                    <div class="quick-edit-title">📊 상태 일괄 변경</div>
+                    <div class="bulk-apply-option">
+                        <label>
+                            <input type="checkbox" id="applyStatusChange">
+                            선택한 프로모션의 종료일을 변경하여 상태 변경
+                        </label>
+                    </div>
+                    <div class="quick-edit-row" id="statusChangeFields" style="display: none;">
+                        <div class="quick-edit-field">
+                            <label>변경할 상태</label>
+                            <select id="quickStatusSelect">
+                                <option value="">선택하세요</option>
+                                <option value="active">진행중 (종료일 연장)</option>
+                                <option value="expired">종료 (오늘 날짜로 종료)</option>
+                                <option value="unlimited">무기한</option>
+                            </select>
+                        </div>
+                        <div class="quick-edit-field" id="extendDateField" style="display: none;">
+                            <label>연장 종료일</label>
+                            <input type="date" id="quickExtendDate">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 날짜 일괄 수정 -->
+                <div class="quick-edit-section">
+                    <div class="quick-edit-title">📅 날짜 일괄 수정</div>
+
+                    <!-- 시작일 수정 -->
+                    <div class="bulk-apply-option" style="background: #d4edda; border-left-color: #28a745;">
+                        <label style="color: #155724;">
+                            <input type="checkbox" id="applyStartDateChange">
+                            시작일 일괄 변경
+                        </label>
+                    </div>
+                    <div class="quick-edit-row" id="startDateFields" style="display: none;">
+                        <div class="quick-edit-field">
+                            <label>새 시작일</label>
+                            <input type="date" id="quickStartDate">
+                        </div>
+                    </div>
+
+                    <!-- 종료일 수정 -->
+                    <div class="bulk-apply-option" style="background: #f8d7da; border-left-color: #dc3545; margin-top: 15px;">
+                        <label style="color: #721c24;">
+                            <input type="checkbox" id="applyEndDateChange">
+                            종료일 일괄 변경
+                        </label>
+                    </div>
+                    <div class="quick-edit-row" id="endDateFields" style="display: none;">
+                        <div class="quick-edit-field">
+                            <label>새 종료일</label>
+                            <input type="date" id="quickEndDate">
+                        </div>
+                        <div class="quick-edit-field">
+                            <label style="visibility: hidden;">또는</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 0;">
+                                <input type="checkbox" id="setUnlimited" style="width: 18px; height: 18px;">
+                                무기한으로 설정
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 날짜 연장 옵션 -->
+                    <div class="date-extend-option" style="margin-top: 15px;">
+                        <label>
+                            <input type="checkbox" id="applyDateExtend" style="margin-right: 8px;">
+                            기존 종료일 기준 N일 연장
+                        </label>
+                        <div class="date-extend-row" id="dateExtendFields" style="display: none; margin-top: 10px;">
+                            <span>종료일을</span>
+                            <input type="number" id="extendDays" value="30" min="1" max="365">
+                            <span>일 연장</span>
+                            <span style="color: #666; font-size: 12px; margin-left: 10px;">※ '무기한' 프로모션은 제외됩니다</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 기타 필드 일괄 수정 -->
+                <div class="quick-edit-section">
+                    <div class="quick-edit-title">🔧 기타 필드 일괄 수정</div>
+                    <div class="quick-edit-row">
+                        <div class="quick-edit-field">
+                            <label>채널 (비워두면 변경 안함)</label>
+                            <input type="text" id="quickChannel" placeholder="예: 전사, 라운지">
+                        </div>
+                        <div class="quick-edit-field">
+                            <label>대분류 (비워두면 변경 안함)</label>
+                            <input type="text" id="quickCategory" placeholder="예: 피부관리">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bulk-edit-actions">
+            <div style="color: #666; font-size: 13px;">
+                💡 변경사항은 저장 버튼을 클릭해야 적용됩니다
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeBulkEditModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveBulkEdit()">✅ 변경사항 저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let bulkEditData = []; // 선택된 프로모션 데이터
+let bulkEditMode = 'full'; // 'full' 또는 'quick'
+
+// 일괄 수정 모달 열기
+function openBulkEditModal() {
+    const selectedIds = getSelectedPromotionIds();
+    if (selectedIds.length === 0) {
+        showSimpleToast('알림', '수정할 프로모션을 선택해주세요', 'warning');
+        return;
+    }
+
+    // 선택된 프로모션 데이터 로드
+    bulkEditData = allPromotions.filter(p => selectedIds.includes(p.id));
+
+    document.getElementById('bulkEditCount').textContent = bulkEditData.length;
+    renderBulkEditPreviewList();
+    renderBulkEditTable();
+
+    document.getElementById('bulkEditModal').classList.add('show');
+
+    // 탭 초기화
+    switchBulkEditTab('full');
+}
+
+// 일괄 수정 모달 닫기
+function closeBulkEditModal() {
+    document.getElementById('bulkEditModal').classList.remove('show');
+    bulkEditData = [];
+    bulkEditMode = 'full';
+
+    // 체크박스 초기화
+    resetQuickEditFields();
+}
+
+// 빠른 수정 필드 초기화
+function resetQuickEditFields() {
+    document.getElementById('applyStatusChange').checked = false;
+    document.getElementById('applyStartDateChange').checked = false;
+    document.getElementById('applyEndDateChange').checked = false;
+    document.getElementById('applyDateExtend').checked = false;
+    document.getElementById('setUnlimited').checked = false;
+    document.getElementById('statusChangeFields').style.display = 'none';
+    document.getElementById('startDateFields').style.display = 'none';
+    document.getElementById('endDateFields').style.display = 'none';
+    document.getElementById('dateExtendFields').style.display = 'none';
+    document.getElementById('quickStatusSelect').value = '';
+    document.getElementById('quickExtendDate').value = '';
+    document.getElementById('quickStartDate').value = '';
+    document.getElementById('quickEndDate').value = '';
+    document.getElementById('quickChannel').value = '';
+    document.getElementById('quickCategory').value = '';
+    document.getElementById('extendDays').value = '30';
+}
+
+// 탭 전환
+function switchBulkEditTab(mode) {
+    bulkEditMode = mode;
+
+    const fullTab = document.getElementById('fullEditTab');
+    const quickTab = document.getElementById('quickEditTab');
+    const fullContent = document.getElementById('fullEditContent');
+    const quickContent = document.getElementById('quickEditContent');
+
+    if (mode === 'full') {
+        fullTab.classList.add('active');
+        quickTab.classList.remove('active');
+        fullContent.classList.add('active');
+        quickContent.classList.remove('active');
+    } else {
+        quickTab.classList.add('active');
+        fullTab.classList.remove('active');
+        quickContent.classList.add('active');
+        fullContent.classList.remove('active');
+    }
+}
+
+// 선택 항목 미리보기 토글
+function togglePreviewList() {
+    const list = document.getElementById('bulkEditPreviewList');
+    list.style.display = list.style.display === 'none' ? 'block' : 'none';
+}
+
+// 미리보기 리스트 렌더링
+function renderBulkEditPreviewList() {
+    const container = document.getElementById('bulkEditPreviewList');
+    container.innerHTML = bulkEditData.map(p => `
+        <div class="preview-list-item">
+            <div>
+                <div class="item-name">${escapeHtml(p.promotion_name)}</div>
+                <div class="item-detail">${escapeHtml(p.product_name)} | ${escapeHtml(p.channel)} | ${p.start_date} ~ ${p.end_date}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 전체 수정 테이블 렌더링
+function renderBulkEditTable() {
+    const tbody = document.getElementById('bulkEditTableBody');
+    tbody.innerHTML = bulkEditData.map((p, idx) => `
+        <tr data-id="${p.id}" data-index="${idx}">
+            <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
+            <td><input type="text" value="${escapeHtml(p.category || '')}" data-field="category"></td>
+            <td><input type="text" value="${escapeHtml(p.product_name)}" data-field="product_name"></td>
+            <td><input type="text" value="${escapeHtml(p.channel)}" data-field="channel"></td>
+            <td><input type="text" value="${escapeHtml(p.promotion_name)}" data-field="promotion_name"></td>
+            <td><input type="text" value="${escapeHtml(p.discount_amount || '')}" data-field="discount_amount"></td>
+            <td><input type="text" value="${escapeHtml(p.session_exemption || '')}" data-field="session_exemption"></td>
+            <td><input type="text" value="${(p.subscription_types || []).join(',')}" data-field="subscription_types"></td>
+            <td><input type="text" value="${escapeHtml(p.promotion_code || '')}" data-field="promotion_code"></td>
+            <td><textarea data-field="content">${escapeHtml(p.content)}</textarea></td>
+            <td><input type="date" value="${p.start_date}" data-field="start_date"></td>
+            <td><input type="text" value="${p.end_date}" data-field="end_date" placeholder="무기한"></td>
+        </tr>
+    `).join('');
+}
+
+// 체크박스 변경 이벤트 핸들러
+document.addEventListener('DOMContentLoaded', function() {
+    // 상태 변경 체크박스
+    const applyStatusChange = document.getElementById('applyStatusChange');
+    if (applyStatusChange) {
+        applyStatusChange.addEventListener('change', function() {
+            document.getElementById('statusChangeFields').style.display = this.checked ? 'flex' : 'none';
+        });
+    }
+
+    // 상태 선택 변경
+    const quickStatusSelect = document.getElementById('quickStatusSelect');
+    if (quickStatusSelect) {
+        quickStatusSelect.addEventListener('change', function() {
+            document.getElementById('extendDateField').style.display = this.value === 'active' ? 'block' : 'none';
+        });
+    }
+
+    // 시작일 변경 체크박스
+    const applyStartDateChange = document.getElementById('applyStartDateChange');
+    if (applyStartDateChange) {
+        applyStartDateChange.addEventListener('change', function() {
+            document.getElementById('startDateFields').style.display = this.checked ? 'flex' : 'none';
+        });
+    }
+
+    // 종료일 변경 체크박스
+    const applyEndDateChange = document.getElementById('applyEndDateChange');
+    if (applyEndDateChange) {
+        applyEndDateChange.addEventListener('change', function() {
+            document.getElementById('endDateFields').style.display = this.checked ? 'flex' : 'none';
+        });
+    }
+
+    // 날짜 연장 체크박스
+    const applyDateExtend = document.getElementById('applyDateExtend');
+    if (applyDateExtend) {
+        applyDateExtend.addEventListener('change', function() {
+            document.getElementById('dateExtendFields').style.display = this.checked ? 'flex' : 'none';
+        });
+    }
+
+    // 무기한 체크박스
+    const setUnlimited = document.getElementById('setUnlimited');
+    if (setUnlimited) {
+        setUnlimited.addEventListener('change', function() {
+            document.getElementById('quickEndDate').disabled = this.checked;
+            if (this.checked) {
+                document.getElementById('quickEndDate').value = '';
+            }
+        });
+    }
+
+    // 모달 외부 클릭 시 닫기
+    const bulkEditModal = document.getElementById('bulkEditModal');
+    if (bulkEditModal) {
+        bulkEditModal.addEventListener('click', function(e) {
+            if (e.target === bulkEditModal) {
+                closeBulkEditModal();
+            }
+        });
+    }
+});
+
+// 일괄 수정 저장
+async function saveBulkEdit() {
+    let updateData = [];
+
+    if (bulkEditMode === 'full') {
+        // 전체 수정 모드: 테이블에서 데이터 수집
+        const rows = document.querySelectorAll('#bulkEditTableBody tr');
+        rows.forEach(row => {
+            const id = parseInt(row.dataset.id);
+            const data = { id };
+
+            row.querySelectorAll('input, textarea').forEach(input => {
+                const field = input.dataset.field;
+                let value = input.value;
+
+                if (field === 'subscription_types') {
+                    value = value.split(',').map(t => t.trim()).filter(t => t);
+                }
+
+                data[field] = value;
+            });
+
+            updateData.push(data);
+        });
+    } else {
+        // 빠른 수정 모드: 선택된 옵션에 따라 업데이트
+        const updates = {};
+
+        // 상태 변경
+        if (document.getElementById('applyStatusChange').checked) {
+            const status = document.getElementById('quickStatusSelect').value;
+            if (status === 'active') {
+                const extendDate = document.getElementById('quickExtendDate').value;
+                if (extendDate) {
+                    updates.end_date = extendDate;
+                }
+            } else if (status === 'expired') {
+                const today = new Date().toISOString().split('T')[0];
+                updates.end_date = today;
+            } else if (status === 'unlimited') {
+                updates.end_date = '무기한';
+            }
+        }
+
+        // 시작일 변경
+        if (document.getElementById('applyStartDateChange').checked) {
+            const startDate = document.getElementById('quickStartDate').value;
+            if (startDate) {
+                updates.start_date = startDate;
+            }
+        }
+
+        // 종료일 변경
+        if (document.getElementById('applyEndDateChange').checked) {
+            if (document.getElementById('setUnlimited').checked) {
+                updates.end_date = '무기한';
+            } else {
+                const endDate = document.getElementById('quickEndDate').value;
+                if (endDate) {
+                    updates.end_date = endDate;
+                }
+            }
+        }
+
+        // 날짜 연장
+        if (document.getElementById('applyDateExtend').checked) {
+            const extendDays = parseInt(document.getElementById('extendDays').value) || 0;
+            if (extendDays > 0) {
+                updates.extend_days = extendDays;
+            }
+        }
+
+        // 채널/대분류 변경
+        const channel = document.getElementById('quickChannel').value.trim();
+        const category = document.getElementById('quickCategory').value.trim();
+        if (channel) updates.channel = channel;
+        if (category) updates.category = category;
+
+        // 모든 선택된 프로모션에 업데이트 적용
+        bulkEditData.forEach(p => {
+            const data = { id: p.id, ...updates };
+            updateData.push(data);
+        });
+    }
+
+    if (updateData.length === 0) {
+        showSimpleToast('알림', '변경할 내용이 없습니다', 'warning');
+        return;
+    }
+
+    if (!confirm(`${updateData.length}개의 프로모션을 수정하시겠습니까?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/promotions/bulk-update', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ promotions: updateData, mode: bulkEditMode })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSimpleToast('성공', result.message || '프로모션이 수정되었습니다', 'success');
+            closeBulkEditModal();
+            clearAllSelections();
+            loadPromotions();
+        } else {
+            showSimpleToast('오류', result.error || '수정 중 오류가 발생했습니다', 'error');
+        }
+    } catch (error) {
+        console.error('일괄 수정 실패:', error);
+        showSimpleToast('오류', '수정 중 오류가 발생했습니다', 'error');
+    }
+}
+
+// 일괄 삭제
+async function bulkDeletePromotions() {
+    const selectedIds = getSelectedPromotionIds();
+    if (selectedIds.length === 0) {
+        showSimpleToast('알림', '삭제할 프로모션을 선택해주세요', 'warning');
+        return;
+    }
+
+    if (!confirm(`정말 ${selectedIds.length}개의 프로모션을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/promotions/bulk-delete', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selectedIds })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSimpleToast('성공', result.message || '프로모션이 삭제되었습니다', 'success');
+            clearAllSelections();
+            loadPromotions();
+            loadFilters();
+        } else {
+            showSimpleToast('오류', result.error || '삭제 중 오류가 발생했습니다', 'error');
+        }
+    } catch (error) {
+        console.error('일괄 삭제 실패:', error);
+        showSimpleToast('오류', '삭제 중 오류가 발생했습니다', 'error');
+    }
+}
+</script>
