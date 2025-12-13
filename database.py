@@ -4,7 +4,9 @@ PostgreSQL 데이터베이스 헬퍼 함수 (최적화 버전)
 - 부분 조회 기능 추가
 - 연결 풀링
 - 느린 쿼리 로깅
+- 타입 힌트 지원
 """
+from __future__ import annotations
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
@@ -13,23 +15,27 @@ import logging
 import time
 from contextlib import contextmanager
 from functools import wraps
+from typing import Any, Callable, Generator, TypeVar, Optional
 
 logger = logging.getLogger('crm')
+
+# 타입 정의
+F = TypeVar('F', bound=Callable[..., Any])
 
 # 느린 쿼리 임계값 (초)
 SLOW_QUERY_THRESHOLD = 0.5
 
-def log_slow_query(func):
+def log_slow_query(func: F) -> F:
     """느린 쿼리 로깅 데코레이터"""
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         result = func(*args, **kwargs)
         elapsed = time.time() - start_time
         if elapsed > SLOW_QUERY_THRESHOLD:
             logger.warning(f"SLOW QUERY [{elapsed:.3f}s]: {func.__name__}({args[:2] if args else ''}{', ...' if len(args) > 2 else ''})")
         return result
-    return wrapper
+    return wrapper  # type: ignore
 
 # PostgreSQL 연결 설정
 DB_CONFIG = {
@@ -43,7 +49,7 @@ DB_CONFIG = {
 connection_pool = None
 pool_lock = threading.Lock()
 
-def init_connection_pool(minconn=1, maxconn=20):
+def init_connection_pool(minconn: int = 1, maxconn: int = 20) -> None:
     """연결 풀 초기화"""
     global connection_pool
     if connection_pool is None:
@@ -57,7 +63,7 @@ def init_connection_pool(minconn=1, maxconn=20):
 db_lock = threading.Lock()
 
 @contextmanager
-def get_db_connection():
+def get_db_connection() -> Generator[Any, None, None]:
     """데이터베이스 연결을 안전하게 관리하는 컨텍스트 매니저"""
     conn = None
     try:
@@ -79,7 +85,7 @@ def get_db_connection():
 # ==================== 할일 관리 ====================
 
 @log_slow_query
-def load_data():
+def load_data() -> list[dict[str, Any]]:
     """할일 목록 조회 (users와 JOIN하여 team 정보 포함)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -102,7 +108,7 @@ def load_data():
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
-def load_data_by_assigned(username):
+def load_data_by_assigned(username: str) -> list[dict[str, Any]]:
     """특정 사용자에게 배정된 할일만 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -124,7 +130,7 @@ def load_data_by_assigned(username):
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
-def load_data_unassigned():
+def load_data_unassigned() -> list[dict[str, Any]]:
     """미배정 할일 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -146,7 +152,7 @@ def load_data_unassigned():
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
-def save_data(data):
+def save_data(data: list[dict[str, Any]]) -> None:
     """할일 목록 저장 (전체 덮어쓰기 - 호환성 유지)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -160,7 +166,7 @@ def save_data(data):
                       task['content'], task['created_at'], task.get('status', '대기중')))
             conn.commit()
 
-def update_task_status(task_id, status):
+def update_task_status(task_id: int, status: str) -> None:
     """할일 상태 업데이트"""
     with db_lock:
         with get_db_connection() as conn:
@@ -183,7 +189,7 @@ def update_task_status(task_id, status):
                 ''', (status, task_id))
             conn.commit()
 
-def update_task_assignment(task_id, assigned_to):
+def update_task_assignment(task_id: int, assigned_to: Optional[str]) -> None:
     """할일 배정 업데이트 (배정/회수) - 배정일만 업데이트, 수정일은 변경하지 않음"""
     with db_lock:
         with get_db_connection() as conn:
@@ -196,7 +202,7 @@ def update_task_assignment(task_id, assigned_to):
             ''', (assigned_to, task_id))
             conn.commit()
 
-def add_task(assigned_to, title, content, status='대기중'):
+def add_task(assigned_to: Optional[str], title: str, content: str, status: str = '대기중') -> int:
     """새 할일 추가 (개별 삽입)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -217,7 +223,7 @@ def add_task(assigned_to, title, content, status='대기중'):
             conn.commit()
             return cursor.fetchone()['id']
 
-def update_task(task_id, title, content):
+def update_task(task_id: int, title: str, content: str) -> bool:
     """할일 수정 (제목, 내용)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -232,7 +238,7 @@ def update_task(task_id, title, content):
             conn.commit()
             return cursor.rowcount > 0
 
-def delete_task(task_id):
+def delete_task(task_id: int) -> bool:
     """할일 삭제"""
     with db_lock:
         with get_db_connection() as conn:
@@ -243,7 +249,7 @@ def delete_task(task_id):
 
 # ==================== 사용자 관리 ====================
 
-def load_users():
+def load_users() -> list[str]:
     """사용자 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -251,7 +257,7 @@ def load_users():
         return [row['username'] for row in cursor.fetchall()]
 
 
-def get_admin_usernames():
+def get_admin_usernames() -> set[str]:
     """관리자 사용자명 목록 조회 (캐시용)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -259,7 +265,7 @@ def get_admin_usernames():
         return set(row['username'] for row in cursor.fetchall())
 
 
-def is_user_admin(username):
+def is_user_admin(username: str) -> bool:
     """특정 사용자가 관리자인지 확인"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -269,7 +275,7 @@ def is_user_admin(username):
         )
         return cursor.fetchone() is not None
 
-def save_users(users):
+def save_users(users: list[str]) -> None:
     """사용자 목록 저장"""
     with db_lock:
         with get_db_connection() as conn:
@@ -279,7 +285,7 @@ def save_users(users):
                 cursor.execute('INSERT INTO users (username) VALUES (%s)', (username,))
             conn.commit()
 
-def add_user(username):
+def add_user(username: str) -> None:
     """사용자 추가"""
     with db_lock:
         with get_db_connection() as conn:
@@ -290,7 +296,7 @@ def add_user(username):
             except psycopg2.IntegrityError:
                 conn.rollback()
 
-def user_exists(username):
+def user_exists(username: str) -> bool:
     """사용자 존재 여부 확인"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -298,7 +304,7 @@ def user_exists(username):
         result = cursor.fetchone()
         return result['count'] > 0
 
-def load_users_by_team(team=None):
+def load_users_by_team(team: Optional[str] = None) -> list[str]:
     """팀별 사용자 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -308,21 +314,21 @@ def load_users_by_team(team=None):
             cursor.execute('SELECT username FROM users WHERE team IS NOT NULL ORDER BY username')
         return [row['username'] for row in cursor.fetchall()]
 
-def load_teams():
+def load_teams() -> list[str]:
     """팀 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT DISTINCT team FROM users WHERE team IS NOT NULL AND team != \'\' ORDER BY team')
         return [row['team'] for row in cursor.fetchall()]
 
-def load_users_with_team():
+def load_users_with_team() -> list[dict[str, Any]]:
     """팀 정보를 포함한 사용자 목록 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT username, team FROM users ORDER BY team, username')
         return [{'username': row['username'], 'team': row['team']} for row in cursor.fetchall()]
 
-def load_all_users_detail():
+def load_all_users_detail() -> list[dict[str, Any]]:
     """모든 사용자 정보 조회 (관리자용)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -333,7 +339,7 @@ def load_all_users_detail():
         ''')
         return [dict(row) for row in cursor.fetchall()]
 
-def create_user(username, password, role, status='active', team=None):
+def create_user(username: str, password: str, role: str, status: str = 'active', team: Optional[str] = None) -> bool:
     """새 사용자 생성 (관리자용)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -349,7 +355,7 @@ def create_user(username, password, role, status='active', team=None):
                 conn.rollback()
                 return False  # 중복 username
 
-def delete_user(user_id):
+def delete_user(user_id: int) -> bool:
     """사용자 삭제 (관리자용)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -358,7 +364,7 @@ def delete_user(user_id):
             conn.commit()
             return cursor.rowcount > 0
 
-def update_user_status(user_id, status):
+def update_user_status(user_id: int, status: str) -> bool:
     """사용자 활성/비활성 상태 변경"""
     with db_lock:
         with get_db_connection() as conn:
@@ -371,7 +377,7 @@ def update_user_status(user_id, status):
             conn.commit()
             return cursor.rowcount > 0
 
-def update_user_team(user_id, team):
+def update_user_team(user_id: int, team: Optional[str]) -> bool:
     """사용자 팀 변경"""
     with db_lock:
         with get_db_connection() as conn:
@@ -384,7 +390,7 @@ def update_user_team(user_id, team):
             conn.commit()
             return cursor.rowcount > 0
 
-def update_user_role(user_id, role):
+def update_user_role(user_id: int, role: str) -> bool:
     """사용자 권한 변경"""
     with db_lock:
         with get_db_connection() as conn:
@@ -397,7 +403,7 @@ def update_user_role(user_id, role):
             conn.commit()
             return cursor.rowcount > 0
 
-def reset_user_password(user_id, role):
+def reset_user_password(user_id: int, role: str) -> bool:
     """사용자 비밀번호 초기화"""
     default_password = 'admin1234' if role == '관리자' else 'body123!'
     with db_lock:
@@ -411,7 +417,7 @@ def reset_user_password(user_id, role):
             conn.commit()
             return cursor.rowcount > 0
 
-def verify_user_login(username, password):
+def verify_user_login(username: str, password: str) -> Optional[dict[str, Any]]:
     """사용자 로그인 검증 (비밀번호 확인 + 활성 상태 확인)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -423,7 +429,7 @@ def verify_user_login(username, password):
         row = cursor.fetchone()
         return dict(row) if row else None
 
-def get_user_info(username):
+def get_user_info(username: str) -> Optional[dict[str, Any]]:
     """사용자 정보 조회"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -435,7 +441,7 @@ def get_user_info(username):
         row = cursor.fetchone()
         return dict(row) if row else None
 
-def change_user_password(username, current_password, new_password):
+def change_user_password(username: str, current_password: str, new_password: str) -> tuple[bool, str]:
     """사용자 비밀번호 변경 (본인만 가능)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -461,7 +467,7 @@ def change_user_password(username, current_password, new_password):
 
 # ==================== 채팅 관리 (최적화) ====================
 
-def load_chats():
+def load_chats() -> dict[str, dict[str, Any]]:
     """채팅 목록 조회 (최적화: 단일 쿼리로 모든 데이터 로드)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -537,7 +543,7 @@ def load_chats():
 
         return chats
 
-def load_chat_by_id(chat_id):
+def load_chat_by_id(chat_id: int | str) -> Optional[dict[str, dict[str, Any]]]:
     """특정 채팅방만 조회 (최적화: 필요한 데이터만 로드)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -609,7 +615,7 @@ def load_chat_by_id(chat_id):
 
         return {str(chat_id): chat}
 
-def save_chats(chats):
+def save_chats(chats: dict[str, dict[str, Any]]) -> None:
     """채팅 데이터 저장 (트랜잭션 최적화)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -660,7 +666,7 @@ def save_chats(chats):
                 raise e
 
 
-def save_message(chat_id, message):
+def save_message(chat_id: int | str, message: dict[str, Any]) -> int:
     """
     개별 메시지 저장 (최적화: 전체 데이터 로드/저장 없이 단일 INSERT)
 
@@ -704,7 +710,7 @@ def save_message(chat_id, message):
         return msg_id
 
 
-def mark_messages_as_read(chat_id, username):
+def mark_messages_as_read(chat_id: int | str, username: str) -> int:
     """
     채팅방의 모든 메시지를 읽음 처리 (최적화: 직접 INSERT)
 
@@ -735,7 +741,7 @@ def mark_messages_as_read(chat_id, username):
         return affected
 
 
-def mark_single_message_as_read(chat_id, message_id, username):
+def mark_single_message_as_read(chat_id: int | str, message_id: int, username: str) -> bool:
     """
     특정 메시지 하나를 읽음 처리
 
@@ -758,7 +764,7 @@ def mark_single_message_as_read(chat_id, message_id, username):
         return cursor.rowcount > 0
 
 
-def get_message_read_by(message_id):
+def get_message_read_by(message_id: int) -> list[str]:
     """
     특정 메시지의 읽은 사용자 목록 조회
 
@@ -779,7 +785,7 @@ def get_message_read_by(message_id):
 
 
 @log_slow_query
-def get_chat_info(chat_id):
+def get_chat_info(chat_id: int | str) -> Optional[dict[str, Any]]:
     """
     특정 채팅방 정보 조회 (참여자 목록 포함)
 
@@ -816,7 +822,7 @@ def get_chat_info(chat_id):
 
 
 @log_slow_query
-def get_unread_chat_count(username):
+def get_unread_chat_count(username: str) -> int:
     """
     특정 사용자의 읽지 않은 채팅 메시지 개수 조회 (최적화: 단일 쿼리)
 
@@ -848,7 +854,7 @@ def get_unread_chat_count(username):
 
 # ==================== 프로모션 관리 (최적화) ====================
 
-def load_promotions():
+def load_promotions() -> list[dict[str, Any]]:
     """프로모션 목록 조회 (최적화: JOIN으로 단일 쿼리)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -883,7 +889,7 @@ def load_promotions():
 
         return promotions
 
-def save_promotions(promotions):
+def save_promotions(promotions: list[dict[str, Any]]) -> None:
     """프로모션 데이터 저장 (트랜잭션 최적화)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -922,7 +928,7 @@ def save_promotions(promotions):
 
 # ==================== 개인 예약 관리 ====================
 
-def load_reminders(user_id, show_completed=False):
+def load_reminders(user_id: str, show_completed: bool = False) -> list[dict[str, Any]]:
     """개인 예약 목록 조회 (사용자별)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -950,7 +956,7 @@ def load_reminders(user_id, show_completed=False):
             result.append(r)
         return result
 
-def add_reminder(user_id, title, content, scheduled_date, scheduled_time):
+def add_reminder(user_id: str, title: str, content: str, scheduled_date: str, scheduled_time: str) -> int:
     """새 예약 추가"""
     with db_lock:
         with get_db_connection() as conn:
@@ -963,7 +969,7 @@ def add_reminder(user_id, title, content, scheduled_date, scheduled_time):
             conn.commit()
             return cursor.fetchone()['id']
 
-def update_reminder(reminder_id, user_id, title, content, scheduled_date, scheduled_time):
+def update_reminder(reminder_id: int, user_id: str, title: str, content: str, scheduled_date: str, scheduled_time: str) -> bool:
     """예약 수정 (본인 것만 수정 가능)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -977,7 +983,7 @@ def update_reminder(reminder_id, user_id, title, content, scheduled_date, schedu
             conn.commit()
             return cursor.rowcount > 0
 
-def delete_reminder(reminder_id, user_id):
+def delete_reminder(reminder_id: int, user_id: str) -> bool:
     """예약 삭제 (본인 것만 삭제 가능)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -986,7 +992,7 @@ def delete_reminder(reminder_id, user_id):
             conn.commit()
             return cursor.rowcount > 0
 
-def toggle_reminder_complete(reminder_id, user_id):
+def toggle_reminder_complete(reminder_id: int, user_id: str) -> bool:
     """예약 완료 상태 토글"""
     with db_lock:
         with get_db_connection() as conn:
@@ -1000,7 +1006,7 @@ def toggle_reminder_complete(reminder_id, user_id):
             conn.commit()
             return cursor.rowcount > 0
 
-def mark_reminder_notified(reminder_id):
+def mark_reminder_notified(reminder_id: int) -> None:
     """30분 전 알림 발송 완료 표시"""
     with db_lock:
         with get_db_connection() as conn:
@@ -1012,7 +1018,7 @@ def mark_reminder_notified(reminder_id):
             ''', (reminder_id,))
             conn.commit()
 
-def get_pending_notifications(user_id):
+def get_pending_notifications(user_id: str) -> list[dict[str, Any]]:
     """알림이 필요한 예약 목록 (30분 전, 아직 알림 안 보낸 것)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1034,7 +1040,7 @@ def get_pending_notifications(user_id):
         return result
 
 
-def get_all_pending_reminder_notifications():
+def get_all_pending_reminder_notifications() -> list[dict[str, Any]]:
     """모든 사용자의 30분 이내 예약 알림 목록 (스케줄러용)"""
     from datetime import datetime, timedelta
 
@@ -1072,7 +1078,7 @@ def get_all_pending_reminder_notifications():
 
 # ==================== 사용자 알림 설정 ====================
 
-def get_user_notification_settings(username):
+def get_user_notification_settings(username: str) -> dict[str, Any]:
     """사용자의 알림 설정 조회 (없으면 기본값 반환)"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1102,7 +1108,7 @@ def get_user_notification_settings(username):
         }
 
 
-def save_user_notification_settings(username, settings):
+def save_user_notification_settings(username: str, settings: dict[str, Any]) -> bool:
     """사용자 알림 설정 저장 (UPSERT)"""
     with db_lock:
         with get_db_connection() as conn:
@@ -1133,7 +1139,7 @@ def save_user_notification_settings(username, settings):
             return True
 
 
-def update_last_daily_summary(username, date_str):
+def update_last_daily_summary(username: str, date_str: str) -> None:
     """일일 요약 발송 날짜 업데이트"""
     with db_lock:
         with get_db_connection() as conn:
@@ -1146,7 +1152,7 @@ def update_last_daily_summary(username, date_str):
             conn.commit()
 
 
-def get_users_needing_daily_summary():
+def get_users_needing_daily_summary() -> list[dict[str, Any]]:
     """일일 요약이 필요한 사용자 목록 (오늘 아직 안 보낸 사람)"""
     from datetime import date
     today = str(date.today())
@@ -1164,7 +1170,7 @@ def get_users_needing_daily_summary():
         return [dict(row) for row in rows]
 
 
-def get_all_reminder_users():
+def get_all_reminder_users() -> list[str]:
     """예약이 있는 모든 사용자 목록"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1175,7 +1181,7 @@ def get_all_reminder_users():
         return [row['user_id'] for row in rows]
 
 
-def get_today_reminder_count(username):
+def get_today_reminder_count(username: str) -> int:
     """사용자의 당일 예약 개수"""
     from datetime import date
     today = str(date.today())
@@ -1190,7 +1196,7 @@ def get_today_reminder_count(username):
         return row['count'] if row else 0
 
 
-def get_today_reminders_list(username):
+def get_today_reminders_list(username: str) -> list[dict[str, Any]]:
     """사용자의 당일 예약 목록 (시간순)"""
     from datetime import date
     today = str(date.today())
@@ -1206,7 +1212,7 @@ def get_today_reminders_list(username):
         return [dict(row) for row in rows]
 
 
-def update_reminder_notification(reminder_id):
+def update_reminder_notification(reminder_id: int) -> None:
     """예약 알림 발송 기록 업데이트"""
     with db_lock:
         with get_db_connection() as conn:
@@ -1221,7 +1227,7 @@ def update_reminder_notification(reminder_id):
             conn.commit()
 
 
-def get_pending_reminders_for_notification():
+def get_pending_reminders_for_notification() -> list[dict[str, Any]]:
     """알림이 필요한 모든 예약 목록 (사용자별 설정 적용)"""
     from datetime import datetime, timedelta
 
@@ -1291,7 +1297,7 @@ def get_pending_reminders_for_notification():
 
 # ==================== 유틸리티 ====================
 
-def get_next_id(table):
+def get_next_id(table: str) -> int:
     """다음 사용할 ID 반환"""
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -1299,7 +1305,7 @@ def get_next_id(table):
         result = cursor.fetchone()['max']
         return (result or 0) + 1
 
-def vacuum_database():
+def vacuum_database() -> None:
     """데이터베이스 최적화 (PostgreSQL은 VACUUM 자동 실행)"""
     with get_db_connection() as conn:
         old_isolation = conn.isolation_level
@@ -1311,7 +1317,7 @@ def vacuum_database():
 
 # ==================== 공휴일 관리 ====================
 
-def load_holidays(year=None):
+def load_holidays(year: Optional[int] = None) -> list[dict[str, Any]]:
     """공휴일 조회
     Args:
         year: 연도 (None이면 모든 공휴일)

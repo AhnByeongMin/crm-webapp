@@ -1,11 +1,13 @@
 # Eventlet monkey patching (최상단 필수!)
+from __future__ import annotations
 import eventlet
 eventlet.monkey_patch()
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory, send_file, Response
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_compress import Compress
 from werkzeug.utils import secure_filename
+from werkzeug.wrappers import Response as WerkzeugResponse
 import json
 import os
 import uuid
@@ -13,6 +15,7 @@ import threading
 from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
+from typing import Any, Optional, Union
 import database  # SQLite 데이터베이스 헬퍼
 import pandas as pd
 import random
@@ -25,7 +28,7 @@ from rate_limiter import (
 from csrf_protection import init_csrf, exempt_csrf, is_csrf_exempt
 
 # 로깅 설정
-def setup_logging():
+def setup_logging() -> logging.Logger:
     """애플리케이션 로깅 설정"""
     # 로그 디렉토리 생성
     log_dir = os.path.join(os.path.dirname(__file__), 'logs')
@@ -112,7 +115,7 @@ FILE_SIGNATURES = {
     'rar': [b'Rar!\x1a\x07'],
 }
 
-def validate_file_signature(file_stream, extension):
+def validate_file_signature(file_stream: Any, extension: str) -> bool:
     """파일 시그니처로 실제 파일 타입 검증"""
     ext = extension.lower()
     if ext not in FILE_SIGNATURES:
@@ -142,7 +145,7 @@ socketio = SocketIO(
 _admin_cache = None
 _admin_cache_time = None
 
-def get_admin_accounts():
+def get_admin_accounts() -> set[str]:
     """관리자 사용자명 집합 반환 (5분 캐시)"""
     global _admin_cache, _admin_cache_time
     import time
@@ -169,12 +172,13 @@ load_users_by_team = database.load_users_by_team
 load_teams = database.load_teams
 load_users_with_team = database.load_users_with_team
 
-def is_localhost():
+def is_localhost() -> bool:
+    """로컬호스트 여부 확인"""
     # Nginx 프록시 뒤에서는 X-Real-IP 헤더 사용
     real_ip = request.headers.get('X-Real-IP', request.remote_addr)
     return real_ip in ['127.0.0.1', 'localhost', '::1']
 
-def is_admin():
+def is_admin() -> bool:
     """실제 관리자 권한 확인 (로컬호스트 또는 관리자 역할)"""
     if is_localhost():
         return True
@@ -189,7 +193,7 @@ def is_admin():
 
     return False
 
-def require_login():
+def require_login() -> Optional[WerkzeugResponse]:
     """로그인 필수 체크 - 로그인하지 않은 경우 로그인 페이지로 리다이렉트"""
     if is_localhost():
         return None  # localhost는 항상 허용
@@ -199,7 +203,7 @@ def require_login():
 
     return None
 
-def require_admin():
+def require_admin() -> Optional[Union[WerkzeugResponse, str]]:
     """관리자 권한 필수 체크 - 권한 없으면 access_denied 페이지로"""
     if is_localhost():
         return None  # localhost는 항상 허용
@@ -216,7 +220,7 @@ def require_admin():
 
 # Asset versioning for cache busting
 _asset_manifest = None
-def load_asset_manifest():
+def load_asset_manifest() -> dict[str, str]:
     """Load asset manifest with file hashes"""
     global _asset_manifest
     if _asset_manifest is None:
@@ -749,7 +753,8 @@ def favicon():
     return '', 204
 
 # 파일 업로드/다운로드
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
+    """허용된 파일 확장자인지 확인"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/upload', methods=['POST'])
@@ -2615,7 +2620,7 @@ def push_unsubscribe():
         return jsonify({'error': '구독 해제 중 오류가 발생했습니다'}), 500
 
 @cached(ttl=10, key_prefix='nav_counts')
-def calculate_nav_counts(username):
+def calculate_nav_counts(username: str) -> dict[str, int]:
     """네비게이션 바 카운트 계산 (최적화: 전용 쿼리 사용, 10초 캐시)"""
     counts = {
         'pending_tasks': 0,
