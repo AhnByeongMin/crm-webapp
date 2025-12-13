@@ -68,6 +68,21 @@
         .password-hint { font-size: 13px; color: #6c757d; margin-top: 8px; }
         .localhost-notice { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin-bottom: 20px; color: #856404; }
 
+        /* 화면 설정 섹션 */
+        .settings-section { margin-top: 30px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
+        .settings-section h2 { font-size: 20px; margin-bottom: 20px; color: #333; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #dee2e6; }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-label { font-weight: bold; color: #495057; }
+        .setting-description { font-size: 13px; color: #6c757d; margin-top: 4px; }
+        .font-size-btns { display: flex; gap: 8px; }
+        .font-size-btn { padding: 8px 16px; border: 2px solid #dee2e6; background: white; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        .font-size-btn:hover { border-color: #667eea; }
+        .font-size-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .font-size-btn.small { font-size: 13px; }
+        .font-size-btn.medium { font-size: 15px; }
+        .font-size-btn.large { font-size: 17px; }
+
         /* 도움말 섹션 (마이페이지 전용) */
         .help-section {
             margin-bottom: 25px;
@@ -151,6 +166,23 @@
                 <button type="submit" class="btn-primary" {% if username == 'Admin' %}disabled{% endif %}>비밀번호 변경</button>
             </form>
         </div>
+
+        <!-- 화면 설정 -->
+        <div class="settings-section">
+            <h2>⚙️ 화면 설정</h2>
+
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">글자 크기</div>
+                    <div class="setting-description">전체 화면의 글자 크기를 조절합니다</div>
+                </div>
+                <div class="font-size-btns">
+                    <button class="font-size-btn small" onclick="setFontSize('small')" data-size="small">작게</button>
+                    <button class="font-size-btn medium" onclick="setFontSize('medium')" data-size="medium">보통</button>
+                    <button class="font-size-btn large" onclick="setFontSize('large')" data-size="large">크게</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -208,6 +240,39 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+        // 폰트 크기 설정
+        const FONT_SIZE_KEY = 'crm_font_size';
+        const fontSizes = {
+            small: '14px',
+            medium: '16px',
+            large: '18px'
+        };
+
+        function setFontSize(size) {
+            localStorage.setItem(FONT_SIZE_KEY, size);
+            document.documentElement.style.fontSize = fontSizes[size];
+
+            // 버튼 활성화 상태 업데이트
+            document.querySelectorAll('.font-size-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.size === size);
+            });
+
+            showToast(`글자 크기가 '${size === 'small' ? '작게' : size === 'medium' ? '보통' : '크게'}'로 변경되었습니다.`, 'success');
+        }
+
+        function loadFontSize() {
+            const savedSize = localStorage.getItem(FONT_SIZE_KEY) || 'medium';
+            document.documentElement.style.fontSize = fontSizes[savedSize];
+
+            // 버튼 활성화 상태 초기화
+            document.querySelectorAll('.font-size-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.size === savedSize);
+            });
+        }
+
+        // 페이지 로드 시 폰트 크기 적용
+        loadFontSize();
 
         // 도움말 모달 제어
         function openHelpModal() {
