@@ -63,7 +63,10 @@
       "Bash(/svc/was/crm/crm-webapp/scripts/status.sh:*)",
       "Bash(wc:*)",
       "Bash(timeout 30 python3:*)",
-      "Bash(/svc/was/crm/crm-webapp/scripts/restart.sh:*)"
+      "Bash(/svc/was/crm/crm-webapp/scripts/restart.sh:*)",
+      "Bash(lsof:*)",
+      "Bash(do echo '=== 12월 $day일 ===')",
+      "Bash(do echo '--- 12/$day ---')"
     ],
     "deny": [],
     "ask": []
