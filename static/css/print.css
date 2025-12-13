@@ -1,0 +1,493 @@
+/**
+ * 인쇄 최적화 스타일
+ * @media print를 활용한 인쇄 전용 레이아웃
+ */
+
+@media print {
+    /* ========== 기본 설정 ========== */
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    html, body {
+        width: 100%;
+        height: auto;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 12pt;
+        line-height: 1.5;
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    /* ========== 숨길 요소 ========== */
+
+    /* 네비게이션 및 헤더 */
+    .header,
+    .nav,
+    .nav-toggle,
+    .header-settings,
+    .mobile-nav,
+    .sidebar,
+    .footer,
+    footer,
+    nav {
+        display: none !important;
+    }
+
+    /* 인터랙티브 요소 */
+    button:not(.print-visible),
+    .btn:not(.print-visible),
+    input[type="button"]:not(.print-visible),
+    input[type="submit"]:not(.print-visible),
+    .upload-btn,
+    .action-btn,
+    .fab,
+    .floating-btn {
+        display: none !important;
+    }
+
+    /* 모달 및 팝업 */
+    .modal,
+    .popup,
+    .dialog,
+    .overlay,
+    .toast,
+    .tooltip,
+    .dropdown-menu {
+        display: none !important;
+    }
+
+    /* UX 컴포넌트 */
+    .voice-input-btn,
+    .voice-listening-indicator,
+    .upload-progress-container,
+    .notification-center,
+    .search-history-dropdown,
+    .autocomplete-dropdown,
+    .onboarding-overlay,
+    .page-transition-overlay,
+    .pull-to-refresh-indicator,
+    .touch-feedback-ripple {
+        display: none !important;
+    }
+
+    /* 기타 비필수 요소 */
+    .scroll-to-top,
+    .chat-input-area,
+    .message-input,
+    .emoji-picker,
+    .file-upload-zone,
+    .ad-banner,
+    .cookie-notice,
+    .alert-dismissible .close,
+    .no-print,
+    [data-no-print] {
+        display: none !important;
+    }
+
+    /* ========== 레이아웃 조정 ========== */
+
+    .container,
+    .page-content,
+    .content-wrapper,
+    .main-content,
+    main {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 15px !important;
+    }
+
+    /* 카드 및 박스 */
+    .card,
+    .panel,
+    .box,
+    .section {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        page-break-inside: avoid;
+        margin-bottom: 15px !important;
+    }
+
+    /* 테이블 */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
+    }
+
+    th, td {
+        border: 1px solid #ccc !important;
+        padding: 8px !important;
+        text-align: left;
+        background: transparent !important;
+    }
+
+    th {
+        background: #f5f5f5 !important;
+        font-weight: bold;
+    }
+
+    /* 리스트 */
+    .task-list,
+    .reminder-list,
+    .chat-list,
+    .user-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .task-item,
+    .reminder-item,
+    .chat-item,
+    .list-item {
+        border: 1px solid #ddd !important;
+        margin-bottom: 10px !important;
+        padding: 10px !important;
+        page-break-inside: avoid;
+    }
+
+    /* ========== 채팅 관련 ========== */
+
+    .chat-container,
+    .messages-container {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .message-bubble {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        margin-bottom: 8px !important;
+        page-break-inside: avoid;
+    }
+
+    .message-bubble.sent {
+        background: #e8f4fd !important;
+        margin-left: 20% !important;
+    }
+
+    .message-bubble.received {
+        background: #f5f5f5 !important;
+        margin-right: 20% !important;
+    }
+
+    .message-time {
+        color: #666 !important;
+        font-size: 9pt !important;
+    }
+
+    .message-image,
+    .chat-image {
+        max-width: 300px !important;
+        max-height: 200px !important;
+        page-break-inside: avoid;
+    }
+
+    /* ========== 타이포그래피 ========== */
+
+    h1 { font-size: 20pt; }
+    h2 { font-size: 16pt; }
+    h3 { font-size: 14pt; }
+    h4 { font-size: 12pt; }
+    h5, h6 { font-size: 11pt; }
+
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+    }
+
+    p, li, dt, dd {
+        orphans: 3;
+        widows: 3;
+    }
+
+    /* 링크 */
+    a {
+        color: #000 !important;
+        text-decoration: underline !important;
+    }
+
+    /* URL 표시 */
+    a[href^="http"]:after,
+    a[href^="https"]:after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: #666;
+        word-wrap: break-word;
+    }
+
+    /* 내부 링크는 URL 숨김 */
+    a[href^="/"]:after,
+    a[href^="#"]:after,
+    a[href^="javascript"]:after {
+        content: "";
+    }
+
+    /* ========== 이미지 ========== */
+
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+
+    /* 로고 및 아이콘 */
+    .logo,
+    .icon,
+    .avatar {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* ========== 폼 요소 ========== */
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    textarea,
+    select {
+        border: 1px solid #ccc !important;
+        background: #fff !important;
+        padding: 5px !important;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* ========== 상태 표시 ========== */
+
+    .badge,
+    .tag,
+    .label,
+    .status {
+        border: 1px solid currentColor !important;
+        background: transparent !important;
+        padding: 2px 6px !important;
+    }
+
+    .badge-success,
+    .status-complete {
+        color: #28a745 !important;
+    }
+
+    .badge-warning,
+    .status-pending {
+        color: #ffc107 !important;
+    }
+
+    .badge-danger,
+    .status-overdue {
+        color: #dc3545 !important;
+    }
+
+    /* ========== 페이지 나누기 ========== */
+
+    .page-break {
+        page-break-after: always;
+    }
+
+    .page-break-before {
+        page-break-before: always;
+    }
+
+    .no-page-break {
+        page-break-inside: avoid;
+    }
+
+    /* 새 페이지에서 시작할 섹션 */
+    .print-section {
+        page-break-before: always;
+    }
+
+    .print-section:first-of-type {
+        page-break-before: auto;
+    }
+
+    /* ========== 인쇄 전용 표시 요소 ========== */
+
+    .print-only {
+        display: block !important;
+    }
+
+    .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #333;
+    }
+
+    .print-header h1 {
+        margin: 0;
+        font-size: 18pt;
+    }
+
+    .print-header .print-date {
+        font-size: 10pt;
+        color: #666;
+        margin-top: 5px;
+    }
+
+    .print-footer {
+        display: block !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 9pt;
+        color: #666;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+    }
+
+    /* ========== 특수 페이지 ========== */
+
+    /* 할일 관리 */
+    .task-priority-high {
+        border-left: 4px solid #dc3545 !important;
+    }
+
+    .task-priority-medium {
+        border-left: 4px solid #ffc107 !important;
+    }
+
+    .task-priority-low {
+        border-left: 4px solid #28a745 !important;
+    }
+
+    /* 예약 관리 */
+    .reminder-time {
+        font-weight: bold;
+        font-size: 11pt;
+    }
+
+    .reminder-date {
+        color: #666;
+        font-size: 10pt;
+    }
+
+    /* 프로모션 */
+    .promo-card {
+        border: 2px solid #667eea !important;
+        padding: 15px !important;
+    }
+
+    .promo-title {
+        font-size: 14pt;
+        font-weight: bold;
+    }
+
+    .promo-dates {
+        font-size: 10pt;
+        color: #666;
+    }
+
+    /* ========== 유틸리티 ========== */
+
+    .text-muted {
+        color: #666 !important;
+    }
+
+    .text-primary {
+        color: #0056b3 !important;
+    }
+
+    .bg-light {
+        background: #f8f9fa !important;
+    }
+
+    .border {
+        border: 1px solid #ddd !important;
+    }
+
+    /* 정렬 */
+    .text-center {
+        text-align: center !important;
+    }
+
+    .text-right {
+        text-align: right !important;
+    }
+
+    /* ========== 페이지 설정 ========== */
+
+    @page {
+        size: A4;
+        margin: 15mm 10mm;
+    }
+
+    @page :first {
+        margin-top: 20mm;
+    }
+
+    /* 가로 모드 (채팅, 테이블) */
+    @page landscape {
+        size: A4 landscape;
+    }
+
+    .print-landscape {
+        page: landscape;
+    }
+}
+
+/* ========== 화면에서 숨길 요소 ========== */
+
+.print-only,
+.print-header,
+.print-footer {
+    display: none;
+}
+
+/* ========== 인쇄 미리보기 버튼 ========== */
+
+.print-preview-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    z-index: 1000;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.print-preview-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+@media print {
+    .print-preview-btn {
+        display: none !important;
+    }
+}
