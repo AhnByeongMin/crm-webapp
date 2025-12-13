@@ -380,27 +380,65 @@ function quickAddTodayReminder() {
     checkTodayReminders();
 })();
 
-// 당일 예약 확인 (배지 업데이트) - 캐싱 없이 즉시 조회
-async function checkTodayReminders() {
+// 당일 예약 확인 (배지 업데이트) - 스마트 캐싱
+// 전략: 첫 로드 시 즉시 조회 → 캐싱 → 이후 캐시 활용 + 변동 감지 시 갱신
+const REMINDER_CACHE_KEY = 'crm_reminder_badge_v3';
+const REMINDER_CACHE_TTL = 5 * 60 * 1000; // 5분
+let lastKnownCount = null;
+
+async function checkTodayReminders(forceRefresh = false) {
     try {
+        // 캐시가 있고 강제 새로고침이 아닌 경우 캐시 먼저 표시 (빠른 UI 반응)
+        if (!forceRefresh) {
+            const cached = localStorage.getItem(REMINDER_CACHE_KEY);
+            if (cached) {
+                const { count, timestamp } = JSON.parse(cached);
+                // TTL 이내면 캐시 사용
+                if (Date.now() - timestamp < REMINDER_CACHE_TTL) {
+                    updateReminderBadge(count);
+                    lastKnownCount = count;
+                    return;
+                }
+            }
+        }
+
+        // 서버에서 최신 데이터 조회
         const response = await fetch('/api/reminders/banner-check');
         const data = await response.json();
-        updateReminderBadge(data);
+
+        // 당일 예약만 표시 (과거 예약 제외)
+        const todayCount = data.today_count || 0;
+
+        // 배지 업데이트
+        updateReminderBadge(todayCount);
+
+        // 캐시 저장
+        localStorage.setItem(REMINDER_CACHE_KEY, JSON.stringify({
+            count: todayCount,
+            timestamp: Date.now()
+        }));
+
+        lastKnownCount = todayCount;
     } catch (error) {
         console.error('예약 확인 실패:', error);
     }
 }
 
-function updateReminderBadge(data) {
+// 예약 변경 시 즉시 갱신 (완료, 추가, 수정 후 호출)
+function refreshReminderBadge() {
+    // 캐시 무효화 후 즉시 조회
+    localStorage.removeItem(REMINDER_CACHE_KEY);
+    checkTodayReminders(true);
+}
+
+function updateReminderBadge(count) {
     const badge = document.getElementById('reminderBadge');
     if (!badge) return;
 
-    // 당일 + 지난 미완료 예약 합산 표시
-    const totalCount = (data.today_count || 0) + (data.overdue_count || 0);
-
-    if (totalCount > 0) {
+    // 당일 예약 건수만 표시
+    if (count > 0) {
         badge.style.display = 'flex';
-        badge.textContent = totalCount;
+        badge.textContent = count;
     } else {
         badge.style.display = 'none';
     }
@@ -471,9 +509,9 @@ async function completeReminder(reminderId) {
         });
 
         if (response.ok) {
-            // 목록 새로고침
+            // 목록 새로고침 + 배지 즉시 갱신 (캐시 무효화)
             loadTodayReminders();
-            checkTodayReminders();
+            refreshReminderBadge();
         }
     } catch (error) {
         console.error('예약 완료 처리 실패:', error);
@@ -487,10 +525,11 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Socket.IO 이벤트 리스너 (배지 업데이트)
+// Socket.IO 이벤트 리스너 (배지 업데이트 - 다른 탭/기기에서 변경 시)
 if (typeof socket !== 'undefined') {
     socket.on('nav_counts_update', (counts) => {
-        checkTodayReminders();
+        // 서버에서 변경 알림 받으면 캐시 무효화 후 즉시 갱신
+        refreshReminderBadge();
     });
 }
 </script>

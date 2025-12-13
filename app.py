@@ -3184,16 +3184,13 @@ def calculate_nav_counts(username: str) -> dict[str, int]:
                 row = cursor.fetchone()
                 counts['pending_tasks'] = row['count'] if row else 0
 
-        # 당일 + 지난 미완료 예약 개수
+        # 당일 예약 개수만 표시 (과거 예약 제외)
         from datetime import date
         today = str(date.today())
         reminders = database.load_reminders(username)
-        # 당일 예약 (미완료)
+        # 당일 예약 (미완료)만 카운트
         today_reminders = [r for r in reminders if r.get('scheduled_date') == today and not r.get('completed')]
-        # 지난 미완료 예약 (overdue)
-        overdue_reminders = [r for r in reminders if r.get('scheduled_date', '') < today and not r.get('completed')]
-        # 합산하여 표시
-        counts['today_reminders'] = len(today_reminders) + len(overdue_reminders)
+        counts['today_reminders'] = len(today_reminders)
 
     except Exception as e:
         logger.error(f"Error calculating nav counts for {username}: {e}")
