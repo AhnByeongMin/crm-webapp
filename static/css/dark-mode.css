@@ -1229,3 +1229,341 @@
     border-color: var(--border-color);
     color: var(--text-primary);
 }
+
+/* ========== 스크린샷 기반 추가 수정 ========== */
+
+/* 프로모션 - 상세 내용 배경 흰색 문제 해결 */
+[data-theme="dark"] .promo-block,
+[data-theme="dark"] .detail-row,
+[data-theme="dark"] .detail-row td {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .content-text {
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .info-grid {
+    background: transparent !important;
+}
+
+[data-theme="dark"] .info-grid .info-value,
+[data-theme="dark"] .info-value {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .info-grid .info-label,
+[data-theme="dark"] .info-label {
+    color: var(--text-muted) !important;
+}
+
+/* 프로모션 테이블 전체 */
+[data-theme="dark"] table,
+[data-theme="dark"] tbody,
+[data-theme="dark"] tr,
+[data-theme="dark"] td {
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] table tr:hover {
+    background: var(--bg-hover);
+}
+
+/* 채널 필터 버튼 영역 - 흰색 배경 문제 */
+[data-theme="dark"] .channel-filter {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .channel-filter-btn {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .channel-filter-btn.active {
+    color: white !important;
+}
+
+[data-theme="dark"] .channel-filter-btn:not(.active):hover {
+    background: var(--bg-hover) !important;
+}
+
+/* 할일 관리 페이지 - 흰색 배경 문제 */
+[data-theme="dark"] #addForm,
+[data-theme="dark"] .task-form {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .task-card,
+[data-theme="dark"] .task-item,
+[data-theme="dark"] .task-row {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .task-card:hover,
+[data-theme="dark"] .task-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+/* 채팅방 - 메시지 영역 */
+[data-theme="dark"] .messages,
+[data-theme="dark"] #messages,
+[data-theme="dark"] .messages-container {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .message,
+[data-theme="dark"] .message-item {
+    background: transparent !important;
+}
+
+[data-theme="dark"] .message-bubble {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .message-bubble.mine,
+[data-theme="dark"] .message.mine .message-bubble {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .message-username {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .message-time {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .message-text {
+    color: var(--text-primary) !important;
+}
+
+/* 채팅 입력 영역 */
+[data-theme="dark"] .input-container,
+[data-theme="dark"] .chat-input,
+[data-theme="dark"] .input-area {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #messageInput,
+[data-theme="dark"] .message-input {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 도움말 모달 - 시인성 개선 */
+[data-theme="dark"] .help-modal,
+[data-theme="dark"] .help-modal-content {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .help-modal-header {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .help-modal-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .help-modal-body {
+    background: var(--modal-bg) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .help-modal-body h2,
+[data-theme="dark"] .help-modal-body h3,
+[data-theme="dark"] .help-modal-body h4 {
+    color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .help-modal-body p,
+[data-theme="dark"] .help-modal-body li {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .help-modal-body ul {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .help-modal-body strong {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .help-content {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .help-content li {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .help-section-title {
+    color: var(--accent-primary) !important;
+}
+
+/* 내 예약 페이지 - 카드 배경 */
+[data-theme="dark"] .calendar-section {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .calendar-day {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .calendar-day.sunday {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .calendar-day.saturday {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .calendar-day.today {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .calendar-day.selected {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .calendar-day.has-reminder {
+    background: #44403c !important;
+    border-color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .reminders-section,
+[data-theme="dark"] .reminders-wrapper {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .reminder-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .reminder-card.today {
+    background: #2d1f1f !important;
+}
+
+[data-theme="dark"] .reminder-card.upcoming {
+    background: #2d2a1f !important;
+}
+
+[data-theme="dark"] .reminder-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .reminder-content {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .reminder-datetime {
+    color: var(--text-muted) !important;
+}
+
+/* 알림 배너 - 노란색 경고 */
+[data-theme="dark"] .alert-banner,
+[data-theme="dark"] .alert-banner.warning {
+    background: #44403c !important;
+    border-color: #fbbf24 !important;
+    color: #fbbf24 !important;
+}
+
+/* 검색 입력 영역 */
+[data-theme="dark"] .search-input,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="search"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="datetime-local"] {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+[data-theme="dark"] textarea {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+[data-theme="dark"] select {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 체크박스 라벨 텍스트 */
+[data-theme="dark"] .filter-section label,
+[data-theme="dark"] .form-check-label,
+[data-theme="dark"] label {
+    color: var(--text-primary) !important;
+}
+
+/* 버튼 기본 스타일 유지 (primary, success, danger 등) */
+[data-theme="dark"] .btn-primary {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .btn-success {
+    background: #22c55e !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .btn-danger {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: #6b7280 !important;
+    color: white !important;
+}
+
+/* 날짜 구분선 */
+[data-theme="dark"] .date-separator {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .date-separator span {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+}
+
+/* 시스템 메시지 */
+[data-theme="dark"] .system-message {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+}
+
+/* 복사 버튼 */
+[data-theme="dark"] .copy-btn,
+[data-theme="dark"] .message-copy-btn {
+    background: rgba(255,255,255,0.1) !important;
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .copy-btn:hover,
+[data-theme="dark"] .message-copy-btn:hover {
+    background: rgba(255,255,255,0.2) !important;
+    color: var(--text-primary) !important;
+}
