@@ -22,6 +22,7 @@
     <!-- 그 다음 auto-update와 push-notifications -->
     <script src="/static/js/sw-auto-update.js"></script>
     <script src="/static/js/push-notifications.js" defer></script>
+    <link rel="stylesheet" href="/static/css/loading-spinner.css">
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -329,9 +330,53 @@
                 <div class="reminders-section">
                     <div id="alertBanners"></div>
                     <div id="remindersContainer">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📅</div>
-                            <p>예약이 없습니다</p>
+                        <!-- 스켈레톤 로딩 -->
+                        <div id="remindersSkeleton" class="reminders-grid">
+                            <div class="skeleton-reminder-card">
+                                <div class="skeleton-reminder-header">
+                                    <div>
+                                        <div class="skeleton skeleton-reminder-title"></div>
+                                        <div class="skeleton skeleton-reminder-datetime"></div>
+                                    </div>
+                                    <div class="skeleton skeleton-reminder-badge"></div>
+                                </div>
+                                <div class="skeleton skeleton-reminder-content"></div>
+                                <div class="skeleton-reminder-actions">
+                                    <div class="skeleton skeleton-btn"></div>
+                                    <div class="skeleton skeleton-btn"></div>
+                                    <div class="skeleton skeleton-btn"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-reminder-card">
+                                <div class="skeleton-reminder-header">
+                                    <div>
+                                        <div class="skeleton skeleton-reminder-title" style="width: 40%;"></div>
+                                        <div class="skeleton skeleton-reminder-datetime" style="width: 180px;"></div>
+                                    </div>
+                                    <div class="skeleton skeleton-reminder-badge"></div>
+                                </div>
+                                <div class="skeleton skeleton-reminder-content" style="width: 85%;"></div>
+                                <div class="skeleton-reminder-actions">
+                                    <div class="skeleton skeleton-btn"></div>
+                                    <div class="skeleton skeleton-btn"></div>
+                                    <div class="skeleton skeleton-btn"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-reminder-card">
+                                <div class="skeleton-reminder-header">
+                                    <div>
+                                        <div class="skeleton skeleton-reminder-title" style="width: 60%;"></div>
+                                        <div class="skeleton skeleton-reminder-datetime" style="width: 160px;"></div>
+                                    </div>
+                                    <div class="skeleton skeleton-reminder-badge"></div>
+                                </div>
+                                <div class="skeleton skeleton-reminder-content" style="width: 50%;"></div>
+                                <div class="skeleton-reminder-actions">
+                                    <div class="skeleton skeleton-btn"></div>
+                                    <div class="skeleton skeleton-btn"></div>
+                                    <div class="skeleton skeleton-btn"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -553,9 +598,19 @@
 
             if (reminders.length === 0) {
                 container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📅</div>
-                        <p>${selectedDate ? selectedDate + '에 예약이 없습니다' : '예약이 없습니다'}</p>
+                    <div class="empty-state-container ${selectedDate ? 'empty-state-filter' : ''}">
+                        <div class="empty-state-illustration">📅</div>
+                        <div class="empty-state-title">${selectedDate ? selectedDate + '에 예약이 없습니다' : '예약이 없습니다'}</div>
+                        <div class="empty-state-description">
+                            ${selectedDate
+                                ? '선택한 날짜에 등록된 예약이 없습니다. 다른 날짜를 선택하거나 새로운 예약을 추가해보세요.'
+                                : '아직 등록된 예약이 없습니다. 새로운 예약을 추가하여 일정을 관리해보세요!'}
+                        </div>
+                        <button class="empty-state-action" onclick="openAddModal()">
+                            <span class="icon">➕</span>
+                            새 예약 추가
+                        </button>
+                        ${selectedDate ? '<div class="empty-state-hint"><a href="#" onclick="clearDateFilter(); return false;">전체 예약 보기</a></div>' : ''}
                     </div>
                 `;
                 return;
@@ -581,7 +636,7 @@
                 }
             });
 
-            let html = '<div class="reminders-grid">';
+            let html = '<div class="reminders-grid content-fade-in">';
 
             if (todayReminders.length > 0) {
                 todayReminders.forEach(r => {

@@ -362,9 +362,38 @@
         </div>
 
         <div id="chatList">
-            <div class="loading-container">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">채팅방 로딩 중...</div>
+            <!-- 스켈레톤 로딩 -->
+            <div id="chatListSkeleton" class="chat-list">
+                <div class="skeleton-chat-item">
+                    <div class="skeleton-chat-content">
+                        <div class="skeleton-chat-header">
+                            <div class="skeleton skeleton-chat-title"></div>
+                            <div class="skeleton skeleton-chat-time"></div>
+                        </div>
+                        <div class="skeleton skeleton-chat-preview"></div>
+                        <div class="skeleton skeleton-chat-participants"></div>
+                    </div>
+                </div>
+                <div class="skeleton-chat-item">
+                    <div class="skeleton-chat-content">
+                        <div class="skeleton-chat-header">
+                            <div class="skeleton skeleton-chat-title" style="width: 55%;"></div>
+                            <div class="skeleton skeleton-chat-time"></div>
+                        </div>
+                        <div class="skeleton skeleton-chat-preview" style="width: 65%;"></div>
+                        <div class="skeleton skeleton-chat-participants" style="width: 40%;"></div>
+                    </div>
+                </div>
+                <div class="skeleton-chat-item">
+                    <div class="skeleton-chat-content">
+                        <div class="skeleton-chat-header">
+                            <div class="skeleton skeleton-chat-title" style="width: 35%;"></div>
+                            <div class="skeleton skeleton-chat-time"></div>
+                        </div>
+                        <div class="skeleton skeleton-chat-preview" style="width: 90%;"></div>
+                        <div class="skeleton skeleton-chat-participants" style="width: 60%;"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -570,9 +599,18 @@
 
                     if (chatArray.length === 0) {
                         container.innerHTML = `
-                            <div class="empty">
-                                <div class="empty-icon">💬</div>
-                                <p>${currentTab === 'all' ? '채팅방이 없습니다.' : '참여 중인 채팅방이 없습니다.'}</p>
+                            <div class="empty-state-container">
+                                <div class="empty-state-illustration">💬</div>
+                                <div class="empty-state-title">${currentTab === 'all' ? '채팅방이 없습니다' : '참여 중인 채팅방이 없습니다'}</div>
+                                <div class="empty-state-description">
+                                    ${currentTab === 'all'
+                                        ? '아직 생성된 채팅방이 없습니다.'
+                                        : '새로운 채팅방을 만들어 동료들과 대화를 시작해보세요!'}
+                                </div>
+                                <button class="empty-state-action" onclick="location.href='/chat/create'">
+                                    <span class="icon">➕</span>
+                                    새 채팅방 만들기
+                                </button>
                             </div>
                         `;
                         return;
@@ -598,7 +636,7 @@
                         return aIsPinned ? -1 : 1;
                     });
 
-                    container.innerHTML = '<div class="chat-list">' +
+                    container.innerHTML = '<div class="chat-list content-fade-in">' +
                         chatArray.map(([chatId, chat]) => {
                             const displayTitle = getChatDisplayTitle(chat);
                             // 서버에서 계산된 unread_count 사용

@@ -22,6 +22,7 @@
     <!-- 그 다음 auto-update와 push-notifications -->
     <script src="/static/js/sw-auto-update.js"></script>
     <script src="/static/js/push-notifications.js" defer></script>
+    <link rel="stylesheet" href="/static/css/loading-spinner.css">
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -247,8 +248,33 @@
                     </tr>
                 </thead>
                 <tbody id="usersTable">
-                    <tr>
-                        <td colspan="7" class="empty-state">로딩 중...</td>
+                    <!-- 스켈레톤 로딩 -->
+                    <tr class="skeleton-row">
+                        <td><div class="skeleton skeleton-line short" style="width: 30px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 80px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 60px; height: 24px; border-radius: 12px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 50px; height: 24px; border-radius: 12px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 70px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 90px; height: 14px;"></div></td>
+                        <td><div style="display: flex; gap: 5px;"><div class="skeleton skeleton-btn" style="width: 50px;"></div><div class="skeleton skeleton-btn" style="width: 50px;"></div></div></td>
+                    </tr>
+                    <tr class="skeleton-row">
+                        <td><div class="skeleton skeleton-line short" style="width: 30px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 100px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 60px; height: 24px; border-radius: 12px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 50px; height: 24px; border-radius: 12px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 90px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 90px; height: 14px;"></div></td>
+                        <td><div style="display: flex; gap: 5px;"><div class="skeleton skeleton-btn" style="width: 50px;"></div><div class="skeleton skeleton-btn" style="width: 50px;"></div></div></td>
+                    </tr>
+                    <tr class="skeleton-row">
+                        <td><div class="skeleton skeleton-line short" style="width: 30px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 70px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 60px; height: 24px; border-radius: 12px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 50px; height: 24px; border-radius: 12px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 60px; height: 14px;"></div></td>
+                        <td><div class="skeleton skeleton-line" style="width: 90px; height: 14px;"></div></td>
+                        <td><div style="display: flex; gap: 5px;"><div class="skeleton skeleton-btn" style="width: 50px;"></div><div class="skeleton skeleton-btn" style="width: 50px;"></div></div></td>
                     </tr>
                 </tbody>
             </table>
@@ -488,7 +514,21 @@
             const tbody = document.getElementById('usersTable');
 
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">사용자가 없습니다.</td></tr>';
+                tbody.innerHTML = `
+                    <tr><td colspan="7">
+                        <div class="empty-state-container empty-state-search" style="margin: 20px 0;">
+                            <div class="empty-state-illustration">👤</div>
+                            <div class="empty-state-title">사용자가 없습니다</div>
+                            <div class="empty-state-description">
+                                검색 조건에 맞는 사용자가 없습니다. 필터를 초기화하거나 새 사용자를 추가해보세요.
+                            </div>
+                            <button class="empty-state-action" onclick="openAddModal()">
+                                <span class="icon">➕</span>
+                                사용자 추가
+                            </button>
+                        </div>
+                    </td></tr>
+                `;
                 return;
             }
 
