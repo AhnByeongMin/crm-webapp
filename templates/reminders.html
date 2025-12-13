@@ -1100,6 +1100,17 @@
                 });
             }
 
+            // 검색 히스토리 초기화
+            if (window.SearchHistory) {
+                new SearchHistory({
+                    inputSelector: '#searchKeyword',
+                    pageKey: 'reminders',
+                    onSearch: function(query) {
+                        loadReminders();
+                    }
+                });
+            }
+
             // 온보딩 튜토리얼
             if (window.CRMOnboarding) {
                 const onboarding = new CRMOnboarding({

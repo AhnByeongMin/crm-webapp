@@ -275,3 +275,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+/**
+ * 브라우저 푸시와 알림 센터 통합 헬퍼
+ * 푸시 알림을 받으면 알림 센터에도 추가
+ */
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'PUSH_RECEIVED') {
+            // 알림 센터에 추가
+            if (window.notificationCenter) {
+                window.notificationCenter.addNotification({
+                    type: event.data.notificationType || 'info',
+                    title: event.data.title || '알림',
+                    message: event.data.body || '',
+                    link: event.data.url || null,
+                    icon: event.data.icon || '🔔'
+                });
+            }
+        }
+    });
+}

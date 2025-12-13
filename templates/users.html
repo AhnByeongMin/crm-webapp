@@ -985,9 +985,20 @@
 
     {% include 'includes/today_reminders.html' %}
 
-    <!-- 온보딩 튜토리얼 -->
+    <!-- 검색 히스토리 및 온보딩 튜토리얼 -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // 검색 히스토리 초기화
+        if (window.SearchHistory) {
+            new SearchHistory({
+                inputSelector: '#searchKeyword',
+                pageKey: 'users',
+                onSearch: function(query) {
+                    filterAndRenderUsers();
+                }
+            });
+        }
+
         if (window.CRMOnboarding) {
             const onboarding = new CRMOnboarding({
                 storageKey: 'crm_onboarding_users',

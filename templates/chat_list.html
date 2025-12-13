@@ -1009,6 +1009,17 @@
     <!-- 온보딩 튜토리얼 -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // 검색 히스토리 초기화
+        if (window.SearchHistory) {
+            new SearchHistory({
+                inputSelector: '#searchInput',
+                pageKey: 'chat_list',
+                onSearch: function(query) {
+                    filterChats();
+                }
+            });
+        }
+
         if (window.CRMOnboarding) {
             const onboarding = new CRMOnboarding({
                 storageKey: 'crm_onboarding_chat_list',

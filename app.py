@@ -304,6 +304,14 @@ def admin():
                          page_title='할일 관리',
                          current_page='admin')
 
+# 앱 버전 (배포 시 업데이트)
+APP_VERSION = '2024121301'
+
+@app.route('/api/version', methods=['GET'])
+def get_version():
+    """앱 버전 반환 - 클라이언트 캐시 무효화에 사용"""
+    return jsonify({'version': APP_VERSION})
+
 @app.route('/api/items', methods=['GET'])
 def get_items():
     if is_admin():
