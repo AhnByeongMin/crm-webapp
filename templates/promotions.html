@@ -2899,21 +2899,33 @@
                 storageKey: 'crm_onboarding_promotions',
                 steps: [
                     {
-                        target: '.search-wrapper',
-                        title: '프로모션 검색',
-                        description: '제목이나 상품명으로 프로모션을 빠르게 검색할 수 있습니다.',
-                        position: 'bottom'
-                    },
-                    {
-                        target: '.channel-filter',
+                        target: '#channelFilter',
                         title: '채널 필터',
-                        description: '채널별로 프로모션을 필터링할 수 있습니다.',
+                        description: '채널별로 프로모션을 필터링합니다. 빨간 점은 승인이 필요한 프로모션이 있음을 표시합니다.',
                         position: 'bottom'
                     },
                     {
-                        target: '.group-tabs',
-                        title: '대분류 탭',
-                        description: '대분류별로 프로모션을 분류하여 볼 수 있습니다.',
+                        target: '#categoryFilter',
+                        title: '대분류 선택',
+                        description: '대분류를 선택하면 해당 카테고리의 상품만 표시됩니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#searchInput',
+                        title: '프로모션 검색',
+                        description: '제목이나 상품명으로 프로모션을 빠르게 검색할 수 있습니다. 자동완성 기능을 지원합니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#showEndedPromotions',
+                        title: '종료 프로모션 보기',
+                        description: '체크하면 기간이 종료된 프로모션도 함께 표시됩니다.',
+                        position: 'left'
+                    },
+                    {
+                        target: '.header-settings',
+                        title: '화면 설정',
+                        description: '다크모드 전환과 글꼴 크기 조절이 가능합니다.',
                         position: 'bottom'
                     }
                 ]

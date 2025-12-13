@@ -97,6 +97,75 @@
             align-items: center;
             gap: 8px;
         }
+
+        /* ========== 모바일 반응형 ========== */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+
+            /* 필터 영역 */
+            .container > div[style*="padding: 20px"] {
+                padding: 15px !important;
+            }
+            .container > div[style*="padding: 20px"] > div[style*="display: flex"] {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            .container > div[style*="padding: 20px"] > div[style*="display: flex"] > div {
+                width: 100% !important;
+                min-width: auto !important;
+            }
+            .container > div[style*="padding: 20px"] select {
+                width: 100% !important;
+            }
+
+            /* 할일 카드 */
+            .item {
+                padding: 15px;
+            }
+            .item h3 {
+                font-size: 16px;
+                word-break: keep-all;
+            }
+            .item-content {
+                font-size: 14px;
+            }
+            .item-status {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .item-status .status-badge {
+                margin-bottom: 5px;
+            }
+            .item-status .status-button {
+                width: 100%;
+                padding: 10px;
+                text-align: center;
+            }
+
+            /* 토스트 위치 조정 */
+            .toast-container {
+                bottom: 90px !important;
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* 체크박스 라벨 */
+            .container label[style*="display: flex"] {
+                font-size: 13px !important;
+            }
+
+            /* 빈 상태 */
+            .empty {
+                padding: 40px 15px;
+            }
+            .empty-icon {
+                font-size: 36px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -643,5 +712,49 @@
     </div>
 
     {% include 'includes/today_reminders.html' %}
+
+    <!-- 온보딩 튜토리얼 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.CRMOnboarding) {
+            const onboarding = new CRMOnboarding({
+                storageKey: 'crm_onboarding_user',
+                steps: [
+                    {
+                        target: '#searchInput',
+                        title: '할일 검색',
+                        description: '제목이나 내용으로 할일을 빠르게 검색할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#statusFilter',
+                        title: '상태 필터',
+                        description: '대기중/진행중/완료 상태별로 할일을 필터링할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#hideCompleted',
+                        title: '완료 항목 숨기기',
+                        description: '체크하면 완료된 할일을 목록에서 숨길 수 있습니다.',
+                        position: 'left'
+                    },
+                    {
+                        target: '.header-settings',
+                        title: '화면 설정',
+                        description: '다크모드 전환과 글꼴 크기 조절이 가능합니다. 설정은 자동 저장됩니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.help-button',
+                        title: '도움말',
+                        description: '더 자세한 사용법은 도움말 버튼을 눌러 확인하세요!',
+                        position: 'left'
+                    }
+                ]
+            });
+            setTimeout(() => onboarding.start(), 1000);
+        }
+    });
+    </script>
 </body>
 </html>

@@ -357,7 +357,7 @@
         </div>
 
         <div class="action-bar">
-            <button class="btn-new-chat" onclick="location.href='/chat/create'">새 채팅방 만들기</button>
+            <button class="btn-new-chat" id="newChatBtn" onclick="location.href='/chat/create'">새 채팅방 만들기</button>
             <span id="chatCount" style="color: #666; font-size: 14px;"></span>
         </div>
 
@@ -967,5 +967,43 @@
 
     {% include 'includes/alert_modal.html' %}
     {% include 'includes/today_reminders.html' %}
+
+    <!-- 온보딩 튜토리얼 -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.CRMOnboarding) {
+            const onboarding = new CRMOnboarding({
+                storageKey: 'crm_onboarding_chat_list',
+                steps: [
+                    {
+                        target: '#newChatBtn',
+                        title: '새 채팅방 만들기',
+                        description: '동료들과 대화할 새로운 채팅방을 만들 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#searchInput',
+                        title: '채팅방 검색',
+                        description: '채팅방 이름이나 참여자 이름으로 검색할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '#chatList',
+                        title: '채팅 목록',
+                        description: '채팅방을 클릭하면 입장합니다. 📌 버튼으로 자주 사용하는 채팅방을 상단에 고정할 수 있습니다.',
+                        position: 'top'
+                    },
+                    {
+                        target: '.header-settings',
+                        title: '화면 설정',
+                        description: '다크모드 전환과 글꼴 크기 조절이 가능합니다.',
+                        position: 'bottom'
+                    }
+                ]
+            });
+            setTimeout(() => onboarding.start(), 1500);
+        }
+    });
+    </script>
 </body>
 </html>

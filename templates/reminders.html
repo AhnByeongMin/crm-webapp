@@ -311,7 +311,7 @@
                 </div>
 
                 <!-- 알림 설정 버튼 -->
-                <button onclick="openNotificationSettingsModal()" style="width: 100%; margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s;">
+                <button id="notificationSettingsBtn" onclick="openNotificationSettingsModal()" style="width: 100%; margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s;">
                     🔔 알림 설정
                 </button>
             </div>
@@ -319,7 +319,7 @@
             <!-- 예약 목록 영역 -->
             <div class="reminders-wrapper">
                 <div class="filter-section">
-                    <button class="btn-primary" onclick="openAddModal()">+ 새 예약 추가</button>
+                    <button class="btn-primary" id="addReminderBtn" onclick="openAddModal()">+ 새 예약 추가</button>
                     <label>
                         <input type="checkbox" id="showCompleted" onchange="loadReminders()">
                         <span>완료된 항목 보기</span>
@@ -1057,16 +1057,22 @@
                             position: 'right'
                         },
                         {
-                            target: '.btn-primary[onclick="openAddModal()"]',
+                            target: '#addReminderBtn',
                             title: '예약 추가',
                             description: '새로운 예약을 추가할 수 있습니다. 시간과 내용을 입력하세요.',
                             position: 'bottom'
                         },
                         {
-                            target: '.notification-settings-btn',
+                            target: '#notificationSettingsBtn',
                             title: '알림 설정',
                             description: '예약 전 알림 시간, 반복 알림, 아침 일일 요약 등을 설정할 수 있습니다.',
                             position: 'top'
+                        },
+                        {
+                            target: '#searchKeyword',
+                            title: '검색',
+                            description: '제목이나 내용으로 예약을 검색할 수 있습니다.',
+                            position: 'bottom'
                         }
                     ]
                 });
