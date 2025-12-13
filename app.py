@@ -26,6 +26,8 @@ from rate_limiter import (
     check_login_lockout, record_login_attempt, get_remaining_attempts
 )
 from csrf_protection import init_csrf, exempt_csrf, is_csrf_exempt
+from flasgger import Swagger
+from swagger_config import SWAGGER_CONFIG, SWAGGER_TEMPLATE
 
 # 로깅 설정
 def setup_logging() -> logging.Logger:
@@ -98,6 +100,9 @@ limiter = create_limiter(app)
 
 # CSRF 보호 초기화
 csrf = init_csrf(app)
+
+# Swagger/OpenAPI 문서화 초기화
+swagger = Swagger(app, config=SWAGGER_CONFIG, template=SWAGGER_TEMPLATE)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar', 'md', 'csv', 'json', 'xml', 'html', 'css', 'log'}
 EXCEL_EXTENSIONS = {'xls', 'xlsx'}
@@ -376,11 +381,42 @@ APP_VERSION = '2024121301'
 
 @app.route('/api/version', methods=['GET'])
 def get_version():
-    """앱 버전 반환 - 클라이언트 캐시 무효화에 사용"""
+    """앱 버전 조회
+    ---
+    tags:
+      - 시스템
+    responses:
+      200:
+        description: 현재 앱 버전
+        schema:
+          type: object
+          properties:
+            version:
+              type: string
+              example: "2024121301"
+    """
     return jsonify({'version': APP_VERSION})
 
 @app.route('/api/items', methods=['GET'])
 def get_items():
+    """할일 목록 조회
+    ---
+    tags:
+      - 할일(Task)
+    security:
+      - session: []
+    responses:
+      200:
+        description: 할일 목록
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/Task'
+      401:
+        description: 인증 필요
+        schema:
+          $ref: '#/definitions/Error'
+    """
     if is_admin():
         # 관리자는 전체 조회
         data = load_data()
@@ -396,6 +432,46 @@ def get_items():
 
 @app.route('/api/items', methods=['POST'])
 def create_item():
+    """할일 생성
+    ---
+    tags:
+      - 할일(Task)
+    security:
+      - session: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - title
+            - content
+          properties:
+            title:
+              type: string
+              description: 할일 제목
+            content:
+              type: string
+              description: 할일 내용
+            priority:
+              type: string
+              enum: [높음, 중간, 낮음]
+              default: 중간
+            due_date:
+              type: string
+              format: date
+              description: 마감일
+    responses:
+      201:
+        description: 생성된 할일
+        schema:
+          $ref: '#/definitions/Task'
+      403:
+        description: 권한 없음 (관리자 전용)
+        schema:
+          $ref: '#/definitions/Error'
+    """
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
@@ -410,7 +486,43 @@ def create_item():
 
 @app.route('/api/items/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
-    """할일 수정 (제목, 내용) - 관리자 전용"""
+    """할일 수정
+    ---
+    tags:
+      - 할일(Task)
+    security:
+      - session: []
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+        description: 할일 ID
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - title
+            - content
+          properties:
+            title:
+              type: string
+            content:
+              type: string
+    responses:
+      200:
+        description: 수정된 할일
+        schema:
+          $ref: '#/definitions/Task'
+      400:
+        description: 잘못된 요청
+      403:
+        description: 권한 없음 (관리자 전용)
+      404:
+        description: 할일을 찾을 수 없음
+    """
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
@@ -435,6 +547,26 @@ def update_item(item_id):
 
 @app.route('/api/items/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):
+    """할일 삭제
+    ---
+    tags:
+      - 할일(Task)
+    security:
+      - session: []
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+        description: 삭제할 할일 ID
+    responses:
+      200:
+        description: 삭제 결과
+        schema:
+          $ref: '#/definitions/Success'
+      403:
+        description: 권한 없음 (관리자 전용)
+    """
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
@@ -445,7 +577,28 @@ def delete_item(item_id):
 
 @app.route('/api/items/<int:item_id>/unassign', methods=['POST'])
 def unassign_item(item_id):
-    """할일 배정 해제 (관리자 전용)"""
+    """할일 배정 해제
+    ---
+    tags:
+      - 할일(Task)
+    security:
+      - session: []
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+        description: 할일 ID
+    responses:
+      200:
+        description: 배정 해제 성공
+        schema:
+          $ref: '#/definitions/Success'
+      403:
+        description: 권한 없음 (관리자 전용)
+      500:
+        description: 서버 오류
+    """
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
@@ -458,7 +611,49 @@ def unassign_item(item_id):
 
 @app.route('/api/items/<int:item_id>/status', methods=['PUT'])
 def update_item_status(item_id):
-    """할일 상태 변경 (일반 사용자: 자신에게 배정된 항목만)"""
+    """할일 상태 변경
+    ---
+    tags:
+      - 할일(Task)
+    security:
+      - session: []
+    parameters:
+      - in: path
+        name: item_id
+        type: integer
+        required: true
+        description: 할일 ID
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - status
+          properties:
+            status:
+              type: string
+              enum: [대기중, 진행중, 완료]
+              description: 변경할 상태
+    responses:
+      200:
+        description: 상태 변경 성공
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            status:
+              type: string
+      400:
+        description: 잘못된 상태값
+      401:
+        description: 인증 필요
+      403:
+        description: 권한 없음 (본인 할당 항목만)
+      404:
+        description: 할일을 찾을 수 없음
+    """
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -863,7 +1058,28 @@ def chat_room(chat_id):
 
 @app.route('/api/chats', methods=['GET'])
 def get_chats():
-    """채팅 목록 조회 API (최적화: 최신 메시지 1개만 반환)"""
+    """채팅 목록 조회
+    ---
+    tags:
+      - 채팅
+    security:
+      - session: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        default: 1
+        description: 각 채팅방당 반환할 메시지 개수
+    responses:
+      200:
+        description: 채팅방 목록 (참여중인 채팅방만)
+        schema:
+          type: object
+          additionalProperties:
+            $ref: '#/definitions/Chat'
+      401:
+        description: 인증 필요
+    """
     chats = load_chats()
 
     # limit 파라미터: 각 채팅방당 반환할 메시지 개수 (기본값: 1)
@@ -2415,7 +2631,22 @@ def users_page():
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
-    """모든 사용자 목록 조회 (관리자 전용)"""
+    """사용자 목록 조회
+    ---
+    tags:
+      - 사용자
+    security:
+      - session: []
+    responses:
+      200:
+        description: 사용자 목록
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/User'
+      401:
+        description: 권한 없음 (관리자 전용)
+    """
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -2424,7 +2655,45 @@ def get_users():
 
 @app.route('/api/users', methods=['POST'])
 def create_user_account():
-    """새 사용자 생성 (관리자 전용)"""
+    """사용자 생성
+    ---
+    tags:
+      - 사용자
+    security:
+      - session: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - username
+          properties:
+            username:
+              type: string
+              description: 사용자명
+            role:
+              type: string
+              enum: [관리자, 팀장, 상담사]
+              default: 상담사
+            status:
+              type: string
+              enum: [active, inactive]
+              default: active
+            team:
+              type: string
+              description: 소속 팀
+    responses:
+      200:
+        description: 생성 성공
+        schema:
+          $ref: '#/definitions/Success'
+      400:
+        description: 잘못된 요청 또는 중복 사용자명
+      401:
+        description: 권한 없음 (관리자 전용)
+    """
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -2539,7 +2808,22 @@ def reset_user_password_api(user_id):
 
 @app.route('/api/teams', methods=['GET'])
 def get_teams_api():
-    """팀 목록 조회 (관리자 전용)"""
+    """팀 목록 조회
+    ---
+    tags:
+      - 팀
+    security:
+      - session: []
+    responses:
+      200:
+        description: 팀 목록
+        schema:
+          type: array
+          items:
+            $ref: '#/definitions/Team'
+      401:
+        description: 권한 없음 (관리자 전용)
+    """
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -2550,7 +2834,22 @@ def get_teams_api():
 
 @app.route('/api/push/vapid-public-key', methods=['GET'])
 def get_vapid_public_key():
-    """VAPID 공개키 조회 (클라이언트에서 구독시 필요)"""
+    """VAPID 공개키 조회
+    ---
+    tags:
+      - 푸시알림
+    responses:
+      200:
+        description: VAPID 공개키 (Base64 인코딩)
+        schema:
+          type: object
+          properties:
+            publicKey:
+              type: string
+              description: Base64 URL-safe 인코딩된 공개키
+      500:
+        description: 서버 오류
+    """
     try:
         vapid_keys = push_helper.get_vapid_keys()
         from py_vapid import Vapid
@@ -2572,7 +2871,44 @@ def get_vapid_public_key():
 @app.route('/api/push/subscribe', methods=['POST'])
 @csrf.exempt  # 내부 AJAX API - 세션 인증으로 보호
 def push_subscribe():
-    """푸시 알림 구독"""
+    """푸시 알림 구독
+    ---
+    tags:
+      - 푸시알림
+    security:
+      - session: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - subscription
+          properties:
+            subscription:
+              type: object
+              description: PushSubscription 객체
+              properties:
+                endpoint:
+                  type: string
+                keys:
+                  type: object
+                  properties:
+                    p256dh:
+                      type: string
+                    auth:
+                      type: string
+    responses:
+      200:
+        description: 구독 성공
+        schema:
+          $ref: '#/definitions/Success'
+      400:
+        description: 잘못된 요청
+      401:
+        description: 인증 필요
+    """
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -2658,7 +2994,20 @@ def calculate_nav_counts(username: str) -> dict[str, int]:
 
 @app.route('/api/nav-counts', methods=['GET'])
 def get_nav_counts():
-    """네비게이션 바 카운트 조회 (할일, 읽지 않은 채팅, 당일 예약)"""
+    """네비게이션 카운트 조회
+    ---
+    tags:
+      - 시스템
+    security:
+      - session: []
+    responses:
+      200:
+        description: 네비게이션 바 배지 카운트
+        schema:
+          $ref: '#/definitions/NavCounts'
+      401:
+        description: 인증 필요
+    """
     if 'username' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -2715,7 +3064,20 @@ if __name__ == '__main__':
 
 @app.route('/api/notification-settings', methods=['GET'])
 def get_notification_settings():
-    """사용자 알림 설정 조회"""
+    """알림 설정 조회
+    ---
+    tags:
+      - 푸시알림
+    security:
+      - session: []
+    responses:
+      200:
+        description: 사용자 알림 설정
+        schema:
+          $ref: '#/definitions/NotificationSettings'
+      401:
+        description: 인증 필요
+    """
     if 'username' not in session and not is_localhost():
         return jsonify({'error': 'Unauthorized'}), 401
 
