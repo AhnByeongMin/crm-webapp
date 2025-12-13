@@ -238,6 +238,43 @@
         border-right-color: #4b5563;
     }
 
+    /* 테마 버튼 */
+    .header-theme-btn {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 6px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 14px;
+        transition: all 0.3s;
+        min-height: 36px;
+        color: #666;
+    }
+    .header-theme-btn:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+    }
+    .header-theme-btn .icon {
+        font-size: 14px;
+    }
+    .header-theme-btn .label {
+        font-size: 12px;
+    }
+    [data-theme="dark"] .header-theme-btn {
+        background: #374151;
+        border-color: #4b5563;
+        color: #d1d5db;
+    }
+    [data-theme="dark"] .header-theme-btn:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+    }
+
     /* 튜토리얼 버튼 */
     .header-tutorial-btn {
         background: #f0f0f0;
@@ -291,16 +328,19 @@
             gap: 4px;
         }
         .header-dark-toggle .label,
+        .header-theme-btn .label,
         .header-tutorial-btn .label {
             display: none;
         }
         .header-dark-toggle,
+        .header-theme-btn,
         .header-tutorial-btn {
             padding: 6px 8px;
             min-height: 40px;
             min-width: 40px;
         }
         .header-dark-toggle .icon,
+        .header-theme-btn .icon,
         .header-tutorial-btn .icon {
             font-size: 18px;
         }
@@ -374,6 +414,7 @@
             display: none;
         }
         .header-dark-toggle,
+        .header-theme-btn,
         .header-font-btn {
             min-height: 36px;
             min-width: 36px;
@@ -426,6 +467,12 @@
             <button class="header-font-btn active" data-size="medium" onclick="headerSetFontSize('medium')">가</button>
             <button class="header-font-btn" data-size="large" onclick="headerSetFontSize('large')">가</button>
         </div>
+
+        <!-- 테마 설정 버튼 -->
+        <button class="header-theme-btn" id="headerThemeBtn" onclick="ThemeCustomizer.show()" title="테마 색상 변경">
+            <span class="icon">🎨</span>
+            <span class="label">테마</span>
+        </button>
 
         <!-- 튜토리얼 버튼 -->
         <button class="header-tutorial-btn" id="headerTutorialBtn" onclick="restartTutorial()" title="사용법 튜토리얼 다시 보기">
