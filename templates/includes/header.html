@@ -120,6 +120,93 @@
         text-align: center;
     }
 
+    /* 헤더 설정 버튼 그룹 */
+    .header-settings {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 10px;
+    }
+
+    /* 다크모드 토글 버튼 */
+    .header-dark-toggle {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 6px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        transition: all 0.3s;
+        min-height: 36px;
+    }
+    .header-dark-toggle:hover {
+        background: #e0e0e0;
+    }
+    .header-dark-toggle .icon {
+        font-size: 16px;
+    }
+    .header-dark-toggle .label {
+        font-size: 12px;
+        color: #666;
+    }
+    [data-theme="dark"] .header-dark-toggle {
+        background: #374151;
+        border-color: #4b5563;
+    }
+    [data-theme="dark"] .header-dark-toggle:hover {
+        background: #4b5563;
+    }
+    [data-theme="dark"] .header-dark-toggle .label {
+        color: #d1d5db;
+    }
+
+    /* 폰트 크기 조절 버튼 그룹 */
+    .header-font-controls {
+        display: flex;
+        align-items: center;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        overflow: hidden;
+    }
+    .header-font-btn {
+        background: transparent;
+        border: none;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-weight: bold;
+        color: #666;
+        transition: all 0.2s;
+        min-height: 36px;
+        min-width: 36px;
+    }
+    .header-font-btn:hover {
+        background: #e0e0e0;
+    }
+    .header-font-btn.active {
+        background: #667eea;
+        color: white;
+    }
+    .header-font-btn:not(:last-child) {
+        border-right: 1px solid #ddd;
+    }
+    [data-theme="dark"] .header-font-controls {
+        background: #374151;
+        border-color: #4b5563;
+    }
+    [data-theme="dark"] .header-font-btn {
+        color: #d1d5db;
+    }
+    [data-theme="dark"] .header-font-btn:hover {
+        background: #4b5563;
+    }
+    [data-theme="dark"] .header-font-btn:not(:last-child) {
+        border-right-color: #4b5563;
+    }
+
     /* 모바일 반응형 (768px 이하) */
     @media (max-width: 768px) {
         .header {
@@ -129,6 +216,15 @@
         .header h1 {
             font-size: 18px;
             flex: 1;
+        }
+        .header-settings {
+            margin-right: 8px;
+        }
+        .header-dark-toggle .label {
+            display: none;
+        }
+        .header-dark-toggle {
+            padding: 6px 10px;
         }
         .nav-toggle {
             display: flex;
@@ -178,6 +274,23 @@
         <span class="admin-badge">관리자</span>
         {% endif %}
     </h1>
+
+    <!-- 헤더 설정 버튼 (다크모드, 폰트 크기) -->
+    <div class="header-settings">
+        <!-- 다크모드 토글 -->
+        <button class="header-dark-toggle" id="headerDarkToggle" onclick="headerToggleDarkMode()" title="다크모드 전환">
+            <span class="icon" id="darkModeIcon">☀️</span>
+            <span class="label" id="darkModeLabel">라이트</span>
+        </button>
+
+        <!-- 폰트 크기 조절 -->
+        <div class="header-font-controls" title="글자 크기 조절">
+            <button class="header-font-btn" data-size="small" onclick="headerSetFontSize('small')">가</button>
+            <button class="header-font-btn active" data-size="medium" onclick="headerSetFontSize('medium')">가</button>
+            <button class="header-font-btn" data-size="large" onclick="headerSetFontSize('large')">가</button>
+        </div>
+    </div>
+
     <button class="nav-toggle" id="navToggle" onclick="toggleMobileNav()" aria-label="메뉴 열기">☰</button>
     <div class="nav" id="mainNav">
         {% if current_page == 'chat_room' %}
@@ -243,6 +356,78 @@ document.addEventListener('click', (e) => {
         nav.classList.remove('active');
         toggle.textContent = '☰';
     }
+});
+
+// 헤더 다크모드 토글
+function headerToggleDarkMode() {
+    const DARK_MODE_KEY = 'crm_dark_mode';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem(DARK_MODE_KEY, 'false');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem(DARK_MODE_KEY, 'true');
+    }
+
+    updateHeaderDarkModeUI();
+
+    // 마이페이지의 토글도 업데이트 (있으면)
+    if (typeof updateDarkModeToggle === 'function') {
+        updateDarkModeToggle();
+    }
+}
+
+// 헤더 다크모드 UI 업데이트
+function updateHeaderDarkModeUI() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = document.getElementById('darkModeIcon');
+    const label = document.getElementById('darkModeLabel');
+
+    if (icon) {
+        icon.textContent = isDark ? '🌙' : '☀️';
+    }
+    if (label) {
+        label.textContent = isDark ? '다크' : '라이트';
+    }
+}
+
+// 헤더 폰트 크기 설정
+function headerSetFontSize(size) {
+    const FONT_SIZE_KEY = 'crm_font_size';
+    const fontSizes = {
+        small: '14px',
+        medium: '16px',
+        large: '18px'
+    };
+
+    document.documentElement.style.fontSize = fontSizes[size];
+    localStorage.setItem(FONT_SIZE_KEY, size);
+
+    updateHeaderFontSizeUI(size);
+}
+
+// 헤더 폰트 크기 UI 업데이트
+function updateHeaderFontSizeUI(activeSize) {
+    const buttons = document.querySelectorAll('.header-font-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.size === activeSize) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// 페이지 로드 시 헤더 설정 UI 초기화
+document.addEventListener('DOMContentLoaded', () => {
+    // 다크모드 UI 초기화
+    updateHeaderDarkModeUI();
+
+    // 폰트 크기 UI 초기화
+    const savedSize = localStorage.getItem('crm_font_size') || 'medium';
+    updateHeaderFontSizeUI(savedSize);
 });
 </script>
 
