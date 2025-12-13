@@ -2,7 +2,7 @@
 <!-- 다크 모드 & 폰트 설정 (가장 먼저 로드) -->
 <link rel="stylesheet" href="/static/css/dark-mode.css?v=20241213">
 <script src="/static/js/dark-mode.js?v=20241213"></script>
-<script src="/static/js/font-settings.js?v=20241213"></script>
+<script src="/static/js/font-settings.js?v=20241213b"></script>
 <script>
 // 최소 침습 보안: console 출력만 차단 (error/warn 유지, 개발자도구 완전 허용)
 (function() {
@@ -393,18 +393,45 @@ function updateHeaderDarkModeUI() {
     }
 }
 
-// 헤더 폰트 크기 설정
+// 헤더 폰트 크기 설정 (zoom 방식으로 전체 확대/축소)
 function headerSetFontSize(size) {
     const FONT_SIZE_KEY = 'crm_font_size';
-    const fontSizes = {
-        small: '14px',
-        medium: '16px',
-        large: '18px'
+    const zoomLevels = {
+        small: 0.9,    // 90%
+        medium: 1.0,   // 100%
+        large: 1.15    // 115%
     };
 
-    document.documentElement.style.fontSize = fontSizes[size];
-    localStorage.setItem(FONT_SIZE_KEY, size);
+    const zoom = zoomLevels[size] || 1.0;
 
+    // 다양한 메인 컨테이너 셀렉터
+    const containerSelectors = [
+        '.container',
+        '.chat-container',
+        '.page-content',
+        '.page-container',
+        'main',
+        '.content'
+    ];
+
+    let applied = false;
+    for (const selector of containerSelectors) {
+        const el = document.querySelector(selector);
+        if (el) {
+            el.style.zoom = zoom;
+            applied = true;
+            break;
+        }
+    }
+
+    // fallback: body에 적용하되 헤더는 리셋
+    if (!applied && document.body) {
+        document.body.style.zoom = zoom;
+        const header = document.querySelector('.header');
+        if (header) header.style.zoom = 1 / zoom;
+    }
+
+    localStorage.setItem(FONT_SIZE_KEY, size);
     updateHeaderFontSizeUI(size);
 }
 

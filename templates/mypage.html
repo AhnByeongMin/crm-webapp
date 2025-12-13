@@ -263,17 +263,21 @@
             }, 3000);
         }
 
-        // 폰트 크기 설정
+        // 폰트 크기 설정 (zoom 방식)
         const FONT_SIZE_KEY = 'crm_font_size';
-        const fontSizes = {
-            small: '14px',
-            medium: '16px',
-            large: '18px'
+        const zoomLevels = {
+            small: 0.9,
+            medium: 1.0,
+            large: 1.15
         };
 
         function setFontSize(size) {
             localStorage.setItem(FONT_SIZE_KEY, size);
-            document.documentElement.style.fontSize = fontSizes[size];
+
+            // 헤더 함수 호출 (공통 zoom 적용)
+            if (typeof headerSetFontSize === 'function') {
+                headerSetFontSize(size);
+            }
 
             // 버튼 활성화 상태 업데이트
             document.querySelectorAll('.font-size-btn').forEach(btn => {
@@ -285,7 +289,6 @@
 
         function loadFontSize() {
             const savedSize = localStorage.getItem(FONT_SIZE_KEY) || 'medium';
-            document.documentElement.style.fontSize = fontSizes[savedSize];
 
             // 버튼 활성화 상태 초기화
             document.querySelectorAll('.font-size-btn').forEach(btn => {
@@ -293,7 +296,7 @@
             });
         }
 
-        // 페이지 로드 시 폰트 크기 적용
+        // 페이지 로드 시 폰트 크기 적용 (font-settings.js에서 처리)
         loadFontSize();
 
         // 다크 모드 토글 핸들러
