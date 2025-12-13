@@ -25,8 +25,8 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 # 프로세스 이름
 proc_name = 'crm_webapp_5002'
 
-# 재시작 설정 (메모리 누수 없으므로 크게 설정)
-max_requests = 500000  # 50만 (40명 기준 하루 버팀)
+# 재시작 설정 (주기적 갱신으로 메모리 안정성 확보)
+max_requests = 50000   # 5만 (재시작 오버헤드 미미, 안정성 우선)
 max_requests_jitter = 5000
 graceful_timeout = 30
 

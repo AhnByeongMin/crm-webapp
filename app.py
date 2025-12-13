@@ -183,6 +183,35 @@ def is_localhost() -> bool:
     real_ip = request.headers.get('X-Real-IP', request.remote_addr)
     return real_ip in ['127.0.0.1', 'localhost', '::1']
 
+def is_internal_network() -> bool:
+    """내부망 접근 여부 확인 (Swagger/API 문서 접근 제한용)"""
+    real_ip = request.headers.get('X-Real-IP', request.remote_addr)
+
+    # 로컬호스트
+    if real_ip in ['127.0.0.1', 'localhost', '::1']:
+        return True
+
+    # 내부 네트워크 대역 (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    try:
+        parts = real_ip.split('.')
+        if len(parts) == 4:
+            first = int(parts[0])
+            second = int(parts[1])
+
+            # 192.168.0.0/16
+            if first == 192 and second == 168:
+                return True
+            # 10.0.0.0/8
+            if first == 10:
+                return True
+            # 172.16.0.0/12 (172.16.x.x ~ 172.31.x.x)
+            if first == 172 and 16 <= second <= 31:
+                return True
+    except (ValueError, IndexError):
+        pass
+
+    return False
+
 def is_admin() -> bool:
     """실제 관리자 권한 확인 (로컬호스트 또는 관리자 역할)"""
     if is_localhost():
@@ -259,6 +288,18 @@ def session_management():
     # 정적 파일은 세션 체크 불필요
     if request.path.startswith('/static/') or request.path.startswith('/favicon'):
         return
+
+    # Swagger/API 문서: 외부에서 /apispec.json 직접 접근 차단
+    # Swagger UI는 Referer 헤더로 내부 요청 구분
+    if request.path == '/apispec.json':
+        # 내부망이 아니고, Swagger UI에서 온 요청도 아니면 차단
+        referer = request.headers.get('Referer', '')
+        is_from_swagger_ui = '/api/docs' in referer
+        if not is_internal_network() and not is_from_swagger_ui:
+            return jsonify({
+                'error': 'API 스펙은 직접 접근할 수 없습니다.',
+                'message': 'Use /api/docs/ for API documentation.'
+            }), 403
 
     # 로그인된 사용자의 세션 활동 갱신
     if 'username' in session:
@@ -378,6 +419,23 @@ def admin():
 
 # 앱 버전 (배포 시 업데이트)
 APP_VERSION = '2024121301'
+
+# ==================== 커스텀 Swagger UI (내부/외부망 분리) ====================
+
+@app.route('/api/docs/')
+@app.route('/api/docs')
+def custom_swagger_ui():
+    """
+    커스텀 Swagger UI - 내부/외부망 구분
+    - 내부망: Try it out 활성화, 서버 정보 표시
+    - 외부망: 읽기 전용, Try it out 비활성화
+    """
+    is_internal = is_internal_network()
+    return render_template(
+        'swagger_ui.html',
+        readonly_mode=not is_internal,
+        spec_url='/apispec.json'
+    )
 
 @app.route('/api/version', methods=['GET'])
 def get_version():

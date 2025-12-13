@@ -90,6 +90,11 @@
     border-color: var(--border-color);
 }
 
+[data-theme="dark"] .header h1,
+[data-theme="dark"] .page-header h1 {
+    color: var(--text-primary);
+}
+
 /* 카드 */
 [data-theme="dark"] .card,
 [data-theme="dark"] .info-card,

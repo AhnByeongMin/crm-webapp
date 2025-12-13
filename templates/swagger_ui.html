@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하루CRM API 문서</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        html { box-sizing: border-box; overflow-y: scroll; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body { margin: 0; background: #fafafa; }
+        .swagger-ui .topbar { display: none; }
+
+        /* 외부 접속 시 경고 배너 */
+        .external-warning {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .external-warning .icon { margin-right: 8px; }
+
+        /* 내부망 배너 */
+        .internal-badge {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            padding: 8px 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+        .internal-badge .icon { margin-right: 8px; }
+
+        /* Try it out 비활성화 스타일 (외부용) */
+        .readonly-mode .try-out,
+        .readonly-mode .execute-wrapper,
+        .readonly-mode .btn.execute,
+        .readonly-mode .btn.cancel {
+            display: none !important;
+        }
+        .readonly-mode .opblock-summary {
+            cursor: pointer;
+        }
+
+        /* 서버 정보 숨김 (외부용) */
+        .readonly-mode .servers,
+        .readonly-mode .scheme-container {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="{{ 'readonly-mode' if readonly_mode else '' }}">
+    {% if readonly_mode %}
+    <div class="external-warning">
+        <span class="icon">&#128274;</span>
+        외부 접속 - API 문서 열람만 가능합니다. API 테스트(Try it out)는 내부 네트워크에서만 사용할 수 있습니다.
+    </div>
+    {% else %}
+    <div class="internal-badge">
+        <span class="icon">&#9989;</span>
+        내부망 접속 - 모든 기능을 사용할 수 있습니다.
+    </div>
+    {% endif %}
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: "{{ spec_url }}",
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                // 외부 접속 시 Try it out 비활성화
+                supportedSubmitMethods: {% if not readonly_mode %}["get", "post", "put", "delete", "patch"]{% else %}[]{% endif %},
+                // 유효성 검증 비활성화 (외부 서버 접근 방지)
+                validatorUrl: null,
+                // 서버 선택 비활성화
+                showMutatedRequest: {% if not readonly_mode %}true{% else %}false{% endif %}
+            });
+            window.ui = ui;
+
+            {% if readonly_mode %}
+            // 외부 접속 시 추가 보안: Execute 버튼 클릭 방지
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('execute') ||
+                    e.target.classList.contains('try-out__btn')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    alert('API 테스트는 내부 네트워크에서만 가능합니다.');
+                    return false;
+                }
+            }, true);
+            {% endif %}
+        };
+    </script>
+</body>
+</html>

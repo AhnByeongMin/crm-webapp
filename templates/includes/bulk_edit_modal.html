@@ -85,6 +85,40 @@
     .bulk-edit-actions { flex-direction: column; }
     .selection-control-bar { flex-direction: column; text-align: center; }
 }
+
+/* 다크모드 지원 */
+[data-theme="dark"] .bulk-edit-modal-content { background: #1e1e1e; color: #e0e0e0; }
+[data-theme="dark"] .bulk-edit-modal-body { background: #1e1e1e; }
+[data-theme="dark"] .bulk-edit-tabs { border-bottom-color: #444; }
+[data-theme="dark"] .bulk-edit-tab { color: #aaa; }
+[data-theme="dark"] .bulk-edit-tab:hover { color: #8fa4f3; background: #2a2a3e; }
+[data-theme="dark"] .bulk-edit-tab.active { color: #8fa4f3; background: #2a2a3e; border-bottom-color: #8fa4f3; }
+[data-theme="dark"] .bulk-edit-table td { border-color: #444; background: #252525; color: #e0e0e0; }
+[data-theme="dark"] .bulk-edit-table tr:nth-child(even) td { background: #2a2a2a; }
+[data-theme="dark"] .bulk-edit-table tr:hover td { background: #333; }
+[data-theme="dark"] .bulk-edit-table input,
+[data-theme="dark"] .bulk-edit-table textarea,
+[data-theme="dark"] .bulk-edit-table select { background: #333; color: #e0e0e0; border-color: #555; }
+[data-theme="dark"] .quick-edit-section { background: #2a2a2a; }
+[data-theme="dark"] .quick-edit-title { color: #e0e0e0; }
+[data-theme="dark"] .quick-edit-field label { color: #bbb; }
+[data-theme="dark"] .quick-edit-field input,
+[data-theme="dark"] .quick-edit-field select { background: #333; color: #e0e0e0; border-color: #555; }
+[data-theme="dark"] .bulk-apply-option { background: #3d3520; border-left-color: #ffc107; }
+[data-theme="dark"] .bulk-apply-option label { color: #ffc107; }
+[data-theme="dark"] .date-extend-option { background: #1a3a40; border-left-color: #17a2b8; }
+[data-theme="dark"] .date-extend-option label { color: #17a2b8; }
+[data-theme="dark"] .date-extend-row input,
+[data-theme="dark"] .date-extend-row select { background: #333; color: #e0e0e0; border-color: #555; }
+[data-theme="dark"] .selected-summary { background: #1a3d1f; color: #4caf50; }
+[data-theme="dark"] .preview-list { border-color: #444; background: #252525; }
+[data-theme="dark"] .preview-list-item { border-bottom-color: #444; }
+[data-theme="dark"] .preview-list-item:hover { background: #333; }
+[data-theme="dark"] .preview-list-item .item-name { color: #e0e0e0; }
+[data-theme="dark"] .preview-list-item .item-detail { color: #aaa; }
+[data-theme="dark"] .bulk-edit-actions { border-top-color: #444; background: #1e1e1e; }
+/* 힌트 박스 다크모드 */
+[data-theme="dark"] .bulk-hint-box { background: #2a2a3e !important; border-left-color: #8fa4f3 !important; color: #c0c8e8 !important; }
 </style>
 
 <!-- 일괄 수정 모달 -->
@@ -116,7 +150,7 @@
 
             <!-- 탭1: 전체 내용 수정 -->
             <div class="bulk-edit-tab-content active" id="fullEditContent">
-                <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
+                <div class="bulk-hint-box" style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
                     <strong>💡 전체 수정 모드:</strong> 각 프로모션의 모든 필드를 개별적으로 수정할 수 있습니다.
                 </div>
                 <div style="overflow-x: auto; max-height: 400px;">
@@ -146,7 +180,7 @@
 
             <!-- 탭2: 빠른 수정 -->
             <div class="bulk-edit-tab-content" id="quickEditContent">
-                <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
+                <div class="bulk-hint-box" style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
                     <strong>⚡ 빠른 수정 모드:</strong> 선택한 모든 프로모션에 동일한 값을 일괄 적용합니다. 변경하지 않을 필드는 비워두세요.
                 </div>
 

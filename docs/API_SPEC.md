@@ -1,8 +1,24 @@
 # 하루CRM API 연동규격서
 
-**버전**: 1.0.0
-**최종 수정일**: 2025-12-10
-**Base URL**: `https://haruittl.asuscomm.com:5000`
+**버전**: 1.1.0
+**최종 수정일**: 2025-12-13
+**Base URL**: `https://haruittl.asuscomm.com/crm-webapp`
+
+---
+
+## Swagger UI (API 문서)
+
+인터랙티브 API 문서를 다음 URL에서 확인할 수 있습니다:
+
+- **URL**: `/api/docs/`
+- **OpenAPI 스펙**: `/apispec.json`
+
+| 접속 환경 | API 문서 열람 | Try it out (테스트) | 서버 정보 |
+|-----------|--------------|-------------------|----------|
+| 내부망 | ✅ 가능 | ✅ 가능 | ✅ 표시 |
+| 외부망 | ✅ 가능 | ❌ 비활성화 | ❌ 숨김 |
+
+> 외부망에서 `/apispec.json` 직접 접근 시 403 Forbidden 응답
 
 ---
 
@@ -24,6 +40,16 @@
 ### 1.1 로그인
 
 세션 기반 인증을 사용합니다.
+
+### 보안 설정 (v1.1.0)
+
+| 항목 | 설정값 |
+|------|--------|
+| 비밀번호 해싱 | bcrypt (rounds=12) |
+| CSRF 보호 | Flask-WTF (모든 POST 요청) |
+| Rate Limiting | 로그인 5분당 10회, API 분당 200회 |
+| 세션 쿠키 | Secure, HttpOnly, SameSite=Lax |
+| 세션 만료 | 24시간 |
 
 **Endpoint**: `POST /login`
 
@@ -735,3 +761,4 @@ socket.on('nav_counts_update', (counts) => {
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
 | 1.0.0 | 2025-12-10 | 최초 작성 |
+| 1.1.0 | 2025-12-13 | Swagger UI 정보, 보안 설정(bcrypt, CSRF, Rate Limit) 추가 |

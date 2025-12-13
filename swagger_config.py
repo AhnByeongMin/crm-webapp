@@ -5,6 +5,7 @@ API 문서화를 위한 flasgger 설정
 from __future__ import annotations
 
 # Swagger UI 설정
+# 참고: Nginx 프록시 뒤에서 /crm-webapp/ 경로로 접근
 SWAGGER_CONFIG = {
     "headers": [],
     "specs": [
@@ -16,8 +17,8 @@ SWAGGER_CONFIG = {
         }
     ],
     "static_url_path": "/flasgger_static",
-    "swagger_ui": True,
-    "specs_route": "/api/docs/"
+    "swagger_ui": False,  # 기본 UI 비활성화 (커스텀 UI 사용)
+    "specs_route": "/api/docs/",
 }
 
 # OpenAPI 스펙 템플릿
@@ -52,7 +53,7 @@ API 호출은 Rate Limiting이 적용됩니다:
         }
     },
     "host": "",  # 요청 Host 사용
-    "basePath": "/",
+    "basePath": "/crm-webapp",  # Nginx 프록시 경로
     "schemes": ["https", "http"],
     "securityDefinitions": {
         "session": {

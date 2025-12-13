@@ -1,4 +1,4 @@
-# CRM 웹 애플리케이션
+# 하루CRM 웹 애플리케이션
 
 Flask + SocketIO 기반 실시간 채팅 CRM 시스템 (프로덕션 최적화 버전)
 
@@ -50,6 +50,22 @@ systemctl start crm-webapp
 - ✅ 일반 사용자: 읽기 권한
 - ✅ 상품별/채널별/프로모션별 필터링
 - ✅ 실시간 검색
+
+### 4. 개인 예약 (리마인더)
+- ✅ 웹 푸시 알림 지원
+- ✅ 사용자별 알림 시간 설정
+- ✅ 반복 알림, 일일 요약
+
+### 5. 보안
+- ✅ bcrypt 비밀번호 해싱
+- ✅ CSRF 토큰 보호
+- ✅ Rate Limiting (로그인, API)
+- ✅ 세션 보안 (Secure, HttpOnly, SameSite)
+
+### 6. API 문서화
+- ✅ OpenAPI/Swagger 스펙
+- ✅ 내부망: 전체 기능 (Try it out)
+- ✅ 외부망: 읽기 전용 (포트폴리오용)
 
 ## 관리 스크립트 (⭐ 안전한 포트 관리)
 
