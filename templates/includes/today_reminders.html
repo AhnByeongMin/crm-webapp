@@ -417,9 +417,12 @@ function updateReminderBadge(data) {
     const badge = document.getElementById('reminderBadge');
     if (!badge) return;
 
-    if (data.today_count > 0) {
+    // 당일 + 지난 미완료 예약 합산 표시
+    const totalCount = (data.today_count || 0) + (data.overdue_count || 0);
+
+    if (totalCount > 0) {
         badge.style.display = 'flex';
-        badge.textContent = data.today_count;
+        badge.textContent = totalCount;
     } else {
         badge.style.display = 'none';
     }
