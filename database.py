@@ -533,21 +533,23 @@ def load_chats() -> dict[str, dict[str, Any]]:
         cursor = conn.cursor()
         chats = {}
 
-        # 1. 모든 채팅방 조회
-        cursor.execute('SELECT * FROM chats ORDER BY id')
+        # 1. 모든 채팅방 조회 (chat_type 포함)
+        cursor.execute('SELECT id, title, creator, created_at, chat_type FROM chats ORDER BY id')
         for chat_row in cursor.fetchall():
             chat_id = str(chat_row['id'])
             chats[chat_id] = {
                 'title': chat_row['title'],
                 'creator': chat_row['creator'],
                 'created_at': str(chat_row['created_at']),
+                'chat_type': chat_row['chat_type'] or 'direct',
                 'participants': [],
+                'participant_roles': {},  # username -> role
                 'messages': []
             }
 
-        # 2. 모든 참여자를 한 번에 조회 (N+1 제거)
+        # 2. 모든 참여자를 한 번에 조회 (역할 포함)
         cursor.execute('''
-            SELECT chat_id, username
+            SELECT chat_id, username, role
             FROM chat_participants
             ORDER BY chat_id
         ''')
@@ -555,6 +557,7 @@ def load_chats() -> dict[str, dict[str, Any]]:
             chat_id = str(row['chat_id'])
             if chat_id in chats:
                 chats[chat_id]['participants'].append(row['username'])
+                chats[chat_id]['participant_roles'][row['username']] = row['role'] or 'member'
 
         # 3. 모든 메시지를 한 번에 조회 (N+1 제거)
         cursor.execute('''
@@ -1403,3 +1406,323 @@ def load_holidays(year: Optional[int] = None) -> list[dict[str, Any]]:
 
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
+
+
+# ==================== 채팅방 설정 관리 ====================
+
+def get_chat_settings(chat_id: int | str, username: str) -> Optional[dict[str, Any]]:
+    """채팅방 설정 및 권한 정보 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # 채팅방 기본 정보
+        cursor.execute('''
+            SELECT c.id, c.title, c.creator, c.chat_type, c.created_at
+            FROM chats c
+            WHERE c.id = %s
+        ''', (int(chat_id),))
+        chat_row = cursor.fetchone()
+        if not chat_row:
+            return None
+
+        # 현재 사용자의 역할
+        cursor.execute('''
+            SELECT role, muted
+            FROM chat_participants
+            WHERE chat_id = %s AND username = %s
+        ''', (int(chat_id), username))
+        user_row = cursor.fetchone()
+        if not user_row:
+            return None  # 참여자가 아님
+
+        # 모든 참여자 목록 (역할 포함)
+        cursor.execute('''
+            SELECT username, role, muted
+            FROM chat_participants
+            WHERE chat_id = %s
+            ORDER BY
+                CASE role
+                    WHEN 'owner' THEN 1
+                    WHEN 'admin' THEN 2
+                    ELSE 3
+                END, username
+        ''', (int(chat_id),))
+        participants = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            'id': chat_row['id'],
+            'title': chat_row['title'],
+            'creator': chat_row['creator'],
+            'chat_type': chat_row['chat_type'] or 'direct',
+            'created_at': str(chat_row['created_at']),
+            'my_role': user_row['role'] or 'member',
+            'muted': user_row['muted'] or False,
+            'participants': participants,
+            'participant_count': len(participants)
+        }
+
+
+def update_chat_title(chat_id: int | str, username: str, new_title: str) -> tuple[bool, str]:
+    """채팅방 제목 변경 (owner/admin만 가능, 그룹채팅만)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 권한 확인
+            cursor.execute('''
+                SELECT c.chat_type, cp.role
+                FROM chats c
+                JOIN chat_participants cp ON c.id = cp.chat_id
+                WHERE c.id = %s AND cp.username = %s
+            ''', (int(chat_id), username))
+            row = cursor.fetchone()
+
+            if not row:
+                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.'
+
+            if row['chat_type'] == 'direct':
+                return False, '1:1 채팅방은 제목을 변경할 수 없습니다.'
+
+            if row['role'] not in ('owner', 'admin'):
+                return False, '방장 또는 부방장만 제목을 변경할 수 있습니다.'
+
+            # 제목 변경
+            cursor.execute('''
+                UPDATE chats SET title = %s WHERE id = %s
+            ''', (new_title.strip(), int(chat_id)))
+            conn.commit()
+
+            logger.info(f"Chat {chat_id} title changed to '{new_title}' by {username}")
+            return True, '채팅방 제목이 변경되었습니다.'
+
+
+def toggle_chat_mute(chat_id: int | str, username: str) -> tuple[bool, bool]:
+    """채팅방 알림 토글 (반환: 성공여부, 새 muted 상태)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                UPDATE chat_participants
+                SET muted = NOT COALESCE(muted, false)
+                WHERE chat_id = %s AND username = %s
+                RETURNING muted
+            ''', (int(chat_id), username))
+            row = cursor.fetchone()
+            conn.commit()
+
+            if row:
+                return True, row['muted']
+            return False, False
+
+
+def add_chat_participant(chat_id: int | str, username: str, target_username: str) -> tuple[bool, str]:
+    """채팅방에 멤버 추가 (owner/admin만 가능, 그룹채팅만)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 권한 확인
+            cursor.execute('''
+                SELECT c.chat_type, cp.role
+                FROM chats c
+                JOIN chat_participants cp ON c.id = cp.chat_id
+                WHERE c.id = %s AND cp.username = %s
+            ''', (int(chat_id), username))
+            row = cursor.fetchone()
+
+            if not row:
+                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.'
+
+            if row['chat_type'] == 'direct':
+                return False, '1:1 채팅방에는 멤버를 추가할 수 없습니다.'
+
+            if row['role'] not in ('owner', 'admin'):
+                return False, '방장 또는 부방장만 멤버를 추가할 수 있습니다.'
+
+            # 대상 사용자 존재 확인
+            cursor.execute('SELECT username FROM users WHERE username = %s', (target_username,))
+            if not cursor.fetchone():
+                return False, f'사용자 "{target_username}"을(를) 찾을 수 없습니다.'
+
+            # 이미 참여 중인지 확인
+            cursor.execute('''
+                SELECT id FROM chat_participants
+                WHERE chat_id = %s AND username = %s
+            ''', (int(chat_id), target_username))
+            if cursor.fetchone():
+                return False, f'{target_username}님은 이미 채팅방에 참여 중입니다.'
+
+            # 추가
+            cursor.execute('''
+                INSERT INTO chat_participants (chat_id, username, role, muted)
+                VALUES (%s, %s, 'member', false)
+            ''', (int(chat_id), target_username))
+            conn.commit()
+
+            logger.info(f"User {target_username} added to chat {chat_id} by {username}")
+            return True, f'{target_username}님이 채팅방에 추가되었습니다.'
+
+
+def remove_chat_participant(chat_id: int | str, username: str, target_username: str) -> tuple[bool, str]:
+    """채팅방에서 멤버 내보내기 (owner/admin만 가능, 그룹채팅만)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 권한 확인
+            cursor.execute('''
+                SELECT c.chat_type, cp.role
+                FROM chats c
+                JOIN chat_participants cp ON c.id = cp.chat_id
+                WHERE c.id = %s AND cp.username = %s
+            ''', (int(chat_id), username))
+            row = cursor.fetchone()
+
+            if not row:
+                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.'
+
+            if row['chat_type'] == 'direct':
+                return False, '1:1 채팅방에서는 멤버를 내보낼 수 없습니다.'
+
+            if row['role'] not in ('owner', 'admin'):
+                return False, '방장 또는 부방장만 멤버를 내보낼 수 있습니다.'
+
+            # 대상 사용자 역할 확인
+            cursor.execute('''
+                SELECT role FROM chat_participants
+                WHERE chat_id = %s AND username = %s
+            ''', (int(chat_id), target_username))
+            target_row = cursor.fetchone()
+
+            if not target_row:
+                return False, f'{target_username}님은 채팅방에 없습니다.'
+
+            # owner는 내보낼 수 없음
+            if target_row['role'] == 'owner':
+                return False, '방장은 내보낼 수 없습니다.'
+
+            # admin은 owner만 내보낼 수 있음
+            if target_row['role'] == 'admin' and row['role'] != 'owner':
+                return False, '부방장은 방장만 내보낼 수 있습니다.'
+
+            # 내보내기
+            cursor.execute('''
+                DELETE FROM chat_participants
+                WHERE chat_id = %s AND username = %s
+            ''', (int(chat_id), target_username))
+            conn.commit()
+
+            logger.info(f"User {target_username} removed from chat {chat_id} by {username}")
+            return True, f'{target_username}님이 채팅방에서 내보내졌습니다.'
+
+
+def leave_chat(chat_id: int | str, username: str) -> tuple[bool, str]:
+    """채팅방 나가기 (그룹채팅만 가능)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 채팅방 정보 확인
+            cursor.execute('''
+                SELECT c.chat_type, cp.role
+                FROM chats c
+                JOIN chat_participants cp ON c.id = cp.chat_id
+                WHERE c.id = %s AND cp.username = %s
+            ''', (int(chat_id), username))
+            row = cursor.fetchone()
+
+            if not row:
+                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.'
+
+            if row['chat_type'] == 'direct':
+                return False, '1:1 채팅방은 나갈 수 없습니다.'
+
+            # 방장이 나가는 경우 권한 이전 필요
+            if row['role'] == 'owner':
+                # 다른 참여자 수 확인
+                cursor.execute('''
+                    SELECT username, role FROM chat_participants
+                    WHERE chat_id = %s AND username != %s
+                    ORDER BY CASE role WHEN 'admin' THEN 1 ELSE 2 END, username
+                ''', (int(chat_id), username))
+                others = cursor.fetchall()
+
+                if others:
+                    # 첫 번째 사람(admin 우선)에게 owner 권한 이전
+                    new_owner = others[0]['username']
+                    cursor.execute('''
+                        UPDATE chat_participants SET role = 'owner'
+                        WHERE chat_id = %s AND username = %s
+                    ''', (int(chat_id), new_owner))
+                    logger.info(f"Owner transferred from {username} to {new_owner} in chat {chat_id}")
+
+            # 나가기
+            cursor.execute('''
+                DELETE FROM chat_participants
+                WHERE chat_id = %s AND username = %s
+            ''', (int(chat_id), username))
+
+            # 참여자가 아무도 없으면 채팅방과 메시지 모두 삭제
+            cursor.execute('''
+                SELECT COUNT(*) as cnt FROM chat_participants WHERE chat_id = %s
+            ''', (int(chat_id),))
+            if cursor.fetchone()['cnt'] == 0:
+                # CASCADE로 messages, message_reads도 자동 삭제됨
+                cursor.execute('DELETE FROM chats WHERE id = %s', (int(chat_id),))
+                logger.info(f"Chat {chat_id} and all messages deleted (no participants)")
+
+            conn.commit()
+
+            logger.info(f"User {username} left chat {chat_id}")
+            return True, '채팅방을 나갔습니다.'
+
+
+def set_chat_admin(chat_id: int | str, username: str, target_username: str, is_admin: bool) -> tuple[bool, str]:
+    """부방장 권한 설정/해제 (owner만 가능)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 권한 확인 (owner만)
+            cursor.execute('''
+                SELECT c.chat_type, cp.role
+                FROM chats c
+                JOIN chat_participants cp ON c.id = cp.chat_id
+                WHERE c.id = %s AND cp.username = %s
+            ''', (int(chat_id), username))
+            row = cursor.fetchone()
+
+            if not row:
+                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.'
+
+            if row['chat_type'] == 'direct':
+                return False, '1:1 채팅방에서는 권한을 설정할 수 없습니다.'
+
+            if row['role'] != 'owner':
+                return False, '방장만 부방장을 지정할 수 있습니다.'
+
+            # 대상 사용자 확인
+            cursor.execute('''
+                SELECT role FROM chat_participants
+                WHERE chat_id = %s AND username = %s
+            ''', (int(chat_id), target_username))
+            target_row = cursor.fetchone()
+
+            if not target_row:
+                return False, f'{target_username}님은 채팅방에 없습니다.'
+
+            if target_row['role'] == 'owner':
+                return False, '방장의 권한은 변경할 수 없습니다.'
+
+            # 권한 변경
+            new_role = 'admin' if is_admin else 'member'
+            cursor.execute('''
+                UPDATE chat_participants SET role = %s
+                WHERE chat_id = %s AND username = %s
+            ''', (new_role, int(chat_id), target_username))
+            conn.commit()
+
+            action = '부방장으로 지정' if is_admin else '일반 멤버로 변경'
+            logger.info(f"User {target_username} {action} in chat {chat_id} by {username}")
+            return True, f'{target_username}님이 {action}되었습니다.'

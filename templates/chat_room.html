@@ -48,6 +48,53 @@
             font-size: 14px;
         }
         .back-btn:hover { background: #5a6268; }
+
+        /* 채팅방 상단 바 */
+        .chat-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .chat-topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-topbar-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .chat-topbar-count {
+            font-size: 13px;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+        .chat-topbar-right {
+            display: flex;
+            gap: 8px;
+        }
+        .topbar-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .topbar-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
         .chat-container {
             flex: 1;
             display: flex;
@@ -1010,8 +1057,20 @@
     {% include 'includes/header.html' %}
 
     <div class="chat-container">
-        <!-- 검색 패널 -->
-        <div id="searchPanel" class="search-panel">
+        <!-- 채팅방 상단 바 -->
+        <div class="chat-topbar">
+            <div class="chat-topbar-left">
+                <span class="chat-topbar-title">{{ chat_title }}</span>
+                <span class="chat-topbar-count" id="participantCount"></span>
+            </div>
+            <div class="chat-topbar-right">
+                <button class="topbar-btn" onclick="toggleSearchPanel()" title="검색">🔍</button>
+                <button class="topbar-btn" onclick="openChatSettings()" title="설정">⚙️</button>
+            </div>
+        </div>
+
+        <!-- 검색 패널 (숨김) -->
+        <div id="searchPanel" class="search-panel" style="display: none;">
             <div class="search-row">
                 <div class="search-input-wrap">
                     <input type="text" id="searchInput" placeholder="메시지 검색..." autocomplete="off">
@@ -1057,6 +1116,9 @@
         ⬇️
         <span class="new-msg-badge" id="newMsgBadge" style="display: none;">0</span>
     </button>
+
+    <!-- 채팅방 설정 모달 -->
+    {% include 'includes/chat_settings_modal.html' %}
 
     <!-- 날짜 선택 모달 -->
     <div id="datePickerModal" class="date-picker-modal">
@@ -2244,7 +2306,26 @@
                     }
                 });
             }
+
+            // 참여자 수 로드
+            loadParticipantCount();
         });
+
+        // 참여자 수 로드
+        async function loadParticipantCount() {
+            try {
+                const res = await fetch(`/api/chats/${chatId}/settings`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const countEl = document.getElementById('participantCount');
+                    if (countEl) {
+                        countEl.textContent = `${data.participant_count}명`;
+                    }
+                }
+            } catch (e) {
+                console.log('참여자 수 로드 실패');
+            }
+        }
 
         // 네비게이션 뱃지 업데이트
         function updateNavBadges(counts) {
@@ -2303,9 +2384,19 @@
             }
         }
 
+        function toggleSearchPanel() {
+            const panel = document.getElementById('searchPanel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                document.getElementById('searchInput').focus();
+            } else {
+                closeSearchPanel();
+            }
+        }
+
         function closeSearchPanel() {
             const panel = document.getElementById('searchPanel');
-            panel.classList.remove('show');
+            panel.style.display = 'none';
             clearSearchHighlights();
             document.getElementById('searchResultsInfo').style.display = 'none';
         }

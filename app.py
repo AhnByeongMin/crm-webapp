@@ -1488,6 +1488,152 @@ def get_message_context(chat_id, msg_id):
     })
 
 
+# ==================== 채팅방 설정 API ====================
+
+@app.route('/api/chats/<chat_id>/settings', methods=['GET'])
+def get_chat_settings_api(chat_id):
+    """채팅방 설정 및 권한 정보 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    settings = database.get_chat_settings(chat_id, username)
+
+    if not settings:
+        return jsonify({'error': 'Chat not found or not a participant'}), 404
+
+    return jsonify(settings)
+
+
+@app.route('/api/chats/<chat_id>/title', methods=['PUT'])
+@limiter.limit(get_limit_string('api'))
+def update_chat_title_api(chat_id):
+    """채팅방 제목 변경 (그룹채팅만, owner/admin만)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    data = request.get_json()
+    new_title = data.get('title', '').strip()
+
+    if not new_title:
+        return jsonify({'success': False, 'message': '제목을 입력해주세요.'}), 400
+
+    if len(new_title) > 100:
+        return jsonify({'success': False, 'message': '제목은 100자 이내로 입력해주세요.'}), 400
+
+    success, message = database.update_chat_title(chat_id, username, new_title)
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/chats/<chat_id>/mute', methods=['POST'])
+@limiter.limit(get_limit_string('api'))
+def toggle_chat_mute_api(chat_id):
+    """채팅방 알림 토글"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    success, muted = database.toggle_chat_mute(chat_id, username)
+
+    if success:
+        return jsonify({'success': True, 'muted': muted})
+    return jsonify({'success': False, 'message': '알림 설정 변경에 실패했습니다.'}), 400
+
+
+@app.route('/api/chats/<chat_id>/participants', methods=['POST'])
+@limiter.limit(get_limit_string('api'))
+def add_chat_participant_api(chat_id):
+    """채팅방에 멤버 추가 (그룹채팅만, owner/admin만)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    data = request.get_json()
+    target_username = data.get('username', '').strip()
+
+    if not target_username:
+        return jsonify({'success': False, 'message': '추가할 사용자를 선택해주세요.'}), 400
+
+    success, message = database.add_chat_participant(chat_id, username, target_username)
+
+    # 성공 시 Socket.IO로 알림
+    if success:
+        socketio.emit('participant_added', {
+            'chat_id': chat_id,
+            'username': target_username,
+            'added_by': username
+        }, room=f'chat_{chat_id}')
+
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/chats/<chat_id>/participants/<target_username>', methods=['DELETE'])
+@limiter.limit(get_limit_string('api'))
+def remove_chat_participant_api(chat_id, target_username):
+    """채팅방에서 멤버 내보내기 (그룹채팅만, owner/admin만)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    success, message = database.remove_chat_participant(chat_id, username, target_username)
+
+    # 성공 시 Socket.IO로 알림
+    if success:
+        socketio.emit('participant_removed', {
+            'chat_id': chat_id,
+            'username': target_username,
+            'removed_by': username
+        }, room=f'chat_{chat_id}')
+
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/chats/<chat_id>/leave', methods=['POST'])
+@limiter.limit(get_limit_string('api'))
+def leave_chat_api(chat_id):
+    """채팅방 나가기 (그룹채팅만)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    success, message = database.leave_chat(chat_id, username)
+
+    # 성공 시 Socket.IO로 알림
+    if success:
+        socketio.emit('participant_left', {
+            'chat_id': chat_id,
+            'username': username
+        }, room=f'chat_{chat_id}')
+
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/chats/<chat_id>/admin/<target_username>', methods=['PUT'])
+@limiter.limit(get_limit_string('api'))
+def set_chat_admin_api(chat_id, target_username):
+    """부방장 권한 설정/해제 (owner만)"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'admin')
+    data = request.get_json()
+    is_admin = data.get('is_admin', False)
+
+    success, message = database.set_chat_admin(chat_id, username, target_username, is_admin)
+
+    # 성공 시 Socket.IO로 알림
+    if success:
+        socketio.emit('role_changed', {
+            'chat_id': chat_id,
+            'username': target_username,
+            'new_role': 'admin' if is_admin else 'member',
+            'changed_by': username
+        }, room=f'chat_{chat_id}')
+
+    return jsonify({'success': success, 'message': message})
+
+
 @app.route('/api/search_users', methods=['GET'])
 @limiter.limit(get_limit_string('search'))
 def search_users():

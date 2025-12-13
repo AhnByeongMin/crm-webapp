@@ -1,0 +1,694 @@
+<style>
+/* 채팅방 설정 모달 */
+.chat-settings-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 10003;
+    align-items: center;
+    justify-content: center;
+}
+.chat-settings-modal.show {
+    display: flex;
+}
+.chat-settings-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 95%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.chat-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 2px solid #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px 12px 0 0;
+}
+.chat-settings-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+}
+.chat-settings-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-settings-close:hover {
+    background: rgba(255,255,255,0.3);
+}
+.chat-settings-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+.setting-section {
+    margin-bottom: 25px;
+}
+.setting-section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+.setting-row:last-child {
+    margin-bottom: 0;
+}
+.setting-label {
+    font-weight: 600;
+    color: #333;
+}
+.setting-value {
+    color: #666;
+    font-size: 14px;
+}
+.setting-input {
+    flex: 1;
+    margin-left: 15px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+.setting-input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+/* 토글 스위치 */
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+    border-radius: 26px;
+}
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+input:checked + .toggle-slider {
+    background-color: #667eea;
+}
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+/* 참여자 목록 */
+.participant-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+.participant-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+.participant-item:last-child {
+    margin-bottom: 0;
+}
+.participant-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.participant-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #667eea;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+.participant-name {
+    font-weight: 600;
+    color: #333;
+}
+.participant-role {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+.role-owner {
+    background: #ffd700;
+    color: #333;
+}
+.role-admin {
+    background: #667eea;
+    color: white;
+}
+.role-member {
+    background: #e9ecef;
+    color: #666;
+}
+.participant-actions {
+    display: flex;
+    gap: 5px;
+}
+.participant-actions button {
+    padding: 5px 10px;
+    font-size: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.btn-admin {
+    background: #667eea;
+    color: white;
+}
+.btn-admin:hover {
+    background: #5568d3;
+}
+.btn-remove-admin {
+    background: #6c757d;
+    color: white;
+}
+.btn-kick {
+    background: #dc3545;
+    color: white;
+}
+.btn-kick:hover {
+    background: #c82333;
+}
+
+/* 멤버 추가 */
+.add-member-section {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.add-member-section input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+}
+.add-member-section input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+.add-member-section button {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.add-member-section button:hover {
+    background: #218838;
+}
+
+/* 위험 영역 */
+.danger-section {
+    border: 2px solid #dc3545;
+    border-radius: 8px;
+    padding: 15px;
+    background: #fff5f5;
+}
+.danger-section .setting-section-title {
+    color: #dc3545;
+}
+.btn-leave {
+    width: 100%;
+    padding: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.btn-leave:hover {
+    background: #c82333;
+}
+
+/* 1:1 채팅 안내 */
+.direct-chat-notice {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+.direct-chat-notice p {
+    margin-bottom: 10px;
+}
+
+/* 다크모드 */
+[data-theme="dark"] .chat-settings-content {
+    background: #1e1e1e;
+    color: #e0e0e0;
+}
+[data-theme="dark"] .setting-row,
+[data-theme="dark"] .participant-item {
+    background: #2a2a2a;
+}
+[data-theme="dark"] .setting-label,
+[data-theme="dark"] .participant-name {
+    color: #e0e0e0;
+}
+[data-theme="dark"] .setting-value {
+    color: #aaa;
+}
+[data-theme="dark"] .setting-input,
+[data-theme="dark"] .add-member-section input {
+    background: #333;
+    color: #e0e0e0;
+    border-color: #555;
+}
+[data-theme="dark"] .danger-section {
+    background: #3d2020;
+}
+[data-theme="dark"] .role-member {
+    background: #444;
+    color: #ccc;
+}
+
+/* 반응형 */
+@media (max-width: 480px) {
+    .chat-settings-content {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    .chat-settings-header {
+        border-radius: 0;
+    }
+    .participant-actions {
+        flex-direction: column;
+    }
+    .add-member-section {
+        flex-direction: column;
+    }
+}
+</style>
+
+<!-- 채팅방 설정 모달 -->
+<div id="chatSettingsModal" class="chat-settings-modal">
+    <div class="chat-settings-content">
+        <div class="chat-settings-header">
+            <span class="chat-settings-title">⚙️ 채팅방 설정</span>
+            <button class="chat-settings-close" onclick="closeChatSettings()">&times;</button>
+        </div>
+        <div class="chat-settings-body" id="chatSettingsBody">
+            <!-- 동적으로 로드 -->
+            <div style="text-align: center; padding: 40px; color: #999;">
+                로딩 중...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 채팅방 설정 관련 함수들
+let chatSettingsData = null;
+
+async function openChatSettings() {
+    const modal = document.getElementById('chatSettingsModal');
+    const body = document.getElementById('chatSettingsBody');
+    modal.classList.add('show');
+
+    body.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">로딩 중...</div>';
+
+    try {
+        const response = await fetch(`/api/chats/${chatId}/settings`);
+        if (!response.ok) {
+            throw new Error('설정을 불러올 수 없습니다.');
+        }
+        chatSettingsData = await response.json();
+        renderChatSettings();
+    } catch (error) {
+        body.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc3545;">${error.message}</div>`;
+    }
+}
+
+function closeChatSettings() {
+    document.getElementById('chatSettingsModal').classList.remove('show');
+}
+
+function renderChatSettings() {
+    const body = document.getElementById('chatSettingsBody');
+    const data = chatSettingsData;
+    const isGroup = data.chat_type === 'group';
+    const isOwner = data.my_role === 'owner';
+    const isAdmin = data.my_role === 'admin';
+    const canManage = isOwner || isAdmin;
+
+    let html = '';
+
+    // 기본 정보
+    html += `
+        <div class="setting-section">
+            <div class="setting-section-title">📋 채팅방 정보</div>
+            <div class="setting-row">
+                <span class="setting-label">유형</span>
+                <span class="setting-value">${isGroup ? '그룹 채팅' : '1:1 채팅'}</span>
+            </div>
+    `;
+
+    if (isGroup && canManage) {
+        // 제목 변경 가능
+        html += `
+            <div class="setting-row">
+                <span class="setting-label">제목</span>
+                <input type="text" class="setting-input" id="chatTitleInput"
+                       value="${escapeHtml(data.title)}" maxlength="100">
+                <button onclick="updateChatTitle()" style="margin-left: 10px; padding: 8px 15px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">변경</button>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="setting-row">
+                <span class="setting-label">제목</span>
+                <span class="setting-value">${escapeHtml(data.title)}</span>
+            </div>
+        `;
+    }
+
+    html += `
+            <div class="setting-row">
+                <span class="setting-label">참여자</span>
+                <span class="setting-value">${data.participant_count}명</span>
+            </div>
+        </div>
+    `;
+
+    // 알림 설정
+    html += `
+        <div class="setting-section">
+            <div class="setting-section-title">🔔 알림 설정</div>
+            <div class="setting-row">
+                <span class="setting-label">알림 끄기</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="muteToggle" ${data.muted ? 'checked' : ''} onchange="toggleMute()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+    `;
+
+    // 참여자 목록 (그룹채팅만)
+    if (isGroup) {
+        html += `
+            <div class="setting-section">
+                <div class="setting-section-title">👥 참여자 목록</div>
+                <div class="participant-list">
+        `;
+
+        for (const p of data.participants) {
+            const initial = p.username.charAt(0).toUpperCase();
+            const roleLabel = p.role === 'owner' ? '방장' : (p.role === 'admin' ? '부방장' : '');
+            const roleClass = p.role === 'owner' ? 'role-owner' : (p.role === 'admin' ? 'role-admin' : 'role-member');
+            const isMe = p.username === username;
+
+            html += `
+                <div class="participant-item">
+                    <div class="participant-info">
+                        <div class="participant-avatar">${initial}</div>
+                        <span class="participant-name">${escapeHtml(p.username)}${isMe ? ' (나)' : ''}</span>
+                        ${roleLabel ? `<span class="participant-role ${roleClass}">${roleLabel}</span>` : ''}
+                    </div>
+                    <div class="participant-actions">
+            `;
+
+            // 방장만 권한 변경 가능
+            if (isOwner && !isMe && p.role !== 'owner') {
+                if (p.role === 'admin') {
+                    html += `<button class="btn-remove-admin" onclick="setAdmin('${p.username}', false)">부방장 해제</button>`;
+                } else {
+                    html += `<button class="btn-admin" onclick="setAdmin('${p.username}', true)">부방장 지정</button>`;
+                }
+            }
+
+            // owner/admin이 내보내기 가능 (본인, 방장 제외)
+            if (canManage && !isMe && p.role !== 'owner') {
+                // admin은 방장만 내보낼 수 있음
+                if (p.role !== 'admin' || isOwner) {
+                    html += `<button class="btn-kick" onclick="kickMember('${p.username}')">내보내기</button>`;
+                }
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+
+        // 멤버 추가 (owner/admin만)
+        if (canManage) {
+            html += `
+                <div class="add-member-section">
+                    <input type="text" id="addMemberInput" placeholder="추가할 사용자명 입력...">
+                    <button onclick="addMember()">추가</button>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+
+        // 나가기 (그룹채팅만)
+        html += `
+            <div class="setting-section danger-section">
+                <div class="setting-section-title">⚠️ 위험 영역</div>
+                <button class="btn-leave" onclick="leaveChat()">채팅방 나가기</button>
+                <p style="font-size: 12px; color: #666; margin-top: 10px; text-align: center;">
+                    ${isOwner ? '방장이 나가면 다음 부방장 또는 멤버에게 권한이 이전됩니다.' : '채팅방을 나가면 대화 내역을 볼 수 없습니다.'}
+                </p>
+            </div>
+        `;
+    } else {
+        // 1:1 채팅 안내
+        html += `
+            <div class="direct-chat-notice">
+                <p>1:1 채팅방입니다.</p>
+                <p style="font-size: 13px;">제목 변경, 멤버 관리, 나가기 등은<br>그룹 채팅방에서만 가능합니다.</p>
+            </div>
+        `;
+    }
+
+    body.innerHTML = html;
+}
+
+async function updateChatTitle() {
+    const input = document.getElementById('chatTitleInput');
+    const newTitle = input.value.trim();
+
+    if (!newTitle) {
+        alert('제목을 입력해주세요.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/chats/${chatId}/title`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: newTitle })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert('채팅방 제목이 변경되었습니다.');
+            // 페이지 제목 업데이트
+            document.title = newTitle;
+            chatSettingsData.title = newTitle;
+        } else {
+            alert(result.message);
+        }
+    } catch (error) {
+        alert('제목 변경에 실패했습니다.');
+    }
+}
+
+async function toggleMute() {
+    try {
+        const response = await fetch(`/api/chats/${chatId}/mute`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            chatSettingsData.muted = result.muted;
+        } else {
+            // 실패 시 토글 원복
+            document.getElementById('muteToggle').checked = !document.getElementById('muteToggle').checked;
+            alert(result.message);
+        }
+    } catch (error) {
+        document.getElementById('muteToggle').checked = !document.getElementById('muteToggle').checked;
+        alert('알림 설정 변경에 실패했습니다.');
+    }
+}
+
+async function addMember() {
+    const input = document.getElementById('addMemberInput');
+    const targetUsername = input.value.trim();
+
+    if (!targetUsername) {
+        alert('추가할 사용자명을 입력해주세요.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/chats/${chatId}/participants`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: targetUsername })
+        });
+        const result = await response.json();
+
+        alert(result.message);
+
+        if (result.success) {
+            input.value = '';
+            openChatSettings(); // 새로고침
+        }
+    } catch (error) {
+        alert('멤버 추가에 실패했습니다.');
+    }
+}
+
+async function kickMember(targetUsername) {
+    if (!confirm(`${targetUsername}님을 채팅방에서 내보내시겠습니까?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/chats/${chatId}/participants/${encodeURIComponent(targetUsername)}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+
+        alert(result.message);
+
+        if (result.success) {
+            openChatSettings(); // 새로고침
+        }
+    } catch (error) {
+        alert('멤버 내보내기에 실패했습니다.');
+    }
+}
+
+async function setAdmin(targetUsername, isAdmin) {
+    const action = isAdmin ? '부방장으로 지정' : '일반 멤버로 변경';
+    if (!confirm(`${targetUsername}님을 ${action}하시겠습니까?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/chats/${chatId}/admin/${encodeURIComponent(targetUsername)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_admin: isAdmin })
+        });
+        const result = await response.json();
+
+        alert(result.message);
+
+        if (result.success) {
+            openChatSettings(); // 새로고침
+        }
+    } catch (error) {
+        alert('권한 변경에 실패했습니다.');
+    }
+}
+
+async function leaveChat() {
+    if (!confirm('정말로 이 채팅방을 나가시겠습니까?\n대화 내역을 다시 볼 수 없습니다.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/chats/${chatId}/leave`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert('채팅방을 나갔습니다.');
+            window.location.href = '/chats';
+        } else {
+            alert(result.message);
+        }
+    } catch (error) {
+        alert('채팅방 나가기에 실패했습니다.');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 모달 외부 클릭 시 닫기
+document.getElementById('chatSettingsModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeChatSettings();
+    }
+});
+</script>
