@@ -8,7 +8,7 @@
 
 const SW_VERSION_KEY = 'crm_sw_version';
 const SW_LAST_CHECK = 'crm_sw_last_check';
-const CHECK_INTERVAL = 30000; // 30초마다 버전 체크
+const CHECK_INTERVAL = 60000; // 60초마다 버전 체크 (트래픽 최적화)
 
 class ServiceWorkerUpdater {
   constructor() {
@@ -62,7 +62,7 @@ class ServiceWorkerUpdater {
         });
       });
 
-      // 주기적 버전 체크 (30초마다)
+      // 주기적 버전 체크 (60초마다)
       setInterval(() => this.checkServerVersion(), CHECK_INTERVAL);
     });
 

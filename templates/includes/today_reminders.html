@@ -380,22 +380,48 @@ function quickAddTodayReminder() {
     checkTodayReminders();
 })();
 
-// 당일 예약 확인 (배지 업데이트)
-async function checkTodayReminders() {
+// 당일 예약 확인 (배지 업데이트) - 5분 캐싱
+const BANNER_CHECK_CACHE_KEY = 'crm_banner_check_cache';
+const BANNER_CHECK_CACHE_TTL = 5 * 60 * 1000; // 5분
+
+async function checkTodayReminders(forceRefresh = false) {
     try {
+        // 캐시 확인 (강제 새로고침이 아닌 경우)
+        if (!forceRefresh) {
+            const cached = localStorage.getItem(BANNER_CHECK_CACHE_KEY);
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                if (Date.now() - timestamp < BANNER_CHECK_CACHE_TTL) {
+                    updateReminderBadge(data);
+                    return;
+                }
+            }
+        }
+
         const response = await fetch('/api/reminders/banner-check');
         const data = await response.json();
 
-        const badge = document.getElementById('reminderBadge');
+        // 캐시 저장
+        localStorage.setItem(BANNER_CHECK_CACHE_KEY, JSON.stringify({
+            data: data,
+            timestamp: Date.now()
+        }));
 
-        if (data.today_count > 0) {
-            badge.style.display = 'flex';
-            badge.textContent = data.today_count;
-        } else {
-            badge.style.display = 'none';
-        }
+        updateReminderBadge(data);
     } catch (error) {
         console.error('예약 확인 실패:', error);
+    }
+}
+
+function updateReminderBadge(data) {
+    const badge = document.getElementById('reminderBadge');
+    if (!badge) return;
+
+    if (data.today_count > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = data.today_count;
+    } else {
+        badge.style.display = 'none';
     }
 }
 
