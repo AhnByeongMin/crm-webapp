@@ -29,25 +29,12 @@
             flex-direction: column;
             height: 100vh;
             background: #f5f5f5;
+            padding: 20px 20px 0 20px; /* 상단/좌우에 여백, 하단은 채팅 입력란이 있으므로 제외 */
         }
-        .header {
-            background: white;
-            padding: 15px 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* 헤더 wrapper (채팅 컨테이너 내부에서 헤더를 전체 너비로 표시) */
+        .header-wrapper {
+            width: 100%;
         }
-        .header h1 { font-size: 18px; color: #333; }
-        .back-btn {
-            padding: 8px 16px;
-            background: #6c757d;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .back-btn:hover { background: #5a6268; }
 
         /* 채팅방 상단 바 */
         .chat-topbar {
@@ -90,16 +77,41 @@
             align-items: center;
             justify-content: center;
             transition: background 0.2s;
+            text-decoration: none;
         }
         .topbar-btn:hover {
             background: rgba(255,255,255,0.3);
+        }
+        .topbar-btn.back-btn {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* 다크모드 채팅 탑바 시인성 개선 */
+        [data-theme="dark"] .chat-topbar {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+        }
+        [data-theme="dark"] .topbar-btn {
+            background: rgba(255,255,255,0.25);
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        [data-theme="dark"] .topbar-btn:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        [data-theme="dark"] .topbar-btn.back-btn {
+            background: rgba(102, 126, 234, 0.8);
+            border-color: rgba(102, 126, 234, 0.9);
+        }
+        [data-theme="dark"] .topbar-btn.back-btn:hover {
+            background: rgba(102, 126, 234, 1);
         }
 
         .chat-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 1000px;
+            max-width: 1400px;
             width: 100%;
             margin: 0 auto;
             background: white;
@@ -1054,12 +1066,14 @@
         <button class="close-banner" onclick="closeBanner()">×</button>
     </div>
 
-    {% include 'includes/header.html' %}
-
     <div class="chat-container">
+        <div class="header-wrapper">
+            {% include 'includes/header.html' %}
+        </div>
         <!-- 채팅방 상단 바 -->
         <div class="chat-topbar">
             <div class="chat-topbar-left">
+                <a href="/chats" class="topbar-btn back-btn" title="채팅 목록">←</a>
                 <span class="chat-topbar-title">{{ chat_title }}</span>
                 <span class="chat-topbar-count" id="participantCount"></span>
             </div>

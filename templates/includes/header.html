@@ -1,42 +1,42 @@
 <!-- 통합 헤더 컴포넌트 -->
 <!-- CSRF 토큰 -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<script src="/static/js/csrf-helper.js?v=20251213"></script>
+<script src="/static/js/csrf-helper.js?v=20251213e"></script>
 <!-- 다크 모드 & 폰트 설정 (가장 먼저 로드 - 렌더링 차단 방지) -->
-<link rel="stylesheet" href="/static/css/dark-mode.css?v=20251213">
-<script src="/static/js/dark-mode.js?v=20251213"></script>
-<script src="/static/js/font-settings.js?v=20251213"></script>
+<link rel="stylesheet" href="/static/css/dark-mode.css?v=20251213e">
+<script src="/static/js/dark-mode.js?v=20251213e"></script>
+<script src="/static/js/font-settings.js?v=20251213e"></script>
 <!-- UX 향상 컴포넌트 (defer로 비동기 로드) -->
-<script defer src="/static/js/toast.js?v=20251213"></script>
-<script defer src="/static/js/autocomplete.js?v=20251213"></script>
-<script defer src="/static/js/swipe-actions.js?v=20251213"></script>
-<script defer src="/static/js/onboarding.js?v=20251213"></script>
-<script defer src="/static/js/page-transitions.js?v=20251213"></script>
-<script defer src="/static/js/keyboard-shortcuts.js?v=20251213"></script>
-<script defer src="/static/js/notification-center.js?v=20251213"></script>
-<script defer src="/static/js/search-history.js?v=20251213"></script>
-<script defer src="/static/js/data-cache.js?v=20251213"></script>
-<script defer src="/static/js/drag-drop.js?v=20251213"></script>
-<script defer src="/static/js/pull-to-refresh.js?v=20251213"></script>
-<script defer src="/static/js/lazy-images.js?v=20251213"></script>
-<script defer src="/static/js/offline-support.js?v=20251213"></script>
-<script defer src="/static/js/touch-feedback.js?v=20251213"></script>
-<script defer src="/static/js/performance-utils.js?v=20251213"></script>
-<script defer src="/static/js/network-adaptive.js?v=20251213"></script>
-<script defer src="/static/js/animation-optimizer.js?v=20251213"></script>
-<script defer src="/static/js/indexed-db-store.js?v=20251213"></script>
-<script defer src="/static/js/form-validator.js?v=20251213"></script>
-<script defer src="/static/js/clipboard-utils.js?v=20251213"></script>
-<script defer src="/static/js/worker-manager.js?v=20251213"></script>
-<script defer src="/static/js/upload-progress.js?v=20251213"></script>
-<script defer src="/static/js/voice-input.js?v=20251213"></script>
-<script defer src="/static/js/fullscreen-mode.js?v=20251213"></script>
-<script defer src="/static/js/gesture-recognizer.js?v=20251213"></script>
-<script defer src="/static/js/theme-customizer.js?v=20251213"></script>
-<script defer src="/static/js/print-helper.js?v=20251213"></script>
-<script defer src="/static/js/file-viewer.js?v=20251213"></script>
-<link rel="stylesheet" href="/static/css/print.css?v=20251213" media="print">
-<script src="/static/js/error-handler.js?v=20251213"></script>
+<script defer src="/static/js/toast.js?v=20251213e"></script>
+<script defer src="/static/js/autocomplete.js?v=20251213e"></script>
+<script defer src="/static/js/swipe-actions.js?v=20251213e"></script>
+<script defer src="/static/js/onboarding.js?v=20251213e"></script>
+<script defer src="/static/js/page-transitions.js?v=20251213e"></script>
+<script defer src="/static/js/keyboard-shortcuts.js?v=20251213e"></script>
+<script defer src="/static/js/notification-center.js?v=20251213e"></script>
+<script defer src="/static/js/search-history.js?v=20251213e"></script>
+<script defer src="/static/js/data-cache.js?v=20251213e"></script>
+<script defer src="/static/js/drag-drop.js?v=20251213e"></script>
+<script defer src="/static/js/pull-to-refresh.js?v=20251213e"></script>
+<script defer src="/static/js/lazy-images.js?v=20251213e"></script>
+<script defer src="/static/js/offline-support.js?v=20251213e"></script>
+<script defer src="/static/js/touch-feedback.js?v=20251213e"></script>
+<script defer src="/static/js/performance-utils.js?v=20251213e"></script>
+<script defer src="/static/js/network-adaptive.js?v=20251213e"></script>
+<script defer src="/static/js/animation-optimizer.js?v=20251213e"></script>
+<script defer src="/static/js/indexed-db-store.js?v=20251213e"></script>
+<script defer src="/static/js/form-validator.js?v=20251213e"></script>
+<script defer src="/static/js/clipboard-utils.js?v=20251213e"></script>
+<script defer src="/static/js/worker-manager.js?v=20251213e"></script>
+<script defer src="/static/js/upload-progress.js?v=20251213e"></script>
+<script defer src="/static/js/voice-input.js?v=20251213e"></script>
+<script defer src="/static/js/fullscreen-mode.js?v=20251213e"></script>
+<script defer src="/static/js/gesture-recognizer.js?v=20251213e"></script>
+<script defer src="/static/js/theme-customizer.js?v=20251213e"></script>
+<script defer src="/static/js/print-helper.js?v=20251213e"></script>
+<script defer src="/static/js/file-viewer.js?v=20251213e"></script>
+<link rel="stylesheet" href="/static/css/print.css?v=20251213e" media="print">
+<script src="/static/js/error-handler.js?v=20251213e"></script>
 <script>
 // 최소 침습 보안: console 출력만 차단 (error/warn 유지, 개발자도구 완전 허용)
 (function() {
@@ -486,11 +486,6 @@
 
     <button class="nav-toggle" id="navToggle" onclick="toggleMobileNav()" aria-label="메뉴 열기">☰</button>
     <div class="nav" id="mainNav">
-        {% if current_page == 'chat_room' %}
-        <button class="success" onclick="toggleSearchPanel()">🔍 검색</button>
-        <button id="participantsBtn">👥 참여자</button>
-        <a href="/chats" class="secondary">← 목록</a>
-        {% endif %}
         {% if is_admin %}
         <a href="/admin" {% if current_page == 'admin' %}class="active"{% endif %}>할일관리</a>
         <a href="/users" {% if current_page == 'users' %}class="active"{% endif %}>사용자관리</a>

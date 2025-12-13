@@ -644,6 +644,18 @@
     color: var(--text-primary);
 }
 
+/* 채팅 메시지 발신자 이름 - 다크모드 시인성 */
+[data-theme="dark"] .message-header {
+    color: #a8b4ff !important;
+    font-weight: 600;
+}
+
+/* 상대방 메시지 버블 다크모드 */
+[data-theme="dark"] .message.other {
+    background: #3a3f47 !important;
+    color: var(--text-primary) !important;
+}
+
 [data-theme="dark"] .system-message {
     background: var(--bg-tertiary);
     color: var(--text-muted);
@@ -1999,4 +2011,193 @@
 [data-theme="dark"] .promo-block.selected {
     background: linear-gradient(to right, rgba(102, 126, 234, 0.2), var(--card-bg)) !important;
     border-left-color: #667eea !important;
+}
+
+/* ========== 프로모션 상세 모달 - 내용 영역 다크모드 ========== */
+[data-theme="dark"] #detailContent {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #detailContent p {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] #detailContent strong {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #detailContent div[style*="background"] {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 프로모션 내용 텍스트 박스 - 인라인 스타일 오버라이드 */
+[data-theme="dark"] #detailContent p[style*="background"],
+[data-theme="dark"] #detailContent p[style*="#f8f9fa"] {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* 프로모션 모달 내용 영역 */
+[data-theme="dark"] .modal-content div[style*="line-height"] {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-content div[style*="line-height"] p {
+    color: var(--text-secondary) !important;
+}
+
+/* 프로모션 상세 모달 내용 텍스트 박스 (white-space: pre-wrap 영역) */
+[data-theme="dark"] #detailContent p[style*="white-space: pre-wrap"],
+[data-theme="dark"] #detailModal p[style*="white-space: pre-wrap"] {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* ========== 내 예약 알림 설정 모달 다크모드 ========== */
+[data-theme="dark"] #notificationSettingsModal .modal-box {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #notificationSettingsModal .modal-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #notificationSettingsModal .form-group label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #notificationSettingsModal select,
+[data-theme="dark"] #notificationSettingsModal input {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 반복 알림 설정 영역 - 흰색 배경 오버라이드 */
+[data-theme="dark"] #notificationSettingsModal div[style*="background: #f8f9fa"],
+[data-theme="dark"] #notificationSettingsModal div[style*="background:#f8f9fa"] {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 아침 일일 요약 설정 영역 - 노란 배경 오버라이드 */
+[data-theme="dark"] #notificationSettingsModal div[style*="background: #fff8e1"],
+[data-theme="dark"] #notificationSettingsModal div[style*="background:#fff8e1"] {
+    background: #3d3a2a !important;
+    color: #ffd54f !important;
+}
+
+[data-theme="dark"] #notificationSettingsModal span {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 할일 관리(Admin) 테이블 영역 다크모드 ========== */
+/* 필터/검색 영역 - 인라인 background: white 오버라이드 */
+[data-theme="dark"] #content-manage > div[style*="background: white"] {
+    background: var(--card-bg) !important;
+}
+
+/* 테이블 컨테이너 */
+[data-theme="dark"] #tableContainer {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] #itemsTable {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] #itemsTableHead {
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] #itemsTableHead th {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #itemsList tr {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] #itemsList tr:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] #itemsList td {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 페이징 영역 */
+[data-theme="dark"] #paginationContainer {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #pageInfo {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] #pageSizeSelect {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 레이아웃 프리셋 선택 영역 */
+[data-theme="dark"] #layoutPreset {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 할일 등록 모달 */
+[data-theme="dark"] #taskRegistrationModal .modal-box {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #taskRegistrationModal h2 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #taskRegistrationModal h3 {
+    color: var(--accent-primary) !important;
+}
+
+/* 단일 항목 추가 / 엑셀 일괄 등록 영역 */
+[data-theme="dark"] #taskRegistrationModal div[style*="background: #f8f9fa"] {
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] #taskRegistrationModal .form-group label {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #taskRegistrationModal input,
+[data-theme="dark"] #taskRegistrationModal textarea {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+/* 엑셀 파일 형식 안내 영역 */
+[data-theme="dark"] #taskRegistrationModal div[style*="background: #fff"] {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #taskRegistrationModal p {
+    color: var(--text-secondary) !important;
+}
+
+/* 결과 개수 텍스트 */
+[data-theme="dark"] #resultCount {
+    color: var(--text-muted) !important;
 }

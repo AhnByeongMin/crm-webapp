@@ -269,6 +269,16 @@
             margin-top: 8px;
         }
 
+        /* 상세 모달 내용 박스 */
+        .detail-content-box {
+            background: #f8f9fa;
+        }
+        [data-theme="dark"] .detail-content-box {
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
         /* 내용 섹션 - 그리드 외부, 전체 너비 */
         .content-section {
             margin-top: 16px;
@@ -495,6 +505,97 @@
         .close-btn:hover {
             color: #333;
         }
+
+        /* 상세 모달 스타일 개선 */
+        #detailModal .modal-content {
+            max-width: 700px;
+        }
+        #detailModal .modal-header {
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            margin-bottom: 25px;
+        }
+        .detail-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px 20px;
+            margin-bottom: 20px;
+        }
+        .detail-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .detail-info-item.full-width {
+            grid-column: 1 / -1;
+        }
+        .detail-info-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .detail-info-value {
+            font-size: 15px;
+            color: #333;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .detail-info-value .copy-btn {
+            margin-left: auto;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .detail-content-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px dashed #e0e0e0;
+        }
+        .detail-content-section .detail-info-label {
+            margin-bottom: 8px;
+        }
+        .detail-footer {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #888;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .detail-footer-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .detail-footer-item::before {
+            font-size: 14px;
+        }
+
+        /* 다크모드 상세 모달 */
+        [data-theme="dark"] .detail-info-value {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-left-color: var(--accent-primary);
+        }
+        [data-theme="dark"] .detail-info-label {
+            color: var(--text-muted);
+        }
+        [data-theme="dark"] .detail-content-section {
+            border-top-color: var(--border-color);
+        }
+        [data-theme="dark"] .detail-footer {
+            border-top-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
         .form-group {
             margin-bottom: 15px;
         }
@@ -1944,34 +2045,71 @@
             fetch(`/api/promotions/${id}`)
                 .then(res => res.json())
                 .then(promo => {
+                    const channelColor = getChannelColor(promo.channel);
                     document.getElementById('detailContent').innerHTML = `
-                        <div style="line-height: 1.8;">
-                            <p><strong>대분류:</strong> ${escapeHtml(promo.category) || '-'}</p>
-                            <p>
-                                <strong>상품명:</strong> ${escapeHtml(promo.product_name)}
-                                <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.product_name).replace(/'/g, "\\'")}', this)">📋 복사</button>
-                            </p>
-                            <p><strong>채널:</strong> ${escapeHtml(promo.channel)}</p>
-                            <p>
-                                <strong>프로모션명:</strong> ${escapeHtml(promo.promotion_name)}
-                                <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.promotion_name).replace(/'/g, "\\'")}', this)">📋 복사</button>
-                            </p>
-                            <p>
-                                <strong>패키지 정책 코드:</strong> ${escapeHtml(promo.promotion_code) || '-'}
-                                ${promo.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.promotion_code).replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
-                            </p>
-                            <p><strong>금액할인:</strong> ${escapeHtml(promo.discount_amount) || '-'}</p>
-                            <p><strong>회차면제:</strong> ${escapeHtml(promo.session_exemption) || '-'}</p>
-                            <p><strong>중복여부:</strong> ${escapeHtml((promo.subscription_types || []).join(', ')) || '-'}</p>
-                            <p><strong>내용:</strong></p>
-                            <p style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 4px;">${escapeHtml(promo.content)}</p>
-                            <p><strong>기간:</strong> ${escapeHtml(promo.start_date)} ~ ${escapeHtml(promo.end_date)}</p>
-                            <p><strong>상태:</strong> ${getStatusBadge(promo)}</p>
-                            <p style="font-size: 12px; color: #666; margin-top: 20px;">
-                                등록일: ${new Date(promo.created_at).toLocaleString('ko-KR')}<br>
-                                ${promo.created_by ? `등록자: ${escapeHtml(promo.created_by)}<br>` : ''}
-                                ${promo.updated_at ? `최종 수정: ${new Date(promo.updated_at).toLocaleString('ko-KR')}` : ''}
-                            </p>
+                        <div class="detail-info-grid">
+                            <div class="detail-info-item">
+                                <span class="detail-info-label">대분류</span>
+                                <div class="detail-info-value">${escapeHtml(promo.category) || '-'}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <span class="detail-info-label">채널</span>
+                                <div class="detail-info-value">
+                                    <span class="channel-badge" style="background: ${channelColor.bg}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px;">${escapeHtml(promo.channel)}</span>
+                                </div>
+                            </div>
+                            <div class="detail-info-item full-width">
+                                <span class="detail-info-label">상품명</span>
+                                <div class="detail-info-value">
+                                    ${escapeHtml(promo.product_name)}
+                                    <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.product_name).replace(/'/g, "\\'")}', this)">📋 복사</button>
+                                </div>
+                            </div>
+                            <div class="detail-info-item full-width">
+                                <span class="detail-info-label">프로모션명</span>
+                                <div class="detail-info-value">
+                                    ${escapeHtml(promo.promotion_name)}
+                                    <button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.promotion_name).replace(/'/g, "\\'")}', this)">📋 복사</button>
+                                </div>
+                            </div>
+                            <div class="detail-info-item">
+                                <span class="detail-info-label">패키지 정책 코드</span>
+                                <div class="detail-info-value">
+                                    ${escapeHtml(promo.promotion_code) || '-'}
+                                    ${promo.promotion_code ? `<button class="copy-btn" onclick="copyToClipboard('${escapeHtml(promo.promotion_code).replace(/'/g, "\\'")}', this)">📋 복사</button>` : ''}
+                                </div>
+                            </div>
+                            <div class="detail-info-item">
+                                <span class="detail-info-label">상태</span>
+                                <div class="detail-info-value">${getStatusBadge(promo)}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <span class="detail-info-label">금액할인</span>
+                                <div class="detail-info-value">${escapeHtml(promo.discount_amount) || '-'}</div>
+                            </div>
+                            <div class="detail-info-item">
+                                <span class="detail-info-label">회차면제</span>
+                                <div class="detail-info-value">${escapeHtml(promo.session_exemption) || '-'}</div>
+                            </div>
+                            <div class="detail-info-item full-width">
+                                <span class="detail-info-label">중복여부</span>
+                                <div class="detail-info-value">${escapeHtml((promo.subscription_types || []).join(', ')) || '-'}</div>
+                            </div>
+                            <div class="detail-info-item full-width">
+                                <span class="detail-info-label">기간</span>
+                                <div class="detail-info-value">📅 ${escapeHtml(promo.start_date)} ~ ${escapeHtml(promo.end_date)}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-content-section">
+                            <span class="detail-info-label">내용</span>
+                            <div class="detail-content-box" style="white-space: pre-wrap; padding: 15px; border-radius: 6px; margin-top: 8px; line-height: 1.6;">${escapeHtml(promo.content) || '-'}</div>
+                        </div>
+
+                        <div class="detail-footer">
+                            <div class="detail-footer-item">📝 등록일: ${new Date(promo.created_at).toLocaleString('ko-KR')}</div>
+                            ${promo.created_by ? `<div class="detail-footer-item">👤 등록자: ${escapeHtml(promo.created_by)}</div>` : ''}
+                            ${promo.updated_at ? `<div class="detail-footer-item">🔄 최종 수정: ${new Date(promo.updated_at).toLocaleString('ko-KR')}</div>` : ''}
                         </div>
                     `;
                     document.getElementById('detailModal').classList.add('show');
