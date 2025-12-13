@@ -283,13 +283,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'PUSH_RECEIVED') {
+            // 현재 보고 있는 채팅방 메시지면 무시
+            const url = event.data.url;
+            if (url && url.includes('/chat/')) {
+                const roomId = url.split('/chat/')[1];
+                if (window.currentChatRoomId && window.currentChatRoomId === roomId) {
+                    // 현재 보고 있는 채팅방이면 알림 추가 안 함
+                    return;
+                }
+            }
+
             // 알림 센터에 추가
             if (window.notificationCenter) {
                 window.notificationCenter.addNotification({
                     type: event.data.notificationType || 'info',
                     title: event.data.title || '알림',
                     message: event.data.body || '',
-                    link: event.data.url || null,
+                    link: url || null,
                     icon: event.data.icon || '🔔'
                 });
             }

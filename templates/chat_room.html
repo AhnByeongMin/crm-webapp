@@ -1032,6 +1032,9 @@
         });
         const chatId = '{{ chat_id }}';
         const username = '{{ username }}';
+
+        // 전역으로 현재 채팅방 ID 노출 (알림 필터링용)
+        window.currentChatRoomId = chatId;
         const messagesDiv = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
