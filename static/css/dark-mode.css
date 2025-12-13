@@ -1,0 +1,452 @@
+/**
+ * 다크 모드 CSS
+ * CSS 변수를 사용하여 라이트/다크 테마 지원
+ */
+
+/* ========== CSS 변수 정의 ========== */
+:root {
+    /* 라이트 모드 (기본) */
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f8f9fa;
+    --bg-hover: #e9ecef;
+
+    --text-primary: #212529;
+    --text-secondary: #495057;
+    --text-muted: #6c757d;
+    --text-light: #888;
+
+    --border-color: #dee2e6;
+    --border-light: #e9ecef;
+
+    --accent-primary: #667eea;
+    --accent-hover: #5568d3;
+    --accent-light: rgba(102, 126, 234, 0.1);
+
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
+
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.2);
+
+    --input-bg: #ffffff;
+    --input-border: #ddd;
+    --input-focus-border: #667eea;
+
+    --card-bg: #ffffff;
+    --modal-bg: #ffffff;
+    --overlay-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* ========== 다크 모드 ========== */
+[data-theme="dark"] {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #1f2937;
+    --bg-hover: #374151;
+
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --text-light: #6b7280;
+
+    --border-color: #374151;
+    --border-light: #4b5563;
+
+    --accent-primary: #818cf8;
+    --accent-hover: #6366f1;
+    --accent-light: rgba(129, 140, 248, 0.2);
+
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+
+    --input-bg: #1f2937;
+    --input-border: #4b5563;
+    --input-focus-border: #818cf8;
+
+    --card-bg: #1f2937;
+    --modal-bg: #1f2937;
+    --overlay-bg: rgba(0, 0, 0, 0.7);
+}
+
+/* ========== 공통 요소에 변수 적용 ========== */
+[data-theme="dark"] body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .container {
+    background: var(--bg-primary);
+}
+
+/* 헤더 */
+[data-theme="dark"] .header,
+[data-theme="dark"] .page-header {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+/* 카드 */
+[data-theme="dark"] .card,
+[data-theme="dark"] .info-card,
+[data-theme="dark"] .user-info-section,
+[data-theme="dark"] .settings-section,
+[data-theme="dark"] .password-section {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* 입력 필드 */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+    border-color: var(--input-focus-border);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+    color: var(--text-muted);
+}
+
+/* 버튼 */
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .nav-buttons a,
+[data-theme="dark"] .nav-buttons button {
+    background: var(--accent-primary);
+}
+
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .nav-buttons a:hover,
+[data-theme="dark"] .nav-buttons button:hover {
+    background: var(--accent-hover);
+}
+
+[data-theme="dark"] .font-size-btn {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .font-size-btn:hover {
+    border-color: var(--accent-primary);
+}
+
+[data-theme="dark"] .font-size-btn.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+/* 테이블 */
+[data-theme="dark"] table {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] th {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] td {
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] tr:hover {
+    background: var(--bg-hover);
+}
+
+/* 모달 */
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .help-modal-content {
+    background: var(--modal-bg);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .help-modal-header {
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-footer {
+    border-color: var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+/* 채팅 */
+[data-theme="dark"] .chat-item {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .chat-item:hover {
+    background: var(--bg-hover);
+}
+
+[data-theme="dark"] .chat-item.pinned {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-primary);
+}
+
+[data-theme="dark"] .message-bubble {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .message-bubble.mine {
+    background: var(--accent-primary);
+    color: white;
+}
+
+[data-theme="dark"] .messages-container {
+    background: var(--bg-primary);
+}
+
+[data-theme="dark"] .chat-input-area {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+/* 토스트 */
+[data-theme="dark"] .toast {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-md);
+}
+
+/* 드롭다운 */
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .recent-searches {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .recent-search-item:hover {
+    background: var(--bg-hover);
+}
+
+/* 알림/경고 박스 */
+[data-theme="dark"] .localhost-notice {
+    background: #3d3200;
+    border-color: #665200;
+    color: #ffc107;
+}
+
+[data-theme="dark"] .alert-info {
+    background: #1a365d;
+    border-color: #2c5282;
+    color: #90cdf4;
+}
+
+/* 구분선 */
+[data-theme="dark"] .info-row,
+[data-theme="dark"] .setting-item {
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .info-label,
+[data-theme="dark"] .setting-label {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .info-value {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .setting-description,
+[data-theme="dark"] .password-hint {
+    color: var(--text-muted);
+}
+
+/* 도움말 버튼 */
+[data-theme="dark"] .help-button {
+    background: var(--accent-primary);
+    box-shadow: var(--shadow-md);
+}
+
+/* 스크롤바 */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* 로딩 스피너 */
+[data-theme="dark"] .loading-container {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .loading-spinner {
+    border-color: var(--border-color);
+    border-top-color: var(--accent-primary);
+}
+
+/* 스켈레톤 로딩 */
+[data-theme="dark"] .skeleton {
+    background: linear-gradient(90deg, #2d3748 25%, #4a5568 50%, #2d3748 75%);
+    background-size: 200% 100%;
+}
+
+[data-theme="dark"] .skeleton-card {
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 플로팅 버튼 */
+[data-theme="dark"] .scroll-to-bottom-btn,
+[data-theme="dark"] .floating-btn {
+    background: var(--accent-primary);
+    box-shadow: var(--shadow-md);
+}
+
+/* 배지 */
+[data-theme="dark"] .badge {
+    background: var(--accent-primary);
+}
+
+/* 탭 */
+[data-theme="dark"] .tab-btn {
+    color: var(--text-muted);
+    border-color: transparent;
+}
+
+[data-theme="dark"] .tab-btn.active {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+/* 검색 박스 */
+[data-theme="dark"] .search-box,
+[data-theme="dark"] .filter-section {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+}
+
+/* 페이지네이션 */
+[data-theme="dark"] .pagination .page-link {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .pagination .page-link:hover {
+    background: var(--bg-hover);
+}
+
+[data-theme="dark"] .pagination .page-item.active .page-link {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+/* 링크 */
+[data-theme="dark"] a {
+    color: var(--accent-primary);
+}
+
+[data-theme="dark"] a:hover {
+    color: var(--accent-hover);
+}
+
+/* 제목 */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: var(--text-primary);
+}
+
+/* ========== 다크모드 토글 스위치 스타일 ========== */
+.dark-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 56px;
+    height: 28px;
+    background: #ccc;
+    border-radius: 28px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.toggle-switch.active {
+    background: var(--accent-primary, #667eea);
+}
+
+.toggle-switch::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-switch.active::before {
+    transform: translateX(28px);
+}
+
+.toggle-label {
+    font-size: 14px;
+    color: var(--text-muted, #6c757d);
+}
+
+/* 다크 모드 아이콘 */
+.dark-mode-toggle .mode-icon {
+    font-size: 20px;
+    transition: opacity 0.3s;
+}
+
+.dark-mode-toggle .sun-icon {
+    opacity: 1;
+}
+
+.dark-mode-toggle .moon-icon {
+    opacity: 0.5;
+}
+
+[data-theme="dark"] .dark-mode-toggle .sun-icon {
+    opacity: 0.5;
+}
+
+[data-theme="dark"] .dark-mode-toggle .moon-icon {
+    opacity: 1;
+}

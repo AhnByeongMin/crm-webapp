@@ -83,6 +83,15 @@
         .font-size-btn.medium { font-size: 15px; }
         .font-size-btn.large { font-size: 17px; }
 
+        /* 다크모드 토글 */
+        .dark-mode-toggle { display: flex; align-items: center; gap: 12px; }
+        .toggle-switch { position: relative; width: 56px; height: 28px; background: #ccc; border-radius: 28px; cursor: pointer; transition: background 0.3s; }
+        .toggle-switch.active { background: #667eea; }
+        .toggle-switch::before { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: transform 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .toggle-switch.active::before { transform: translateX(28px); }
+        .toggle-label { font-size: 14px; color: #6c757d; }
+        .mode-icon { font-size: 20px; }
+
         /* 도움말 섹션 (마이페이지 전용) */
         .help-section {
             margin-bottom: 25px;
@@ -182,6 +191,19 @@
                     <button class="font-size-btn large" onclick="setFontSize('large')" data-size="large">크게</button>
                 </div>
             </div>
+
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">다크 모드</div>
+                    <div class="setting-description">어두운 화면으로 눈의 피로를 줄입니다</div>
+                </div>
+                <div class="dark-mode-toggle">
+                    <span class="mode-icon">☀️</span>
+                    <div class="toggle-switch" onclick="handleDarkModeToggle()"></div>
+                    <span class="mode-icon">🌙</span>
+                    <span class="toggle-label">다크 모드 꺼짐</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -273,6 +295,29 @@
 
         // 페이지 로드 시 폰트 크기 적용
         loadFontSize();
+
+        // 다크 모드 토글 핸들러
+        function handleDarkModeToggle() {
+            const isDark = toggleDarkMode();
+            showToast(isDark ? '다크 모드가 켜졌습니다.' : '다크 모드가 꺼졌습니다.', 'success');
+        }
+
+        // 다크 모드 초기화
+        function initDarkModeToggle() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const toggleSwitch = document.querySelector('.toggle-switch');
+            const toggleLabel = document.querySelector('.toggle-label');
+
+            if (toggleSwitch) {
+                toggleSwitch.classList.toggle('active', isDark);
+            }
+            if (toggleLabel) {
+                toggleLabel.textContent = isDark ? '다크 모드 켜짐' : '다크 모드 꺼짐';
+            }
+        }
+
+        // 페이지 로드 시 다크 모드 초기화
+        initDarkModeToggle();
 
         // 도움말 모달 제어
         function openHelpModal() {
