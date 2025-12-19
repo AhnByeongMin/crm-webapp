@@ -22,8 +22,6 @@
     <script src="/static/js/push-notifications.js" defer></script>
     <link rel="stylesheet" href="/static/css/loading-spinner.css">
 
-    {% include 'includes/header.html' %}
-
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #f5f5f5; min-height: 100vh; }
@@ -190,7 +188,11 @@
     </style>
 </head>
 <body>
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
+        {% include 'includes/header.html' %}
+
         <div class="memo-header" style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; flex-wrap: wrap; gap: 10px;">
             <h2 style="margin: 0; color: #333;">📝 내 메모</h2>
             <button class="mobile-menu-btn" onclick="toggleSidebar()" style="display:none; padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">📁 폴더</button>

@@ -460,22 +460,10 @@
             showToast(isDark ? '다크 모드가 켜졌습니다.' : '다크 모드가 꺼졌습니다.', 'success');
         }
 
-        // 다크 모드 초기화
-        function initDarkModeToggle() {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const toggleSwitch = document.querySelector('.toggle-switch');
-            const toggleLabel = document.querySelector('.toggle-label');
-
-            if (toggleSwitch) {
-                toggleSwitch.classList.toggle('active', isDark);
-            }
-            if (toggleLabel) {
-                toggleLabel.textContent = isDark ? '다크 모드 켜짐' : '다크 모드 꺼짐';
-            }
+        // 페이지 로드 시 다크 모드 UI 동기화 (dark-mode.js의 syncDarkModeUI 사용)
+        if (typeof syncDarkModeUI === 'function') {
+            syncDarkModeUI();
         }
-
-        // 페이지 로드 시 다크 모드 초기화
-        initDarkModeToggle();
 
         // 도움말 모달 제어
         function openHelpModal() {

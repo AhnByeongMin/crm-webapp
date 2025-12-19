@@ -10,14 +10,44 @@
 
     if (savedDarkMode === 'true') {
         document.documentElement.setAttribute('data-theme', 'dark');
+    } else if (savedDarkMode === 'false') {
+        // 명시적으로 라이트 모드 설정
+        document.documentElement.removeAttribute('data-theme');
     } else if (savedDarkMode === null) {
         // 시스템 설정 따르기 (처음 방문 시)
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.setAttribute('data-theme', 'dark');
             localStorage.setItem(DARK_MODE_KEY, 'true');
+        } else {
+            localStorage.setItem(DARK_MODE_KEY, 'false');
         }
     }
+
+    // 페이지 로드 후 토글 UI 동기화
+    document.addEventListener('DOMContentLoaded', function() {
+        syncDarkModeUI();
+    });
 })();
+
+/**
+ * 다크 모드 UI 동기화 (localStorage와 실제 상태를 일치시킴)
+ */
+function syncDarkModeUI() {
+    const DARK_MODE_KEY = 'crm_dark_mode';
+    const savedDarkMode = localStorage.getItem(DARK_MODE_KEY);
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const isDark = savedDarkMode === 'true';
+
+    // localStorage와 실제 data-theme 동기화
+    if (isDark && currentTheme !== 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else if (!isDark && currentTheme === 'dark') {
+        document.documentElement.removeAttribute('data-theme');
+    }
+
+    // 토글 스위치 UI 업데이트
+    updateDarkModeToggle();
+}
 
 /**
  * 다크 모드 토글 함수 (마이페이지에서 사용)
