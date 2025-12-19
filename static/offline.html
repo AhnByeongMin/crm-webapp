@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#667eea">
+  <title>연결 끊김 - 하루CRM</title>
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 24px;
+      padding: 48px 40px;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: slideUp 0.5s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .icon-container {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .icon {
+      font-size: 48px;
+    }
+
+    h1 {
+      color: #1a1a2e;
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .description {
+      color: #666;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff3cd;
+      color: #856404;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #ffc107;
+      border-radius: 50%;
+      animation: blink 1s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .status-online {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-online .status-dot {
+      background: #28a745;
+      animation: none;
+    }
+
+    .retry-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 16px 40px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .retry-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .retry-button:active {
+      transform: translateY(0);
+    }
+
+    .retry-button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .retry-button.loading .spinner {
+      display: block;
+    }
+
+    .retry-button.loading .btn-text {
+      display: none;
+    }
+
+    .tips {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+    }
+
+    .tips-title {
+      color: #999;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .tips-list {
+      list-style: none;
+      text-align: left;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    .tips-list li {
+      color: #666;
+      font-size: 14px;
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tips-list li::before {
+      content: '•';
+      color: #667eea;
+      font-weight: bold;
+    }
+
+    .auto-retry {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #999;
+    }
+
+    .countdown {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 36px 24px;
+        border-radius: 20px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+
+      .description {
+        font-size: 15px;
+      }
+
+      .icon-container {
+        width: 80px;
+        height: 80px;
+      }
+
+      .icon {
+        font-size: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-container">
+      <span class="icon">📡</span>
+    </div>
+
+    <h1>인터넷 연결 끊김</h1>
+
+    <div class="status-indicator" id="statusIndicator">
+      <span class="status-dot"></span>
+      <span id="statusText">오프라인</span>
+    </div>
+
+    <p class="description">
+      네트워크 연결이 불안정합니다.<br>
+      연결이 복구되면 자동으로 다시 시도합니다.
+    </p>
+
+    <button class="retry-button" id="retryBtn" onclick="retryConnection()">
+      <span class="spinner"></span>
+      <span class="btn-text">다시 시도</span>
+    </button>
+
+    <div class="auto-retry">
+      자동 재시도까지 <span class="countdown" id="countdown">10</span>초
+    </div>
+
+    <div class="tips">
+      <div class="tips-title">문제 해결 방법</div>
+      <ul class="tips-list">
+        <li>WiFi 연결 상태 확인</li>
+        <li>모바일 데이터 켜기/끄기</li>
+        <li>비행기 모드 해제 확인</li>
+        <li>라우터 재시작</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    let countdownValue = 10;
+    let countdownInterval;
+    let isRetrying = false;
+
+    // 온라인 상태 감지
+    window.addEventListener('online', () => {
+      updateStatus(true);
+      retryConnection();
+    });
+
+    window.addEventListener('offline', () => {
+      updateStatus(false);
+    });
+
+    // 초기 상태 확인
+    updateStatus(navigator.onLine);
+
+    // 자동 재시도 카운트다운
+    function startCountdown() {
+      countdownValue = 10;
+      document.getElementById('countdown').textContent = countdownValue;
+
+      countdownInterval = setInterval(() => {
+        countdownValue--;
+        document.getElementById('countdown').textContent = countdownValue;
+
+        if (countdownValue <= 0) {
+          clearInterval(countdownInterval);
+          retryConnection();
+        }
+      }, 1000);
+    }
+
+    // 상태 업데이트
+    function updateStatus(isOnline) {
+      const indicator = document.getElementById('statusIndicator');
+      const statusText = document.getElementById('statusText');
+
+      if (isOnline) {
+        indicator.classList.add('status-online');
+        statusText.textContent = '연결됨';
+      } else {
+        indicator.classList.remove('status-online');
+        statusText.textContent = '오프라인';
+      }
+    }
+
+    // 재연결 시도
+    async function retryConnection() {
+      if (isRetrying) return;
+
+      isRetrying = true;
+      clearInterval(countdownInterval);
+
+      const btn = document.getElementById('retryBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      try {
+        // 서버에 ping 요청
+        const response = await fetch('/api/version', {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
+        if (response.ok) {
+          // 연결 성공 - 이전 페이지로 이동
+          const referrer = document.referrer;
+          if (referrer && referrer.includes(location.host)) {
+            location.href = referrer;
+          } else {
+            location.href = '/';
+          }
+          return;
+        }
+      } catch (error) {
+        console.log('연결 실패:', error);
+      }
+
+      // 연결 실패 - 버튼 복원 및 카운트다운 재시작
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      isRetrying = false;
+      startCountdown();
+    }
+
+    // 페이지 로드 시 카운트다운 시작
+    startCountdown();
+  </script>
+</body>
+</html>
