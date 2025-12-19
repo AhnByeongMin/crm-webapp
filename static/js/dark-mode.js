@@ -45,7 +45,27 @@ function syncDarkModeUI() {
         document.documentElement.removeAttribute('data-theme');
     }
 
-    // 토글 스위치 UI 업데이트
+    // 모든 다크모드 UI 업데이트
+    updateAllDarkModeUI();
+}
+
+/**
+ * 모든 다크모드 관련 UI 업데이트 (헤더 + 마이페이지)
+ */
+function updateAllDarkModeUI() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    // 헤더 다크모드 버튼 업데이트
+    const headerIcon = document.getElementById('darkModeIcon');
+    const headerLabel = document.getElementById('darkModeLabel');
+    if (headerIcon) {
+        headerIcon.textContent = isDark ? '🌙' : '☀️';
+    }
+    if (headerLabel) {
+        headerLabel.textContent = isDark ? '다크' : '라이트';
+    }
+
+    // 마이페이지 토글 스위치 업데이트
     updateDarkModeToggle();
 }
 
@@ -64,8 +84,8 @@ function toggleDarkMode() {
         localStorage.setItem(DARK_MODE_KEY, 'true');
     }
 
-    // 토글 스위치 UI 업데이트
-    updateDarkModeToggle();
+    // 모든 다크모드 UI 업데이트
+    updateAllDarkModeUI();
 
     return !isDark;
 }

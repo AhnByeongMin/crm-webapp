@@ -560,11 +560,12 @@ function headerToggleDarkMode() {
         localStorage.setItem(DARK_MODE_KEY, 'true');
     }
 
-    updateHeaderDarkModeUI();
-
-    // 마이페이지의 토글도 업데이트 (있으면)
-    if (typeof updateDarkModeToggle === 'function') {
-        updateDarkModeToggle();
+    // 모든 다크모드 UI 업데이트 (dark-mode.js에서 정의)
+    if (typeof updateAllDarkModeUI === 'function') {
+        updateAllDarkModeUI();
+    } else {
+        // fallback
+        updateHeaderDarkModeUI();
     }
 }
 
@@ -638,8 +639,12 @@ function updateHeaderFontSizeUI(activeSize) {
 
 // 페이지 로드 시 헤더 설정 UI 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    // 다크모드 UI 초기화
-    updateHeaderDarkModeUI();
+    // 다크모드 UI 초기화 (dark-mode.js의 함수 우선 사용)
+    if (typeof updateAllDarkModeUI === 'function') {
+        updateAllDarkModeUI();
+    } else {
+        updateHeaderDarkModeUI();
+    }
 
     // 폰트 크기 UI 초기화
     const savedSize = localStorage.getItem('crm_font_size') || 'medium';

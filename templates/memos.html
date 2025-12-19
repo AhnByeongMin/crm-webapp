@@ -298,7 +298,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadFolders();
             loadMemos();
-            initDarkMode();
 
             // 자동저장 (3초 디바운스)
             let saveTimeout;
@@ -321,12 +320,6 @@
                 document.querySelector('.mobile-menu-btn').style.display = 'inline-flex';
             }
         });
-
-        // 다크모드 초기화
-        function initDarkMode() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        }
 
         // 폴더 로드
         async function loadFolders() {
