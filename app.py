@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.wrappers import Response as WerkzeugResponse
 import json
 import os
+import re
 import uuid
 import threading
 from datetime import datetime
@@ -134,6 +135,76 @@ def validate_file_signature(file_stream: Any, extension: str) -> bool:
         if header.startswith(sig):
             return True
     return False
+
+
+# ==================== 민감정보 검증 ====================
+def contains_sensitive_info(text: str) -> tuple[bool, str]:
+    """
+    텍스트에 민감정보가 포함되어 있는지 검증
+    CU., CO.로 시작하면 허용
+    핸드폰번호, 국선번호, 생년월일 형식은 차단
+
+    Returns:
+        (contains_sensitive, error_message)
+    """
+    if not text:
+        return False, ''
+
+    # CU. 또는 CO.로 시작하면 허용 (고객ID 형식)
+    if text.strip().startswith(('CU.', 'CO.', 'cu.', 'co.')):
+        return False, ''
+
+    # 핸드폰 번호 패턴 (010-0000-0000, 010.0000.0000, 01000000000 등)
+    phone_patterns = [
+        r'01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}',  # 010-1234-5678, 010.1234.5678
+        r'01[016789]\d{7,8}',  # 01012345678
+    ]
+
+    # 국선 전화번호 패턴 (02-0000-0000, 031-000-0000 등)
+    landline_patterns = [
+        r'0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}',  # 02-123-4567, 031-1234-5678
+    ]
+
+    # 생년월일 패턴 (과거 날짜만: 1920~2015년)
+    # 현재/미래 날짜(2020년 이후)는 일정 등에 사용될 수 있으므로 허용
+    birthdate_patterns = [
+        r'\b(19[2-9]\d|200\d|201[0-5])[-./]?(0[1-9]|1[0-2])[-./]?(0[1-9]|[12]\d|3[01])\b',  # 19200101~20151231
+        r'\b[2-9]\d[-./](0[1-9]|1[0-2])[-./](0[1-9]|[12]\d|3[01])\b',  # 20-01-01 ~ 99-12-31 (1920~1999)
+        r'\b[0-1][0-5][-./](0[1-9]|1[0-2])[-./](0[1-9]|[12]\d|3[01])\b',  # 00-01-01 ~ 15-12-31 (2000~2015)
+        r'\b[2-9]\d(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\b',  # 200101 ~ 991231 (6자리, 1920~1999)
+        r'\b[0-1][0-5](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\b',  # 000101 ~ 151231 (6자리, 2000~2015)
+    ]
+
+    # 전화번호 검사
+    for pattern in phone_patterns:
+        if re.search(pattern, text):
+            return True, '휴대폰 번호는 저장할 수 없습니다.'
+
+    for pattern in landline_patterns:
+        if re.search(pattern, text):
+            return True, '전화번호는 저장할 수 없습니다.'
+
+    # 생년월일 검사
+    for pattern in birthdate_patterns:
+        if re.search(pattern, text):
+            return True, '생년월일 형식은 저장할 수 없습니다.'
+
+    return False, ''
+
+
+def validate_content_for_sensitive_info(*texts: str) -> tuple[bool, str]:
+    """
+    여러 텍스트에 대해 민감정보 검증
+
+    Returns:
+        (is_valid, error_message) - is_valid가 True면 저장 가능
+    """
+    for text in texts:
+        contains, error = contains_sensitive_info(text)
+        if contains:
+            return False, error
+    return True, ''
+
 
 # Socket.IO 초기화 (eventlet + Redis)
 socketio = SocketIO(
@@ -2705,6 +2776,11 @@ def create_reminder():
     if not title or not scheduled_date or not scheduled_time:
         return jsonify({'error': 'Missing required fields'}), 400
 
+    # 민감정보 검증
+    is_valid, error_msg = validate_content_for_sensitive_info(title, content)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
     reminder_id = database.add_reminder(username, title, content, scheduled_date, scheduled_time)
 
     # Socket.IO로 배지 업데이트 전송
@@ -2729,6 +2805,11 @@ def update_reminder(reminder_id):
 
     if not title or not scheduled_date or not scheduled_time:
         return jsonify({'error': 'Missing required fields'}), 400
+
+    # 민감정보 검증
+    is_valid, error_msg = validate_content_for_sensitive_info(title, content)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
 
     success = database.update_reminder(reminder_id, username, title, content, scheduled_date, scheduled_time)
 
@@ -2887,6 +2968,278 @@ def get_holidays():
         holidays_dict[date_str] = h['holiday_name']
 
     return jsonify(holidays_dict)
+
+
+# ==================== 개인 메모 API ====================
+
+@app.route('/memos')
+def memos_page():
+    """개인 메모 페이지"""
+    if 'username' not in session and not is_localhost():
+        return redirect(url_for('login'))
+
+    username = session.get('username', 'Admin')
+    return render_template('memos.html',
+                         username=username,
+                         is_admin=is_admin(),
+                         page_title='내 메모',
+                         current_page='memos')
+
+
+@app.route('/api/memos/folders', methods=['GET'])
+def get_memo_folders():
+    """메모 폴더 목록 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    parent_id = request.args.get('parent_id', type=int)
+
+    folders = database.get_memo_folders(username, parent_id)
+    return jsonify(folders)
+
+
+@app.route('/api/memos/folders/tree', methods=['GET'])
+def get_memo_folders_tree():
+    """메모 폴더 트리 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    folders = database.get_all_memo_folders_tree(username)
+    return jsonify(folders)
+
+
+@app.route('/api/memos/folders', methods=['POST'])
+def create_memo_folder():
+    """메모 폴더 생성"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    name = data.get('name', '').strip()
+    parent_id = data.get('parent_id')
+
+    if not name:
+        return jsonify({'error': '폴더 이름을 입력하세요.'}), 400
+
+    # 민감정보 검증
+    is_valid, error_msg = validate_content_for_sensitive_info(name)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
+    folder_id = database.create_memo_folder(username, name, parent_id)
+    return jsonify({'id': folder_id, 'success': True}), 201
+
+
+@app.route('/api/memos/folders/<int:folder_id>', methods=['PUT'])
+def update_memo_folder(folder_id):
+    """메모 폴더 수정"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': '폴더 이름을 입력하세요.'}), 400
+
+    # 민감정보 검증
+    is_valid, error_msg = validate_content_for_sensitive_info(name)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
+    success = database.update_memo_folder(folder_id, username, name)
+    if not success:
+        return jsonify({'error': '폴더를 찾을 수 없습니다.'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/memos/folders/<int:folder_id>/move', methods=['PUT'])
+def move_memo_folder(folder_id):
+    """메모 폴더 이동"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    new_parent_id = data.get('parent_id')  # None이면 루트로 이동
+
+    success = database.move_memo_folder(folder_id, username, new_parent_id)
+    if not success:
+        return jsonify({'error': '폴더를 이동할 수 없습니다. (순환 참조 또는 권한 없음)'}), 400
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/memos/folders/<int:folder_id>', methods=['DELETE'])
+def delete_memo_folder(folder_id):
+    """메모 폴더 삭제"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+
+    success = database.delete_memo_folder(folder_id, username)
+    if not success:
+        return jsonify({'error': '폴더를 찾을 수 없습니다.'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/memos', methods=['GET'])
+def get_memos():
+    """메모 목록 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    folder_id = request.args.get('folder_id', type=int)
+
+    memos = database.get_memos(username, folder_id)
+    return jsonify(memos)
+
+
+@app.route('/api/memos/<int:memo_id>', methods=['GET'])
+def get_memo(memo_id):
+    """메모 상세 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+
+    memo = database.get_memo(memo_id, username)
+    if not memo:
+        return jsonify({'error': '메모를 찾을 수 없습니다.'}), 404
+
+    return jsonify(memo)
+
+
+@app.route('/api/memos', methods=['POST'])
+def create_memo():
+    """새 메모 생성"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    title = data.get('title', '').strip() or '제목 없음'
+    content = data.get('content', '').strip()
+    folder_id = data.get('folder_id')
+
+    # 민감정보 검증
+    is_valid, error_msg = validate_content_for_sensitive_info(title, content)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
+    memo_id = database.create_memo(username, title, content, folder_id)
+    return jsonify({'id': memo_id, 'success': True}), 201
+
+
+@app.route('/api/memos/<int:memo_id>', methods=['PUT'])
+def update_memo(memo_id):
+    """메모 수정"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    title = data.get('title', '').strip() or '제목 없음'
+    content = data.get('content', '').strip()
+
+    # 민감정보 검증
+    is_valid, error_msg = validate_content_for_sensitive_info(title, content)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 400
+
+    success = database.update_memo(memo_id, username, title, content)
+    if not success:
+        return jsonify({'error': '메모를 찾을 수 없습니다.'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/memos/<int:memo_id>/move', methods=['PUT'])
+def move_memo(memo_id):
+    """메모를 다른 폴더로 이동"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    folder_id = data.get('folder_id')  # None이면 루트로 이동
+
+    success = database.move_memo(memo_id, username, folder_id)
+    if not success:
+        return jsonify({'error': '메모를 이동할 수 없습니다.'}), 400
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/memos/<int:memo_id>/pin', methods=['PATCH'])
+def toggle_memo_pin(memo_id):
+    """메모 고정 상태 토글"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+
+    success, is_pinned = database.toggle_memo_pin(memo_id, username)
+    if not success:
+        return jsonify({'error': '메모를 찾을 수 없습니다.'}), 404
+
+    return jsonify({'success': True, 'is_pinned': is_pinned})
+
+
+@app.route('/api/memos/<int:memo_id>', methods=['DELETE'])
+def delete_memo(memo_id):
+    """메모 삭제"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+
+    success = database.delete_memo(memo_id, username)
+    if not success:
+        return jsonify({'error': '메모를 찾을 수 없습니다.'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/memos/search', methods=['GET'])
+def search_memos():
+    """메모 검색"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    query = request.args.get('q', '').strip()
+
+    if not query:
+        return jsonify([])
+
+    memos = database.search_memos(username, query)
+    return jsonify(memos)
+
+
+@app.route('/api/memos/stats', methods=['GET'])
+def get_memo_stats():
+    """메모 통계"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    stats = database.get_memo_counts(username)
+    return jsonify(stats)
+
 
 # ==================== 사용자 관리 API ====================
 

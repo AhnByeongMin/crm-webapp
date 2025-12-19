@@ -107,6 +107,175 @@
             background: rgba(102, 126, 234, 1);
         }
 
+        /* ========== 채팅방 다크모드 UI 요소 강화 ========== */
+        /* 채팅 탑바 - 보라색 그라데이션 */
+        [data-theme="dark"] .chat-topbar {
+            background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 50%, #7c3aed 100%) !important;
+            border-bottom: 1px solid rgba(96, 165, 250, 0.4) !important;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
+        }
+        [data-theme="dark"] .chat-topbar-title {
+            color: #ffffff !important;
+        }
+        [data-theme="dark"] .chat-topbar-count {
+            background: rgba(255, 255, 255, 0.25) !important;
+            color: #ffffff !important;
+        }
+
+        /* 채팅 컨테이너 배경 */
+        [data-theme="dark"] .chat-container {
+            background: #0f0f1a !important;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* 메시지 영역 배경 */
+        [data-theme="dark"] #messages {
+            background: linear-gradient(180deg, #0f0f1a 0%, #1a1025 100%) !important;
+        }
+
+        /* 내 메시지 - 보라색 그라데이션 + 흰색 텍스트 */
+        [data-theme="dark"] .message.own {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%) !important;
+            color: white !important;
+            box-shadow: 0 3px 12px rgba(139, 92, 246, 0.4) !important;
+        }
+        [data-theme="dark"] .message.own .message-text {
+            color: #ffffff !important;
+        }
+
+        /* 상대방 메시지 - 회색 배경 + 흰색 텍스트 (가시성 개선) */
+        [data-theme="dark"] .message.other {
+            background: #2a2a3e !important;
+            color: #ffffff !important;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid rgba(96, 165, 250, 0.2) !important;
+        }
+        [data-theme="dark"] .message.other .message-text {
+            color: #ffffff !important;
+        }
+
+        /* 메시지 헤더 (발신자 이름) - 하늘색 */
+        [data-theme="dark"] .message-header {
+            color: #93c5fd !important;
+            font-weight: 600 !important;
+        }
+
+        /* 메시지 시간 - 회색 */
+        [data-theme="dark"] .message-time {
+            color: #a1a1aa !important;
+        }
+
+        /* 날짜 구분선 */
+        [data-theme="dark"] .date-separator-line {
+            background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.4), transparent) !important;
+        }
+        [data-theme="dark"] .date-separator-text {
+            background: #2a2a3e !important;
+            color: #93c5fd !important;
+            border: 1px solid rgba(96, 165, 250, 0.3) !important;
+        }
+
+        /* 시스템 메시지 */
+        [data-theme="dark"] .system-message {
+            color: #a1a1aa !important;
+            background: rgba(96, 165, 250, 0.1) !important;
+            border-radius: 12px !important;
+        }
+
+        /* 입력 영역 */
+        [data-theme="dark"] .input-area {
+            background: linear-gradient(180deg, #1a1a3e 0%, #2d1f4f 100%) !important;
+            border-top: 1px solid rgba(96, 165, 250, 0.3) !important;
+        }
+
+        /* 메시지 입력 필드 - 흰색 텍스트 */
+        [data-theme="dark"] #messageInput {
+            background: #1e1e38 !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(96, 165, 250, 0.3) !important;
+        }
+        [data-theme="dark"] #messageInput:focus {
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2), 0 0 15px rgba(96, 165, 250, 0.15) !important;
+        }
+        [data-theme="dark"] #messageInput::placeholder {
+            color: #71717a !important;
+        }
+
+        /* 전송 버튼 - 흰색 텍스트 */
+        [data-theme="dark"] #sendBtn {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4) !important;
+            transition: all 0.3s ease !important;
+        }
+        [data-theme="dark"] #sendBtn:hover {
+            background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
+            box-shadow: 0 6px 20px rgba(167, 139, 250, 0.5) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 첨부/이모지 버튼 - 흰색 텍스트 */
+        [data-theme="dark"] #attachBtn,
+        [data-theme="dark"] #emojiBtn {
+            background: #2d2d50 !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(96, 165, 250, 0.3) !important;
+        }
+        [data-theme="dark"] #attachBtn:hover,
+        [data-theme="dark"] #emojiBtn:hover {
+            background: #3d3d70 !important;
+            border-color: #60a5fa !important;
+            color: #ffffff !important;
+        }
+
+        /* 이모지 피커 - 하늘색 강조 */
+        [data-theme="dark"] .emoji-picker {
+            background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+            border: 1px solid rgba(96, 165, 250, 0.3) !important;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+        }
+        [data-theme="dark"] .emoji-picker-header {
+            color: #93c5fd !important;
+        }
+        [data-theme="dark"] .emoji-item:hover {
+            background: rgba(96, 165, 250, 0.2) !important;
+        }
+
+        /* 타이핑 인디케이터 */
+        [data-theme="dark"] .typing-indicator {
+            background: rgba(96, 165, 250, 0.15) !important;
+            color: #93c5fd !important;
+            border: 1px solid rgba(96, 165, 250, 0.2) !important;
+        }
+
+        /* 파일 프리뷰 - 흰색 텍스트 */
+        [data-theme="dark"] .file-preview {
+            background: #1a1a3e !important;
+            border-top-color: rgba(96, 165, 250, 0.3) !important;
+        }
+        [data-theme="dark"] .file-preview-item {
+            background: #2d2d50 !important;
+            border-color: rgba(96, 165, 250, 0.3) !important;
+            color: #ffffff !important;
+        }
+
+        /* 복사 버튼 - 하늘색 */
+        [data-theme="dark"] .message-copy-btn {
+            background: rgba(96, 165, 250, 0.2) !important;
+            color: #93c5fd !important;
+        }
+        [data-theme="dark"] .message-copy-btn:hover {
+            background: rgba(96, 165, 250, 0.4) !important;
+            color: white !important;
+        }
+
+        /* 안읽음 카운트 */
+        [data-theme="dark"] .read-count {
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%) !important;
+            color: white !important;
+        }
+
         .chat-container {
             flex: 1;
             display: flex;

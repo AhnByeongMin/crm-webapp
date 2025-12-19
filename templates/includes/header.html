@@ -504,6 +504,7 @@
             내 예약
             <span id="navRemindersBadge" class="nav-badge" style="display: none;"></span>
         </a>
+        <a href="/memos" {% if current_page == 'memos' %}class="active"{% endif %}>내 메모</a>
         <a href="/mypage" {% if current_page == 'mypage' %}class="active"{% endif %}>마이페이지</a>
         <a href="/logout" class="secondary">로그아웃</a>
     </div>

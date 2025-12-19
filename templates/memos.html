@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 메모</title>
+
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="개인 메모 관리">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="하루CRM">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/static/js/sw-register.js"></script>
+    <script src="/static/js/sw-auto-update.js"></script>
+    <script src="/static/js/push-notifications.js" defer></script>
+    <link rel="stylesheet" href="/static/css/loading-spinner.css">
+
+    {% include 'includes/header.html' %}
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #f5f5f5; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* 헤더 */
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .page-header h1 { color: #333; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+        .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .nav-buttons a, .nav-buttons button { padding: 10px 18px; background: #667eea; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; border: none; cursor: pointer; transition: all 0.2s; }
+        .nav-buttons a:hover, .nav-buttons button:hover { background: #5568d3; transform: translateY(-1px); }
+
+        /* 메인 레이아웃 */
+        .main-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; min-height: calc(100vh - 150px); }
+
+        /* 사이드바 - 폴더 트리 */
+        .sidebar { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h3 { font-size: 16px; color: #333; }
+        .sidebar-actions { display: flex; gap: 8px; }
+        .icon-btn { width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s; }
+        .icon-btn.primary { background: #667eea; color: white; }
+        .icon-btn.primary:hover { background: #5568d3; }
+        .icon-btn.secondary { background: #f0f0f0; color: #666; }
+        .icon-btn.secondary:hover { background: #e0e0e0; }
+
+        /* 검색 */
+        .search-box { padding: 15px; border-bottom: 1px solid #e9ecef; }
+        .search-input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: all 0.2s; }
+        .search-input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+
+        /* 폴더 리스트 */
+        .folder-list { flex: 1; overflow-y: auto; padding: 10px 0; }
+        .folder-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: all 0.2s; gap: 10px; }
+        .folder-item:hover { background: #f8f9fa; }
+        .folder-item.active { background: #667eea; color: white; }
+        .folder-item.active .folder-icon { color: white; }
+        .folder-item.active .folder-count { background: rgba(255,255,255,0.3); color: white; }
+        .folder-icon { font-size: 18px; color: #ffc107; flex-shrink: 0; }
+        .folder-name { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .folder-count { font-size: 12px; padding: 2px 8px; background: #e9ecef; border-radius: 10px; color: #666; }
+        .folder-item.root .folder-icon { color: #667eea; }
+        .folder-depth-1 { padding-left: 30px; }
+        .folder-depth-2 { padding-left: 45px; }
+        .folder-depth-3 { padding-left: 60px; }
+
+        /* 메인 영역 */
+        .main-content { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .content-header h2 { font-size: 18px; color: #333; display: flex; align-items: center; gap: 8px; }
+        .breadcrumb { font-size: 14px; color: #666; display: flex; align-items: center; gap: 5px; }
+        .breadcrumb span { cursor: pointer; }
+        .breadcrumb span:hover { color: #667eea; }
+        .breadcrumb .separator { color: #ccc; }
+
+        /* 메모 리스트 */
+        .memo-list { flex: 1; overflow-y: auto; }
+        .memo-item { display: flex; padding: 15px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: all 0.2s; gap: 15px; align-items: flex-start; }
+        .memo-item:hover { background: #f8f9fa; }
+        .memo-item.active { background: #f0f4ff; border-left: 3px solid #667eea; }
+        .memo-pin { font-size: 14px; color: #ffc107; flex-shrink: 0; }
+        .memo-info { flex: 1; min-width: 0; }
+        .memo-title { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .memo-preview { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .memo-meta { font-size: 12px; color: #999; margin-top: 5px; }
+        .memo-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s; }
+        .memo-item:hover .memo-actions { opacity: 1; }
+
+        /* 메모 에디터 */
+        .memo-editor { display: none; flex: 1; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; }
+        .editor-header { padding: 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .editor-title { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 18px; font-weight: 600; }
+        .editor-title:focus { outline: none; border-color: #667eea; }
+        .editor-body { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; }
+        .editor-content { flex: 1; width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; line-height: 1.8; resize: none; font-family: inherit; }
+        .editor-content:focus { outline: none; border-color: #667eea; }
+        .editor-footer { padding: 15px 20px; border-top: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+        .editor-meta { font-size: 13px; color: #666; }
+        .editor-actions { display: flex; gap: 10px; }
+
+        /* 버튼 */
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-outline { background: transparent; border: 1px solid #ddd; color: #666; }
+        .btn-outline:hover { background: #f8f9fa; border-color: #ccc; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+        /* 빈 상태 */
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #999; }
+        .empty-state .icon { font-size: 64px; margin-bottom: 20px; opacity: 0.5; }
+        .empty-state h3 { font-size: 18px; margin-bottom: 10px; color: #666; }
+        .empty-state p { font-size: 14px; margin-bottom: 20px; }
+
+        /* 모달 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: 12px; padding: 25px; max-width: 400px; width: 90%; animation: modalIn 0.2s ease-out; }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal h3 { font-size: 18px; margin-bottom: 20px; color: #333; }
+        .modal-input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 20px; }
+        .modal-input:focus { outline: none; border-color: #667eea; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* 컨텍스트 메뉴 */
+        .context-menu { display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1001; min-width: 160px; }
+        .context-menu.show { display: block; }
+        .context-menu-item { padding: 10px 16px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+        .context-menu-item:hover { background: #f0f4ff; }
+        .context-menu-item.danger { color: #dc3545; }
+        .context-menu-divider { height: 1px; background: #e9ecef; margin: 5px 0; }
+
+        /* 토스트 */
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 2000; animation: toastIn 0.3s; }
+        @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+
+        /* 폴더 이동 모달 */
+        .folder-select { max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
+        .folder-select-item { padding: 12px 15px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+        .folder-select-item:hover { background: #f8f9fa; }
+        .folder-select-item.selected { background: #f0f4ff; border-left: 3px solid #667eea; }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .sidebar.mobile-show { display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 999; border-radius: 0; }
+            .page-header { padding: 10px 0; }
+            .page-header h1 { font-size: 20px; }
+            .content-header { flex-direction: column; align-items: flex-start; }
+        }
+
+        /* 다크모드 */
+        [data-theme="dark"] body { background: linear-gradient(180deg, #0f0f1a 0%, #1a1025 50%, #0f0f1a 100%); }
+        [data-theme="dark"] .sidebar, [data-theme="dark"] .main-content, [data-theme="dark"] .memo-editor { background: linear-gradient(145deg, #1e1e38 0%, #252550 100%); border: 1px solid rgba(96, 165, 250, 0.2); }
+        [data-theme="dark"] .page-header h1, [data-theme="dark"] .memo-header h2 { color: #fff; }
+        [data-theme="dark"] .sidebar-header, [data-theme="dark"] .content-header, [data-theme="dark"] .editor-header, [data-theme="dark"] .editor-footer { border-color: rgba(96, 165, 250, 0.2); }
+        [data-theme="dark"] .sidebar-header h3, [data-theme="dark"] .content-header h2 { color: #fff; }
+        [data-theme="dark"] .search-input, [data-theme="dark"] .editor-title, [data-theme="dark"] .editor-content, [data-theme="dark"] .modal-input { background: #1e1e38; color: #fff; border-color: rgba(96, 165, 250, 0.3); }
+        [data-theme="dark"] .folder-item:hover, [data-theme="dark"] .memo-item:hover { background: rgba(96, 165, 250, 0.1); }
+        [data-theme="dark"] .folder-item.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        [data-theme="dark"] .memo-item.active { background: rgba(96, 165, 250, 0.15); border-left-color: #60a5fa; }
+        [data-theme="dark"] .memo-title { color: #fff; }
+        [data-theme="dark"] .memo-preview, [data-theme="dark"] .memo-meta, [data-theme="dark"] .editor-meta { color: #a1a1aa; }
+        [data-theme="dark"] .modal { background: linear-gradient(145deg, #1e1e38 0%, #252550 100%); }
+        [data-theme="dark"] .modal h3 { color: #fff; }
+        [data-theme="dark"] .context-menu { background: #252550; }
+        [data-theme="dark"] .context-menu-item:hover { background: rgba(96, 165, 250, 0.15); }
+        [data-theme="dark"] .context-menu-divider { background: rgba(96, 165, 250, 0.2); }
+        [data-theme="dark"] .empty-state h3 { color: #e5e7eb; }
+        [data-theme="dark"] .folder-select { border-color: rgba(96, 165, 250, 0.3); }
+        [data-theme="dark"] .folder-select-item:hover { background: rgba(96, 165, 250, 0.1); }
+        [data-theme="dark"] .breadcrumb span:hover { color: #60a5fa; }
+        [data-theme="dark"] .btn-outline { border-color: rgba(96, 165, 250, 0.3); color: #e5e7eb; }
+        [data-theme="dark"] .btn-outline:hover { background: rgba(96, 165, 250, 0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="memo-header" style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin: 0; color: #333;">📝 내 메모</h2>
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" style="display:none; padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">📁 폴더</button>
+        </div>
+
+        <div class="main-layout">
+            <!-- 사이드바 - 폴더 트리 -->
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h3>📁 폴더</h3>
+                    <div class="sidebar-actions">
+                        <button class="icon-btn primary" onclick="showNewFolderModal()" title="새 폴더">➕</button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="메모 검색..." oninput="searchMemos(this.value)">
+                </div>
+                <div class="folder-list" id="folderList">
+                    <!-- 동적으로 로드 -->
+                </div>
+            </div>
+
+            <!-- 메인 영역 - 메모 리스트 -->
+            <div class="main-content" id="mainContent">
+                <div class="content-header">
+                    <h2 id="contentTitle">📄 모든 메모</h2>
+                    <button class="btn btn-primary" onclick="createNewMemo()">✏️ 새 메모</button>
+                </div>
+                <div class="memo-list" id="memoList">
+                    <!-- 동적으로 로드 -->
+                </div>
+            </div>
+
+            <!-- 메모 에디터 -->
+            <div class="memo-editor" id="memoEditor">
+                <div class="editor-header">
+                    <input type="text" class="editor-title" id="editorTitle" placeholder="제목을 입력하세요">
+                    <div class="editor-actions">
+                        <button class="btn btn-outline btn-sm" onclick="pinMemo()"><span id="pinIcon">📌</span></button>
+                        <button class="btn btn-outline btn-sm" onclick="showMoveMemoModal()">📁 이동</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteMemo()">🗑️</button>
+                        <button class="btn btn-secondary btn-sm" onclick="closeEditor()">✕</button>
+                    </div>
+                </div>
+                <div class="editor-body">
+                    <textarea class="editor-content" id="editorContent" placeholder="내용을 입력하세요..."></textarea>
+                </div>
+                <div class="editor-footer">
+                    <span class="editor-meta" id="editorMeta"></span>
+                    <button class="btn btn-success" onclick="saveMemo()">💾 저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 새 폴더 모달 -->
+    <div class="modal-overlay" id="folderModal">
+        <div class="modal">
+            <h3 id="folderModalTitle">📁 새 폴더</h3>
+            <input type="text" class="modal-input" id="folderNameInput" placeholder="폴더 이름">
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeFolderModal()">취소</button>
+                <button class="btn btn-primary" onclick="saveFolderModal()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 폴더 이동 모달 -->
+    <div class="modal-overlay" id="moveModal">
+        <div class="modal" style="max-width: 450px;">
+            <h3>📁 이동할 폴더 선택</h3>
+            <div class="folder-select" id="folderSelectList">
+                <!-- 동적으로 로드 -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeMoveModal()">취소</button>
+                <button class="btn btn-primary" onclick="confirmMove()">이동</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 컨텍스트 메뉴 -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="contextAction('rename')">✏️ 이름 변경</div>
+        <div class="context-menu-item" onclick="contextAction('move')">📁 이동</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" onclick="contextAction('delete')">🗑️ 삭제</div>
+    </div>
+
+    <script>
+        // 상태 관리
+        let folders = [];
+        let memos = [];
+        let currentFolderId = null;
+        let currentMemoId = null;
+        let isEditing = false;
+        let contextTarget = null;
+        let contextType = null;
+        let selectedMoveFolder = null;
+        let editingFolderId = null;
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFolders();
+            loadMemos();
+            initDarkMode();
+
+            // 자동저장 (3초 디바운스)
+            let saveTimeout;
+            document.getElementById('editorTitle').addEventListener('input', () => {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(autoSave, 3000);
+            });
+            document.getElementById('editorContent').addEventListener('input', () => {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(autoSave, 3000);
+            });
+
+            // 클릭 이벤트로 컨텍스트 메뉴 닫기
+            document.addEventListener('click', () => {
+                document.getElementById('contextMenu').classList.remove('show');
+            });
+
+            // 모바일 대응
+            if (window.innerWidth <= 768) {
+                document.querySelector('.mobile-menu-btn').style.display = 'inline-flex';
+            }
+        });
+
+        // 다크모드 초기화
+        function initDarkMode() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        // 폴더 로드
+        async function loadFolders() {
+            try {
+                const response = await fetch('/api/memos/folders/tree');
+                folders = await response.json();
+                renderFolders();
+            } catch (error) {
+                console.error('폴더 로드 실패:', error);
+            }
+        }
+
+        // 폴더 렌더링
+        function renderFolders() {
+            const list = document.getElementById('folderList');
+            let html = `
+                <div class="folder-item root ${currentFolderId === null ? 'active' : ''}" onclick="selectFolder(null)">
+                    <span class="folder-icon">📂</span>
+                    <span class="folder-name">모든 메모</span>
+                </div>
+            `;
+
+            folders.forEach(folder => {
+                const depthClass = folder.depth > 0 ? `folder-depth-${Math.min(folder.depth, 3)}` : '';
+                html += `
+                    <div class="folder-item ${depthClass} ${currentFolderId === folder.id ? 'active' : ''}"
+                         onclick="selectFolder(${folder.id})"
+                         oncontextmenu="showContextMenu(event, 'folder', ${folder.id})">
+                        <span class="folder-icon">📁</span>
+                        <span class="folder-name">${escapeHtml(folder.name)}</span>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        // 폴더 선택
+        function selectFolder(folderId) {
+            currentFolderId = folderId;
+            renderFolders();
+            loadMemos();
+
+            const title = folderId === null ? '📄 모든 메모' : '📁 ' + (folders.find(f => f.id === folderId)?.name || '폴더');
+            document.getElementById('contentTitle').textContent = title;
+
+            // 에디터가 열려있으면 닫기
+            if (isEditing) {
+                closeEditor();
+            }
+        }
+
+        // 메모 로드
+        async function loadMemos() {
+            try {
+                const url = currentFolderId ? `/api/memos?folder_id=${currentFolderId}` : '/api/memos';
+                const response = await fetch(url);
+                memos = await response.json();
+                renderMemos();
+            } catch (error) {
+                console.error('메모 로드 실패:', error);
+            }
+        }
+
+        // 메모 렌더링
+        function renderMemos() {
+            const list = document.getElementById('memoList');
+
+            if (memos.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📝</div>
+                        <h3>메모가 없습니다</h3>
+                        <p>새 메모를 작성해보세요</p>
+                        <button class="btn btn-primary" onclick="createNewMemo()">✏️ 새 메모 작성</button>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            memos.forEach(memo => {
+                const preview = memo.content?.substring(0, 100) || '내용 없음';
+                html += `
+                    <div class="memo-item ${currentMemoId === memo.id ? 'active' : ''}"
+                         onclick="openMemo(${memo.id})"
+                         oncontextmenu="showContextMenu(event, 'memo', ${memo.id})">
+                        ${memo.is_pinned ? '<span class="memo-pin">📌</span>' : ''}
+                        <div class="memo-info">
+                            <div class="memo-title">${escapeHtml(memo.title)}</div>
+                            <div class="memo-preview">${escapeHtml(preview)}</div>
+                            <div class="memo-meta">${formatDate(memo.updated_at)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        // 새 메모 생성
+        async function createNewMemo() {
+            try {
+                const response = await fetch('/api/memos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: '새 메모',
+                        content: '',
+                        folder_id: currentFolderId
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    await loadMemos();
+                    openMemo(data.id);
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || '메모 생성 실패', 'error');
+                }
+            } catch (error) {
+                showToast('메모 생성 실패', 'error');
+            }
+        }
+
+        // 메모 열기
+        async function openMemo(memoId) {
+            try {
+                const response = await fetch(`/api/memos/${memoId}`);
+                if (!response.ok) throw new Error('메모 로드 실패');
+
+                const memo = await response.json();
+                currentMemoId = memoId;
+                isEditing = true;
+
+                document.getElementById('editorTitle').value = memo.title || '';
+                document.getElementById('editorContent').value = memo.content || '';
+                document.getElementById('editorMeta').textContent = `수정: ${formatDate(memo.updated_at)}`;
+                document.getElementById('pinIcon').textContent = memo.is_pinned ? '📌' : '📍';
+
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('memoEditor').style.display = 'flex';
+
+                renderMemos();
+            } catch (error) {
+                showToast('메모를 열 수 없습니다', 'error');
+            }
+        }
+
+        // 에디터 닫기
+        function closeEditor() {
+            if (isEditing && currentMemoId) {
+                saveMemo(true);  // 자동 저장
+            }
+
+            isEditing = false;
+            currentMemoId = null;
+            document.getElementById('memoEditor').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'flex';
+            loadMemos();
+        }
+
+        // 메모 저장
+        async function saveMemo(silent = false) {
+            if (!currentMemoId) return;
+
+            const title = document.getElementById('editorTitle').value.trim();
+            const content = document.getElementById('editorContent').value;
+
+            try {
+                const response = await fetch(`/api/memos/${currentMemoId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+
+                if (response.ok) {
+                    if (!silent) showToast('저장되었습니다', 'success');
+                    document.getElementById('editorMeta').textContent = `수정: 방금 전`;
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || '저장 실패', 'error');
+                }
+            } catch (error) {
+                if (!silent) showToast('저장 실패', 'error');
+            }
+        }
+
+        // 자동 저장
+        function autoSave() {
+            if (isEditing && currentMemoId) {
+                saveMemo(true);
+            }
+        }
+
+        // 메모 삭제
+        async function deleteMemo() {
+            if (!currentMemoId) return;
+            if (!confirm('이 메모를 삭제하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/memos/${currentMemoId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast('삭제되었습니다', 'success');
+                    closeEditor();
+                } else {
+                    showToast('삭제 실패', 'error');
+                }
+            } catch (error) {
+                showToast('삭제 실패', 'error');
+            }
+        }
+
+        // 메모 고정
+        async function pinMemo() {
+            if (!currentMemoId) return;
+
+            try {
+                const response = await fetch(`/api/memos/${currentMemoId}/pin`, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('pinIcon').textContent = data.is_pinned ? '📌' : '📍';
+                    showToast(data.is_pinned ? '고정되었습니다' : '고정 해제됨', 'success');
+                }
+            } catch (error) {
+                showToast('오류가 발생했습니다', 'error');
+            }
+        }
+
+        // 메모 검색
+        let searchTimeout;
+        async function searchMemos(query) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                if (!query.trim()) {
+                    loadMemos();
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/memos/search?q=${encodeURIComponent(query)}`);
+                    memos = await response.json();
+                    document.getElementById('contentTitle').textContent = `🔍 검색 결과: "${query}"`;
+                    renderMemos();
+                } catch (error) {
+                    console.error('검색 실패:', error);
+                }
+            }, 300);
+        }
+
+        // 새 폴더 모달
+        function showNewFolderModal(parentId = null) {
+            editingFolderId = null;
+            document.getElementById('folderModalTitle').textContent = '📁 새 폴더';
+            document.getElementById('folderNameInput').value = '';
+            document.getElementById('folderModal').classList.add('show');
+            document.getElementById('folderNameInput').focus();
+        }
+
+        function closeFolderModal() {
+            document.getElementById('folderModal').classList.remove('show');
+        }
+
+        async function saveFolderModal() {
+            const name = document.getElementById('folderNameInput').value.trim();
+            if (!name) {
+                showToast('폴더 이름을 입력하세요', 'error');
+                return;
+            }
+
+            try {
+                let response;
+                if (editingFolderId) {
+                    response = await fetch(`/api/memos/folders/${editingFolderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    });
+                } else {
+                    response = await fetch('/api/memos/folders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, parent_id: currentFolderId })
+                    });
+                }
+
+                if (response.ok) {
+                    closeFolderModal();
+                    loadFolders();
+                    showToast(editingFolderId ? '폴더 이름이 변경되었습니다' : '폴더가 생성되었습니다', 'success');
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || '오류가 발생했습니다', 'error');
+                }
+            } catch (error) {
+                showToast('오류가 발생했습니다', 'error');
+            }
+        }
+
+        // 컨텍스트 메뉴
+        function showContextMenu(event, type, id) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            contextTarget = id;
+            contextType = type;
+
+            const menu = document.getElementById('contextMenu');
+            menu.style.left = event.clientX + 'px';
+            menu.style.top = event.clientY + 'px';
+            menu.classList.add('show');
+        }
+
+        async function contextAction(action) {
+            document.getElementById('contextMenu').classList.remove('show');
+
+            if (contextType === 'folder') {
+                if (action === 'rename') {
+                    const folder = folders.find(f => f.id === contextTarget);
+                    editingFolderId = contextTarget;
+                    document.getElementById('folderModalTitle').textContent = '✏️ 폴더 이름 변경';
+                    document.getElementById('folderNameInput').value = folder?.name || '';
+                    document.getElementById('folderModal').classList.add('show');
+                    document.getElementById('folderNameInput').focus();
+                } else if (action === 'move') {
+                    showMoveFolderModal(contextTarget);
+                } else if (action === 'delete') {
+                    if (confirm('이 폴더와 하위 항목을 모두 삭제하시겠습니까?')) {
+                        try {
+                            const response = await fetch(`/api/memos/folders/${contextTarget}`, { method: 'DELETE' });
+                            if (response.ok) {
+                                if (currentFolderId === contextTarget) selectFolder(null);
+                                loadFolders();
+                                showToast('폴더가 삭제되었습니다', 'success');
+                            }
+                        } catch (error) {
+                            showToast('삭제 실패', 'error');
+                        }
+                    }
+                }
+            } else if (contextType === 'memo') {
+                if (action === 'move') {
+                    currentMemoId = contextTarget;
+                    showMoveMemoModal();
+                } else if (action === 'delete') {
+                    if (confirm('이 메모를 삭제하시겠습니까?')) {
+                        try {
+                            const response = await fetch(`/api/memos/${contextTarget}`, { method: 'DELETE' });
+                            if (response.ok) {
+                                loadMemos();
+                                showToast('삭제되었습니다', 'success');
+                            }
+                        } catch (error) {
+                            showToast('삭제 실패', 'error');
+                        }
+                    }
+                }
+            }
+        }
+
+        // 폴더/메모 이동 모달
+        function showMoveMemoModal() {
+            selectedMoveFolder = null;
+            renderFolderSelectList('memo');
+            document.getElementById('moveModal').classList.add('show');
+        }
+
+        function showMoveFolderModal(folderId) {
+            selectedMoveFolder = null;
+            contextTarget = folderId;
+            renderFolderSelectList('folder');
+            document.getElementById('moveModal').classList.add('show');
+        }
+
+        function renderFolderSelectList(type) {
+            const list = document.getElementById('folderSelectList');
+            let html = `
+                <div class="folder-select-item ${selectedMoveFolder === null ? 'selected' : ''}" onclick="selectMoveFolder(null)">
+                    <span>📂</span> <span>루트 (최상위)</span>
+                </div>
+            `;
+
+            folders.forEach(folder => {
+                // 자기 자신이거나 하위 폴더면 제외 (폴더 이동 시)
+                if (type === 'folder' && folder.id === contextTarget) return;
+
+                const indent = '&nbsp;'.repeat(folder.depth * 4);
+                html += `
+                    <div class="folder-select-item ${selectedMoveFolder === folder.id ? 'selected' : ''}"
+                         onclick="selectMoveFolder(${folder.id})">
+                        <span>${indent}📁</span> <span>${escapeHtml(folder.name)}</span>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function selectMoveFolder(folderId) {
+            selectedMoveFolder = folderId;
+            renderFolderSelectList(contextType);
+        }
+
+        function closeMoveModal() {
+            document.getElementById('moveModal').classList.remove('show');
+        }
+
+        async function confirmMove() {
+            try {
+                let response;
+                if (contextType === 'folder') {
+                    response = await fetch(`/api/memos/folders/${contextTarget}/move`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ parent_id: selectedMoveFolder })
+                    });
+                } else {
+                    response = await fetch(`/api/memos/${currentMemoId}/move`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ folder_id: selectedMoveFolder })
+                    });
+                }
+
+                if (response.ok) {
+                    closeMoveModal();
+                    loadFolders();
+                    loadMemos();
+                    showToast('이동되었습니다', 'success');
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || '이동 실패', 'error');
+                }
+            } catch (error) {
+                showToast('이동 실패', 'error');
+            }
+        }
+
+        // 모바일 사이드바 토글
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('mobile-show');
+        }
+
+        // 유틸리티
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return '방금 전';
+            if (diff < 3600000) return Math.floor(diff / 60000) + '분 전';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '시간 전';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + '일 전';
+
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+
+    {% include 'includes/today_reminders.html' %}
+</body>
+</html>

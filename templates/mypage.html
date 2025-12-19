@@ -92,6 +92,145 @@
         .toggle-label { font-size: 14px; color: #6c757d; }
         .mode-icon { font-size: 20px; }
 
+        /* ========== 마이페이지 다크모드 UI 강화 ========== */
+        [data-theme="dark"] body {
+            background: linear-gradient(180deg, #0f0f1a 0%, #1a1025 50%, #0f0f1a 100%) !important;
+        }
+        [data-theme="dark"] .container {
+            background: transparent !important;
+        }
+        [data-theme="dark"] h1, [data-theme="dark"] h2 {
+            color: #ffffff !important;
+        }
+        /* 섹션 카드 */
+        [data-theme="dark"] .user-info-section,
+        [data-theme="dark"] .settings-section,
+        [data-theme="dark"] .password-section {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+            border: 1px solid rgba(96, 165, 250, 0.2) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+        }
+        [data-theme="dark"] .user-info-section h2,
+        [data-theme="dark"] .settings-section h2,
+        [data-theme="dark"] .password-section h2 {
+            color: #ffffff !important;
+        }
+        /* 정보 행 */
+        [data-theme="dark"] .info-row {
+            border-color: rgba(96, 165, 250, 0.2) !important;
+        }
+        [data-theme="dark"] .info-label {
+            color: #93c5fd !important;
+        }
+        [data-theme="dark"] .info-value {
+            color: #ffffff !important;
+        }
+        /* 설정 아이템 */
+        [data-theme="dark"] .setting-item {
+            border-color: rgba(96, 165, 250, 0.2) !important;
+        }
+        [data-theme="dark"] .setting-label {
+            color: #ffffff !important;
+        }
+        [data-theme="dark"] .setting-description {
+            color: #a1a1aa !important;
+        }
+        /* 폰트 크기 버튼 - 비활성 상태는 흰색 텍스트 */
+        [data-theme="dark"] .font-size-btn {
+            background: #2d2d50 !important;
+            color: #ffffff !important;
+            border-color: rgba(96, 165, 250, 0.3) !important;
+        }
+        [data-theme="dark"] .font-size-btn:hover {
+            background: #3d3d70 !important;
+            border-color: #60a5fa !important;
+        }
+        [data-theme="dark"] .font-size-btn.active {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            color: white !important;
+            border-color: transparent !important;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4) !important;
+        }
+        /* 토글 스위치 */
+        [data-theme="dark"] .toggle-switch {
+            background: #3d3d70 !important;
+        }
+        [data-theme="dark"] .toggle-switch.active {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            box-shadow: 0 2px 10px rgba(139, 92, 246, 0.4) !important;
+        }
+        [data-theme="dark"] .toggle-label {
+            color: #e5e7eb !important;
+        }
+        /* 입력 필드 */
+        [data-theme="dark"] .form-group input {
+            background: #1e1e38 !important;
+            color: #ffffff !important;
+            border-color: rgba(96, 165, 250, 0.3) !important;
+        }
+        [data-theme="dark"] .form-group input:focus {
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2), 0 0 15px rgba(96, 165, 250, 0.15) !important;
+        }
+        [data-theme="dark"] .form-group label {
+            color: #93c5fd !important;
+        }
+        /* 주요 버튼 */
+        [data-theme="dark"] .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            border: none !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4) !important;
+        }
+        [data-theme="dark"] .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
+            box-shadow: 0 6px 20px rgba(167, 139, 250, 0.5) !important;
+            transform: translateY(-1px) !important;
+        }
+        /* 네비게이션 버튼 */
+        [data-theme="dark"] .nav-buttons a,
+        [data-theme="dark"] .nav-buttons button {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+            color: white !important;
+            box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3) !important;
+        }
+        [data-theme="dark"] .nav-buttons a:hover,
+        [data-theme="dark"] .nav-buttons button:hover {
+            background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
+            transform: translateY(-1px) !important;
+        }
+        [data-theme="dark"] .nav-buttons .logout {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+            color: white !important;
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3) !important;
+        }
+        [data-theme="dark"] .nav-buttons .logout:hover {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%) !important;
+        }
+        /* 토스트 */
+        [data-theme="dark"] .toast {
+            background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+            color: #ffffff !important;
+            border-left-color: #60a5fa !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+        }
+        [data-theme="dark"] .toast.success {
+            border-left-color: #10b981 !important;
+        }
+        [data-theme="dark"] .toast.error {
+            border-left-color: #ef4444 !important;
+        }
+        /* 힌트 텍스트 */
+        [data-theme="dark"] .password-hint {
+            color: #a1a1aa !important;
+        }
+        /* 경고 알림 */
+        [data-theme="dark"] .localhost-notice {
+            background: #3d3a2a !important;
+            border-color: #fbbf24 !important;
+            color: #fde68a !important;
+        }
+
         /* 도움말 섹션 (마이페이지 전용) */
         .help-section {
             margin-bottom: 25px;

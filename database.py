@@ -1733,3 +1733,289 @@ def set_chat_admin(chat_id: int | str, username: str, target_username: str, is_a
             action = '부방장으로 지정' if is_admin else '일반 멤버로 변경'
             logger.info(f"User {target_username} {action} in chat {chat_id} by {username}")
             return True, f'{target_username}님이 {action}되었습니다.'
+
+
+# ==================== 개인 메모 관리 ====================
+
+@log_slow_query
+def get_memo_folders(user_id: str, parent_id: Optional[int] = None) -> list[dict[str, Any]]:
+    """사용자의 메모 폴더 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if parent_id is None:
+            cursor.execute('''
+                SELECT id, name, parent_id, sort_order,
+                       TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                       TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+                FROM memo_folders
+                WHERE user_id = %s AND parent_id IS NULL
+                ORDER BY sort_order, name
+            ''', (user_id,))
+        else:
+            cursor.execute('''
+                SELECT id, name, parent_id, sort_order,
+                       TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                       TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+                FROM memo_folders
+                WHERE user_id = %s AND parent_id = %s
+                ORDER BY sort_order, name
+            ''', (user_id, parent_id))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+@log_slow_query
+def get_all_memo_folders_tree(user_id: str) -> list[dict[str, Any]]:
+    """사용자의 전체 폴더 트리 조회 (재귀적)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            WITH RECURSIVE folder_tree AS (
+                SELECT id, name, parent_id, sort_order, 0 as depth,
+                       ARRAY[sort_order, id] as path
+                FROM memo_folders
+                WHERE user_id = %s AND parent_id IS NULL
+                UNION ALL
+                SELECT f.id, f.name, f.parent_id, f.sort_order, ft.depth + 1,
+                       ft.path || ARRAY[f.sort_order, f.id]
+                FROM memo_folders f
+                INNER JOIN folder_tree ft ON f.parent_id = ft.id
+                WHERE f.user_id = %s
+            )
+            SELECT id, name, parent_id, sort_order, depth
+            FROM folder_tree
+            ORDER BY path
+        ''', (user_id, user_id))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def create_memo_folder(user_id: str, name: str, parent_id: Optional[int] = None) -> int:
+    """새 메모 폴더 생성"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO memo_folders (user_id, name, parent_id)
+                VALUES (%s, %s, %s)
+                RETURNING id
+            ''', (user_id, name, parent_id))
+            folder_id = cursor.fetchone()['id']
+            conn.commit()
+            return folder_id
+
+
+def update_memo_folder(folder_id: int, user_id: str, name: str) -> bool:
+    """메모 폴더 이름 수정"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE memo_folders
+                SET name = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+            ''', (name, folder_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+def move_memo_folder(folder_id: int, user_id: str, new_parent_id: Optional[int]) -> bool:
+    """메모 폴더 이동"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # 자기 자신 또는 하위 폴더로 이동 방지
+            if new_parent_id is not None:
+                cursor.execute('''
+                    WITH RECURSIVE descendants AS (
+                        SELECT id FROM memo_folders WHERE id = %s
+                        UNION ALL
+                        SELECT f.id FROM memo_folders f
+                        INNER JOIN descendants d ON f.parent_id = d.id
+                    )
+                    SELECT id FROM descendants WHERE id = %s
+                ''', (folder_id, new_parent_id))
+                if cursor.fetchone():
+                    return False  # 순환 참조 방지
+
+            cursor.execute('''
+                UPDATE memo_folders
+                SET parent_id = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+            ''', (new_parent_id, folder_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+def delete_memo_folder(folder_id: int, user_id: str) -> bool:
+    """메모 폴더 삭제 (하위 폴더와 메모도 함께 삭제)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM memo_folders
+                WHERE id = %s AND user_id = %s
+            ''', (folder_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+@log_slow_query
+def get_memos(user_id: str, folder_id: Optional[int] = None) -> list[dict[str, Any]]:
+    """메모 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if folder_id is None:
+            # 루트 레벨 메모 (폴더에 속하지 않은)
+            cursor.execute('''
+                SELECT id, title, content, folder_id, is_pinned, sort_order,
+                       TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                       TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+                FROM memos
+                WHERE user_id = %s AND folder_id IS NULL
+                ORDER BY is_pinned DESC, sort_order, updated_at DESC
+            ''', (user_id,))
+        else:
+            cursor.execute('''
+                SELECT id, title, content, folder_id, is_pinned, sort_order,
+                       TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                       TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+                FROM memos
+                WHERE user_id = %s AND folder_id = %s
+                ORDER BY is_pinned DESC, sort_order, updated_at DESC
+            ''', (user_id, folder_id))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+@log_slow_query
+def get_memo(memo_id: int, user_id: str) -> Optional[dict[str, Any]]:
+    """메모 상세 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, title, content, folder_id, is_pinned, sort_order,
+                   TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                   TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+            FROM memos
+            WHERE id = %s AND user_id = %s
+        ''', (memo_id, user_id))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def create_memo(user_id: str, title: str, content: str, folder_id: Optional[int] = None) -> int:
+    """새 메모 생성"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO memos (user_id, title, content, folder_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+            ''', (user_id, title, content, folder_id))
+            memo_id = cursor.fetchone()['id']
+            conn.commit()
+            return memo_id
+
+
+def update_memo(memo_id: int, user_id: str, title: str, content: str) -> bool:
+    """메모 수정"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE memos
+                SET title = %s, content = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+            ''', (title, content, memo_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+def move_memo(memo_id: int, user_id: str, folder_id: Optional[int]) -> bool:
+    """메모를 다른 폴더로 이동"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # 대상 폴더가 사용자의 것인지 확인
+            if folder_id is not None:
+                cursor.execute('''
+                    SELECT id FROM memo_folders
+                    WHERE id = %s AND user_id = %s
+                ''', (folder_id, user_id))
+                if not cursor.fetchone():
+                    return False
+
+            cursor.execute('''
+                UPDATE memos
+                SET folder_id = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+            ''', (folder_id, memo_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+def toggle_memo_pin(memo_id: int, user_id: str) -> tuple[bool, bool]:
+    """메모 고정 상태 토글"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE memos
+                SET is_pinned = NOT is_pinned, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+                RETURNING is_pinned
+            ''', (memo_id, user_id))
+            row = cursor.fetchone()
+            conn.commit()
+            if row:
+                return True, row['is_pinned']
+            return False, False
+
+
+def delete_memo(memo_id: int, user_id: str) -> bool:
+    """메모 삭제"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM memos
+                WHERE id = %s AND user_id = %s
+            ''', (memo_id, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+@log_slow_query
+def search_memos(user_id: str, query: str) -> list[dict[str, Any]]:
+    """메모 검색 (제목, 내용)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        search_pattern = f'%{query}%'
+        cursor.execute('''
+            SELECT m.id, m.title, m.content, m.folder_id, m.is_pinned,
+                   f.name as folder_name,
+                   TO_CHAR(m.created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                   TO_CHAR(m.updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+            FROM memos m
+            LEFT JOIN memo_folders f ON m.folder_id = f.id
+            WHERE m.user_id = %s
+              AND (m.title ILIKE %s OR m.content ILIKE %s)
+            ORDER BY m.updated_at DESC
+            LIMIT 50
+        ''', (user_id, search_pattern, search_pattern))
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_memo_counts(user_id: str) -> dict[str, int]:
+    """메모 통계 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT
+                COUNT(*) as total_memos,
+                COUNT(CASE WHEN folder_id IS NULL THEN 1 END) as root_memos,
+                (SELECT COUNT(*) FROM memo_folders WHERE user_id = %s) as total_folders
+            FROM memos
+            WHERE user_id = %s
+        ''', (user_id, user_id))
+        row = cursor.fetchone()
+        return dict(row) if row else {'total_memos': 0, 'root_memos': 0, 'total_folders': 0}
