@@ -140,11 +140,13 @@
             align-self: flex-end;
             background: #667eea;
             color: white;
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
         }
         .message.other {
             align-self: flex-start;
             background: #e9ecef;
             color: #333;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
         .message-header {
             font-size: 12px;
@@ -339,6 +341,26 @@
             animation: spin 1s linear infinite;
             margin-right: 8px;
             vertical-align: middle;
+        }
+        .connection-status .refresh-btn {
+            margin-left: 12px;
+            padding: 4px 12px;
+            background: white;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .connection-status .refresh-btn:hover {
+            background: #f0f0f0;
+        }
+        .connection-status.show-refresh .refresh-btn {
+            display: inline-block !important;
+        }
+        .connection-status.show-refresh .spinner {
+            display: none;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
@@ -912,10 +934,35 @@
         }
         .calendar-day.today {
             border: 2px solid #667eea;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            font-weight: bold;
+            box-shadow: 0 0 0 2px #fbbf24, 0 2px 8px rgba(251, 191, 36, 0.3);
+        }
+        .calendar-day.today::after {
+            content: '오늘';
+            position: absolute;
+            bottom: -16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            color: #d97706;
+            font-weight: bold;
+        }
+        .calendar-day.today.has-messages {
+            background: linear-gradient(135deg, #fef3c7 0%, #a5b4fc 100%);
+            color: #4338ca;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px #667eea, 0 2px 8px rgba(102, 126, 234, 0.4);
         }
         .calendar-day.selected {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
             color: white;
+            font-weight: bold;
+            box-shadow: 0 0 0 2px #a8b4ff, 0 4px 12px rgba(102, 126, 234, 0.4);
+            transform: scale(1.1);
+            z-index: 1;
+            position: relative;
         }
         .calendar-day.other-month {
             color: #ccc;
@@ -1048,7 +1095,8 @@
 </head>
 <body class="chat-room-page">
     <div id="connectionStatus" class="connection-status">
-        <span class="spinner"></span>서버에 재연결 중...
+        <span class="spinner"></span><span class="status-text">서버에 재연결 중...</span>
+        <button class="refresh-btn" onclick="location.reload()" style="display:none;">새로고침</button>
     </div>
     <div id="reminderBanner">
         <div class="banner-content">
@@ -1312,42 +1360,106 @@
         const connectionStatus = document.getElementById('connectionStatus');
         let lastMessageTimestamp = null;  // 마지막 메시지 시간 (재연결 시 놓친 메시지 로드용)
 
-        function showConnectionStatus(message, isConnected = false) {
-            connectionStatus.innerHTML = isConnected
-                ? `✓ ${message}`
-                : `<span class="spinner"></span>${message}`;
+        function showConnectionStatus(message, isConnected = false, showRefresh = false) {
+            const statusText = connectionStatus.querySelector('.status-text');
+            const spinner = connectionStatus.querySelector('.spinner');
+            const refreshBtn = connectionStatus.querySelector('.refresh-btn');
+
+            if (statusText) statusText.textContent = message;
+
             connectionStatus.classList.toggle('connected', isConnected);
+            connectionStatus.classList.toggle('show-refresh', showRefresh);
             connectionStatus.classList.add('show');
 
             if (isConnected) {
+                if (spinner) spinner.style.display = 'none';
+                if (statusText) statusText.textContent = `✓ ${message}`;
                 setTimeout(() => {
                     connectionStatus.classList.remove('show');
                 }, 2000);
+            } else {
+                if (spinner && !showRefresh) spinner.style.display = 'inline-block';
             }
         }
 
         function hideConnectionStatus() {
             connectionStatus.classList.remove('show');
+            connectionStatus.classList.remove('show-refresh');
         }
 
-        // Socket.IO 재연결 이벤트 핸들러
-        socket.on('disconnect', (reason) => {
-            console.log('[Socket.IO] 연결 끊김:', reason);
-            showConnectionStatus('서버에 재연결 중...');
-        });
+        // Socket.IO 연결 상태 관리
+        let wasConnected = false;  // 이전에 연결된 적 있는지 (재연결 구분용)
+        let reconnectAttempts = 0;
 
-        socket.on('reconnect', async (attemptNumber) => {
-            console.log('[Socket.IO] 재연결 성공 (시도 횟수:', attemptNumber + ')');
+        // 초기 연결 성공
+        socket.on('connect', () => {
+            console.log('[Socket.IO] 연결 성공');
 
-            // 재연결 성공 시 채팅방에 다시 입장
+            // 채팅방 입장
             socket.emit('join', { chat_id: chatId, username: username });
-            // 읽음 상태 다시 전송
             socket.emit('mark_as_read', { chat_id: chatId, username: username });
 
-            // 놓친 메시지 로드
+            if (wasConnected) {
+                // 재연결인 경우 - 놓친 메시지 동기화
+                syncMissedMessages();
+            } else {
+                // 첫 연결
+                wasConnected = true;
+                hideConnectionStatus();
+            }
+            reconnectAttempts = 0;
+        });
+
+        // 연결 끊김
+        socket.on('disconnect', (reason) => {
+            console.log('[Socket.IO] 연결 끊김:', reason);
+
+            if (reason === 'io server disconnect') {
+                // 서버에서 강제 연결 해제 - 수동 재연결 필요
+                showConnectionStatus('서버 연결 종료, 재연결 시도 중...');
+                socket.connect();
+            } else if (reason === 'transport close' || reason === 'transport error') {
+                // 네트워크 문제 - 자동 재연결 시도됨
+                showConnectionStatus('서버에 재연결 중...');
+            } else if (reason === 'ping timeout') {
+                // 핑 타임아웃 - 자동 재연결 시도됨
+                showConnectionStatus('연결 확인 중...');
+            } else {
+                showConnectionStatus('서버에 재연결 중...');
+            }
+        });
+
+        // 재연결 시도 중
+        socket.io.on('reconnect_attempt', (attempt) => {
+            reconnectAttempts = attempt;
+            console.log('[Socket.IO] 재연결 시도 중... (' + attempt + '번째)');
+            showConnectionStatus(`재연결 시도 중... (${attempt}번째)`);
+        });
+
+        // 재연결 실패
+        socket.io.on('reconnect_error', (error) => {
+            console.log('[Socket.IO] 재연결 에러:', error.message);
+        });
+
+        // 재연결 최종 실패 (reconnectionAttempts 초과 시)
+        socket.io.on('reconnect_failed', () => {
+            console.log('[Socket.IO] 재연결 최종 실패');
+            showConnectionStatus('연결 실패', false, true);  // 새로고침 버튼 표시
+        });
+
+        // 연결 에러
+        socket.on('connect_error', (error) => {
+            console.log('[Socket.IO] 연결 에러:', error.message);
+            if (reconnectAttempts === 0) {
+                showConnectionStatus('서버 연결 시도 중...');
+            }
+        });
+
+        // 놓친 메시지 동기화
+        async function syncMissedMessages() {
             try {
                 showConnectionStatus('메시지 동기화 중...');
-                const res = await fetch(`/api/chats/${chatId}/messages?limit=20`);
+                const res = await fetch(`/api/chats/${chatId}/messages?limit=30`);
                 const data = await res.json();
 
                 if (data.messages && data.messages.length > 0) {
@@ -1376,21 +1488,7 @@
                 console.error('[재연결] 메시지 동기화 실패:', error);
                 showConnectionStatus('연결됨', true);
             }
-        });
-
-        socket.on('reconnect_attempt', (attemptNumber) => {
-            console.log('[Socket.IO] 재연결 시도 중... (' + attemptNumber + '번째)');
-            showConnectionStatus(`재연결 시도 중... (${attemptNumber}번째)`);
-        });
-
-        socket.on('reconnect_error', (error) => {
-            console.log('[Socket.IO] 재연결 실패:', error);
-        });
-
-        socket.on('reconnect_failed', () => {
-            console.log('[Socket.IO] 재연결 최종 실패 (페이지 새로고침 권장)');
-            showConnectionStatus('연결 실패 - 페이지를 새로고침하세요');
-        });
+        }
 
         let chatParticipants = [];
         let isLoadingMessages = false;  // 메시지 로딩 중 플래그
@@ -2391,18 +2489,10 @@
         // 검색 패널 열기/닫기
         function toggleSearchPanel() {
             const panel = document.getElementById('searchPanel');
-            panel.classList.toggle('show');
-            if (panel.classList.contains('show')) {
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'flex';
                 document.getElementById('searchInput').focus();
                 loadChatDates();  // 날짜 목록 미리 로드
-            }
-        }
-
-        function toggleSearchPanel() {
-            const panel = document.getElementById('searchPanel');
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                document.getElementById('searchInput').focus();
             } else {
                 closeSearchPanel();
             }

@@ -1617,8 +1617,12 @@ def remove_chat_participant(chat_id: int | str, username: str, target_username: 
             return True, f'{target_username}님이 채팅방에서 내보내졌습니다.'
 
 
-def leave_chat(chat_id: int | str, username: str) -> tuple[bool, str]:
-    """채팅방 나가기 (그룹채팅만 가능)"""
+def leave_chat(chat_id: int | str, username: str) -> tuple[bool, str, bool]:
+    """채팅방 나가기 (그룹채팅, 1:1 채팅 모두 가능)
+
+    Returns:
+        tuple: (success, message, deleted) - deleted는 채팅방이 삭제되었는지 여부
+    """
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -1633,13 +1637,12 @@ def leave_chat(chat_id: int | str, username: str) -> tuple[bool, str]:
             row = cursor.fetchone()
 
             if not row:
-                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.'
+                return False, '채팅방을 찾을 수 없거나 참여자가 아닙니다.', False
 
-            if row['chat_type'] == 'direct':
-                return False, '1:1 채팅방은 나갈 수 없습니다.'
+            is_direct = row['chat_type'] == 'direct'
 
-            # 방장이 나가는 경우 권한 이전 필요
-            if row['role'] == 'owner':
+            # 그룹채팅에서 방장이 나가는 경우 권한 이전 필요
+            if not is_direct and row['role'] == 'owner':
                 # 다른 참여자 수 확인
                 cursor.execute('''
                     SELECT username, role FROM chat_participants
@@ -1667,15 +1670,19 @@ def leave_chat(chat_id: int | str, username: str) -> tuple[bool, str]:
             cursor.execute('''
                 SELECT COUNT(*) as cnt FROM chat_participants WHERE chat_id = %s
             ''', (int(chat_id),))
-            if cursor.fetchone()['cnt'] == 0:
+            remaining_count = cursor.fetchone()['cnt']
+
+            deleted = False
+            if remaining_count == 0:
                 # CASCADE로 messages, message_reads도 자동 삭제됨
                 cursor.execute('DELETE FROM chats WHERE id = %s', (int(chat_id),))
                 logger.info(f"Chat {chat_id} and all messages deleted (no participants)")
+                deleted = True
 
             conn.commit()
 
             logger.info(f"User {username} left chat {chat_id}")
-            return True, '채팅방을 나갔습니다.'
+            return True, '채팅방을 나갔습니다.', deleted
 
 
 def set_chat_admin(chat_id: int | str, username: str, target_username: str, is_admin: bool) -> tuple[bool, str]:

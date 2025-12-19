@@ -229,7 +229,7 @@
                 <input type="text" id="searchKeyword" placeholder="이름 검색..." onkeyup="filterAndRenderUsers()" style="flex: 1;">
             </label>
 
-            <button class="btn-primary" id="addUserBtn" onclick="openAddModal()">+ 사용자 추가</button>
+            <button class="btn-primary" id="addUserBtn" onclick="openAddUserModal()">+ 사용자 추가</button>
             <button class="btn-team-manage" id="teamManageBtn" onclick="openTeamManageModal()">팀 관리</button>
         </div>
 
@@ -313,7 +313,7 @@
                 초기 비밀번호: <strong>상담사는 body123!</strong>, <strong>관리자는 admin1234</strong>
             </p>
             <div class="modal-buttons">
-                <button class="btn-secondary" onclick="closeAddModal()">취소</button>
+                <button class="btn-secondary" onclick="closeAddUserModal()">취소</button>
                 <button class="btn-primary" onclick="addUser()">추가</button>
             </div>
         </div>
@@ -522,7 +522,7 @@
                             <div class="empty-state-description">
                                 검색 조건에 맞는 사용자가 없습니다. 필터를 초기화하거나 새 사용자를 추가해보세요.
                             </div>
-                            <button class="empty-state-action" onclick="openAddModal()">
+                            <button class="empty-state-action" onclick="openAddUserModal()">
                                 <span class="icon">➕</span>
                                 사용자 추가
                             </button>
@@ -554,11 +554,11 @@
         }
 
         // 사용자 추가 모달
-        function openAddModal() {
+        function openAddUserModal() {
             document.getElementById('addModal').classList.add('active');
         }
 
-        function closeAddModal() {
+        function closeAddUserModal() {
             document.getElementById('addModal').classList.remove('active');
             document.getElementById('newUsername').value = '';
             document.getElementById('newRole').value = '상담사';
@@ -598,7 +598,7 @@
 
                 if (response.ok) {
                     showToast('사용자가 추가되었습니다.');
-                    closeAddModal();
+                    closeAddUserModal();
                     loadUsers();
                     loadTeams();  // 팀 목록 새로고침
                 } else {

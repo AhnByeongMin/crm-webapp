@@ -1678,9 +1678,9 @@
             renderPromotions();
         }
 
-        // 필터 옵션 로드
+        // 필터 옵션 로드 (Promise 반환)
         function loadFilters() {
-            fetch('/api/promotions/filters')
+            return fetch('/api/promotions/filters')
                 .then(res => res.json())
                 .then(data => {
                     // 전체 데이터 저장
@@ -2275,8 +2275,12 @@
                 if (response.ok) {
                     showSimpleToast('성공', id ? '프로모션이 수정되었습니다.' : '프로모션이 등록되었습니다.', 'success');
                     closeModal();
-                    loadPromotions();
-                    loadFilters();
+                    // 필터 옵션 로드 완료 후 프로모션 목록 로드 (순차 실행으로 렌더링 충돌 방지)
+                    loadFilters().then(() => {
+                        loadPromotions();
+                    }).catch(() => {
+                        loadPromotions(); // 필터 로드 실패해도 목록은 로드
+                    });
                 } else {
                     const error = await response.json();
                     showSimpleToast('오류', error.error || '오류가 발생했습니다.', 'error');
@@ -2308,8 +2312,12 @@
                 if (response.ok) {
                     showSimpleToast('성공', '프로모션이 삭제되었습니다.', 'success');
                     closeDetailModal();
-                    loadPromotions();
-                    loadFilters();
+                    // 필터 옵션 로드 완료 후 프로모션 목록 로드 (순차 실행으로 렌더링 충돌 방지)
+                    loadFilters().then(() => {
+                        loadPromotions();
+                    }).catch(() => {
+                        loadPromotions();
+                    });
                 } else {
                     showSimpleToast('오류', '삭제에 실패했습니다.', 'error');
                 }

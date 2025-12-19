@@ -405,7 +405,7 @@
     background: #ccc;
     border-radius: 28px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.15s;
 }
 
 .toggle-switch.active {
@@ -421,7 +421,7 @@
     height: 22px;
     background: white;
     border-radius: 50%;
-    transition: transform 0.3s;
+    transition: transform 0.15s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
@@ -437,7 +437,7 @@
 /* 다크 모드 아이콘 */
 .dark-mode-toggle .mode-icon {
     font-size: 20px;
-    transition: opacity 0.3s;
+    transition: opacity 0.15s;
 }
 
 .dark-mode-toggle .sun-icon {
@@ -1334,9 +1334,21 @@
     background: var(--bg-primary) !important;
 }
 
-[data-theme="dark"] .message,
 [data-theme="dark"] .message-item {
     background: transparent !important;
+}
+
+/* 채팅방 메시지 말풍선 */
+[data-theme="dark"] .message.other {
+    background: #3a3f47 !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .message.own {
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%) !important;
+    color: #e0e7ff !important;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3) !important;
 }
 
 [data-theme="dark"] .message-bubble {
@@ -2200,4 +2212,194 @@
 /* 결과 개수 텍스트 */
 [data-theme="dark"] #resultCount {
     color: var(--text-muted) !important;
+}
+
+/* ========== 채팅 검색 날짜 캘린더 다크모드 ========== */
+/* 날짜 선택 모달 배경 */
+[data-theme="dark"] .date-picker-modal {
+    background: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* 날짜 선택 모달 콘텐츠 */
+[data-theme="dark"] .date-picker-content {
+    background: var(--card-bg) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 날짜 선택 헤더 */
+[data-theme="dark"] .date-picker-header {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .date-picker-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .date-picker-close {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .date-picker-close:hover {
+    color: var(--text-primary) !important;
+}
+
+/* 캘린더 네비게이션 */
+[data-theme="dark"] .calendar-nav button {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .calendar-nav button:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--accent-primary) !important;
+}
+
+/* 캘린더 월 표시 */
+[data-theme="dark"] .calendar-month {
+    color: var(--text-primary) !important;
+}
+
+/* 캘린더 요일 헤더 */
+[data-theme="dark"] .calendar-day-header {
+    color: var(--text-muted) !important;
+}
+
+/* 캘린더 날짜 기본 스타일 */
+[data-theme="dark"] .calendar-day {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .calendar-day:hover {
+    background: var(--bg-hover) !important;
+}
+
+/* 메시지가 있는 날짜 */
+[data-theme="dark"] .calendar-day.has-messages {
+    background: rgba(129, 140, 248, 0.3) !important;
+    color: #a5b4fc !important;
+}
+
+/* 오늘 날짜 - 시인성 강화 */
+[data-theme="dark"] .calendar-day.today {
+    border-color: #fbbf24 !important;
+    background: linear-gradient(135deg, #78350f 0%, #92400e 100%) !important;
+    color: #fde68a !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 0 2px #fbbf24, 0 2px 8px rgba(251, 191, 36, 0.4) !important;
+}
+
+[data-theme="dark"] .calendar-day.today::after {
+    color: #fbbf24 !important;
+}
+
+/* 오늘 + 메시지 있는 날짜 */
+[data-theme="dark"] .calendar-day.today.has-messages {
+    background: linear-gradient(135deg, #78350f 0%, #4c1d95 100%) !important;
+    color: #e9d5ff !important;
+    border-color: #a78bfa !important;
+    box-shadow: 0 0 0 2px #a78bfa, 0 2px 8px rgba(167, 139, 250, 0.4) !important;
+}
+
+/* 선택된 날짜 - 시인성 강화 */
+[data-theme="dark"] .calendar-day.selected {
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%) !important;
+    color: white !important;
+    font-weight: bold !important;
+    box-shadow: 0 0 0 2px #a5b4fc, 0 4px 12px rgba(99, 102, 241, 0.5) !important;
+    transform: scale(1.1);
+    z-index: 1;
+    position: relative;
+}
+
+/* 다른 월의 날짜 */
+[data-theme="dark"] .calendar-day.other-month {
+    color: var(--text-muted) !important;
+    opacity: 0.5;
+}
+
+/* 메시지 없는 날짜 (비활성) */
+[data-theme="dark"] .calendar-day.no-messages {
+    color: var(--text-muted) !important;
+    opacity: 0.4;
+}
+
+/* 검색 결과 하이라이트 */
+[data-theme="dark"] .search-match {
+    background: #fbbf24 !important;
+    color: #1a1a2e !important;
+}
+
+/* 날짜 이동 버튼 */
+[data-theme="dark"] .date-btn {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .date-btn:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--accent-primary) !important;
+}
+
+/* 채팅 검색 패널 전체 */
+[data-theme="dark"] .search-panel {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 검색 입력 필드 */
+[data-theme="dark"] .search-input-wrap input {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+[data-theme="dark"] .search-input-wrap input:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .search-input-wrap input::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* 검색 입력 클리어 버튼 */
+[data-theme="dark"] .search-input-wrap .clear-btn {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .search-input-wrap .clear-btn:hover {
+    color: var(--text-primary) !important;
+}
+
+/* 검색 결과 정보 */
+[data-theme="dark"] .search-results-info {
+    color: var(--text-muted) !important;
+}
+
+/* 검색 결과 네비게이션 버튼 */
+[data-theme="dark"] .search-results-info .nav-btns button {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .search-results-info .nav-btns button:hover:not(:disabled) {
+    background: var(--bg-hover) !important;
+    border-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .search-results-info .nav-btns button:disabled {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+    opacity: 0.5;
+}
+
+/* 검색 닫기 버튼 */
+[data-theme="dark"] .close-search-btn {
+    background: #4b5563 !important;
+}
+
+[data-theme="dark"] .close-search-btn:hover {
+    background: #6b7280 !important;
 }

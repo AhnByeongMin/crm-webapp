@@ -346,7 +346,8 @@ def index():
                          current_page='tasks')
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit(get_limit_string('login'))
+@limiter.limit("30 per minute", methods=["GET"])  # 페이지 조회는 여유롭게
+@limiter.limit(get_limit_string('login'), methods=["POST"])  # 로그인 시도는 엄격하게
 def login():
     if is_localhost():
         return redirect(url_for('admin'))
@@ -1592,21 +1593,22 @@ def remove_chat_participant_api(chat_id, target_username):
 @app.route('/api/chats/<chat_id>/leave', methods=['POST'])
 @limiter.limit(get_limit_string('api'))
 def leave_chat_api(chat_id):
-    """채팅방 나가기 (그룹채팅만)"""
+    """채팅방 나가기 (그룹채팅, 1:1 채팅 모두 가능)"""
     if 'username' not in session and not is_localhost():
         return jsonify({'error': 'Unauthorized'}), 401
 
     username = session.get('username', 'admin')
-    success, message = database.leave_chat(chat_id, username)
+    success, message, deleted = database.leave_chat(chat_id, username)
 
     # 성공 시 Socket.IO로 알림
     if success:
         socketio.emit('participant_left', {
             'chat_id': chat_id,
-            'username': username
+            'username': username,
+            'deleted': deleted
         }, room=f'chat_{chat_id}')
 
-    return jsonify({'success': success, 'message': message})
+    return jsonify({'success': success, 'message': message, 'deleted': deleted})
 
 
 @app.route('/api/chats/<chat_id>/admin/<target_username>', methods=['PUT'])
@@ -1742,12 +1744,27 @@ def handle_message(data):
 
             # 푸시 알림 발송 (백그라운드)
             target_user = participant  # 클로저 문제 방지
-            def send_push_async(target=target_user):
+            sender_name = username  # 클로저 문제 방지
+            msg_preview = message[:100]  # 클로저 문제 방지
+
+            def send_push_async(target=target_user, sender=sender_name, preview=msg_preview):
                 try:
+                    # 사용자 설정 확인 (내용 표시 여부)
+                    show_preview = True
+                    try:
+                        with database.get_db_connection() as conn:
+                            cur = conn.cursor()
+                            cur.execute("SELECT chat_push_preview FROM users WHERE username = %s", (target,))
+                            row = cur.fetchone()
+                            if row and row['chat_push_preview'] is not None:
+                                show_preview = row['chat_push_preview']
+                    except Exception:
+                        pass  # 설정 조회 실패 시 기본값(표시) 사용
+
                     push_helper.send_push_notification(
                         username=target,
-                        title=f'{username}님의 메시지',
-                        body=message[:100],
+                        title=f'{sender}님의 메시지',
+                        body=preview if show_preview else '새 메시지가 있습니다.',
                         data={
                             'type': 'chat',
                             'chatId': chat_id,
@@ -2604,6 +2621,61 @@ def change_password():
     else:
         return jsonify({'error': message}), 400
 
+@app.route('/api/user/settings', methods=['GET'])
+def get_user_settings():
+    """사용자 설정 조회"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+
+    try:
+        with database.get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT chat_push_preview
+                FROM users
+                WHERE username = %s
+            """, (username,))
+            row = cur.fetchone()
+
+            if row:
+                return jsonify({
+                    'chat_push_preview': row['chat_push_preview'] if row['chat_push_preview'] is not None else True
+                })
+            else:
+                return jsonify({'chat_push_preview': True})
+    except Exception as e:
+        logger.error(f"사용자 설정 조회 실패: {e}")
+        return jsonify({'chat_push_preview': True})
+
+@app.route('/api/user/settings', methods=['POST'])
+def update_user_settings():
+    """사용자 설정 업데이트"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+    data = request.json
+
+    try:
+        with database.get_db_connection() as conn:
+            cur = conn.cursor()
+
+            # chat_push_preview 설정
+            if 'chat_push_preview' in data:
+                cur.execute("""
+                    UPDATE users
+                    SET chat_push_preview = %s
+                    WHERE username = %s
+                """, (data['chat_push_preview'], username))
+
+            conn.commit()
+            return jsonify({'success': True, 'message': '설정이 저장되었습니다.'})
+    except Exception as e:
+        logger.error(f"사용자 설정 업데이트 실패: {e}")
+        return jsonify({'error': '설정 저장에 실패했습니다.'}), 500
+
 @app.route('/api/reminders', methods=['GET'])
 def get_reminders():
     """예약 목록 조회"""
@@ -3376,13 +3448,13 @@ def get_sw_version():
     try:
         mtime = os.path.getmtime(sw_path)
         version = {
-            'version': 'v9',  # 주 버전 (수동 관리)
+            'version': 'v10',  # 주 버전 (수동 관리)
             'timestamp': int(mtime),  # 파일 수정 시간
             'hash': str(int(mtime))  # 간단한 해시
         }
         return jsonify(version)
     except Exception as e:
-        return jsonify({'version': 'v9', 'timestamp': 0, 'hash': '0'})
+        return jsonify({'version': 'v10', 'timestamp': 0, 'hash': '0'})
 
 
 @app.route('/service-worker.js')

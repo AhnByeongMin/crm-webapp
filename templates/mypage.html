@@ -205,6 +205,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- 알림 설정 -->
+        <div class="settings-section">
+            <h2>🔔 알림 설정</h2>
+
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">채팅 알림 내용 표시</div>
+                    <div class="setting-description">푸시 알림에 메시지 내용을 표시합니다. 끄면 "새 메시지가 있습니다"로 표시됩니다.</div>
+                </div>
+                <div class="dark-mode-toggle">
+                    <div class="toggle-switch" id="chatPushPreviewToggle" onclick="toggleChatPushPreview()"></div>
+                    <span class="toggle-label" id="chatPushPreviewLabel">내용 표시</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -343,7 +359,59 @@
                     }
                 });
             }
+
+            // 알림 설정 초기화
+            loadNotificationSettings();
         });
+
+        // 채팅 푸시 알림 내용 표시 설정
+        async function loadNotificationSettings() {
+            try {
+                const response = await fetch('/api/user/settings');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateChatPushPreviewUI(data.chat_push_preview !== false);
+                }
+            } catch (error) {
+                console.error('알림 설정 로드 실패:', error);
+            }
+        }
+
+        function updateChatPushPreviewUI(isEnabled) {
+            const toggle = document.getElementById('chatPushPreviewToggle');
+            const label = document.getElementById('chatPushPreviewLabel');
+
+            if (toggle) {
+                toggle.classList.toggle('active', isEnabled);
+            }
+            if (label) {
+                label.textContent = isEnabled ? '내용 표시' : '내용 숨김';
+            }
+        }
+
+        async function toggleChatPushPreview() {
+            const toggle = document.getElementById('chatPushPreviewToggle');
+            const isCurrentlyEnabled = toggle.classList.contains('active');
+            const newValue = !isCurrentlyEnabled;
+
+            try {
+                const response = await fetch('/api/user/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_push_preview: newValue })
+                });
+
+                if (response.ok) {
+                    updateChatPushPreviewUI(newValue);
+                    showToast(newValue ? '채팅 알림에 내용이 표시됩니다.' : '채팅 알림에 내용이 숨겨집니다.', 'success');
+                } else {
+                    showToast('설정 저장에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('설정 저장 실패:', error);
+                showToast('설정 저장에 실패했습니다.', 'error');
+            }
+        }
 
     </script>
 

@@ -77,7 +77,7 @@
 .skeleton {
     background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
     background-size: 200% 100%;
-    animation: skeleton-loading 1.5s infinite;
+    animation: skeleton-loading 1s infinite;
     border-radius: 4px;
 }
 
@@ -433,7 +433,7 @@
 
 /* 페이드 인 애니메이션 */
 .skeleton-fade-out {
-    animation: skeletonFadeOut 0.3s ease forwards;
+    animation: skeletonFadeOut 0.15s ease forwards;
 }
 
 @keyframes skeletonFadeOut {
@@ -443,11 +443,11 @@
 
 /* 컨텐츠 페이드 인 */
 .content-fade-in {
-    animation: contentFadeIn 0.3s ease forwards;
+    animation: contentFadeIn 0.15s ease forwards;
 }
 
 @keyframes contentFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -480,10 +480,102 @@
 
 /* 페이지 로드 시 페이드 인 */
 .page-transition {
-    animation: pageEnter 0.4s ease-out forwards;
+    animation: pageEnter 0.2s ease-out forwards;
 }
 
 @keyframes pageEnter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 페이지 떠나기 애니메이션 */
+.page-leaving {
+    animation: pageLeave 0.15s ease-in forwards;
+}
+
+@keyframes pageLeave {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* 섹션별 순차 애니메이션 */
+.section-animate {
+    opacity: 0;
+    animation: sectionEnter 0.2s ease-out forwards;
+}
+
+.section-animate:nth-child(1) { animation-delay: 0.02s; }
+.section-animate:nth-child(2) { animation-delay: 0.04s; }
+.section-animate:nth-child(3) { animation-delay: 0.06s; }
+.section-animate:nth-child(4) { animation-delay: 0.08s; }
+.section-animate:nth-child(5) { animation-delay: 0.1s; }
+
+@keyframes sectionEnter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 카드 호버 애니메이션 */
+.card-hover-animate {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-hover-animate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* 리스트 아이템 순차 페이드 인 */
+.list-item-animate {
+    opacity: 0;
+    animation: listItemEnter 0.15s ease-out forwards;
+}
+
+/* 최대 10개 아이템까지 순차 딜레이 */
+.list-item-animate:nth-child(1) { animation-delay: 0.01s; }
+.list-item-animate:nth-child(2) { animation-delay: 0.02s; }
+.list-item-animate:nth-child(3) { animation-delay: 0.03s; }
+.list-item-animate:nth-child(4) { animation-delay: 0.04s; }
+.list-item-animate:nth-child(5) { animation-delay: 0.05s; }
+.list-item-animate:nth-child(6) { animation-delay: 0.06s; }
+.list-item-animate:nth-child(7) { animation-delay: 0.07s; }
+.list-item-animate:nth-child(8) { animation-delay: 0.08s; }
+.list-item-animate:nth-child(9) { animation-delay: 0.09s; }
+.list-item-animate:nth-child(10) { animation-delay: 0.1s; }
+
+@keyframes listItemEnter {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 슬라이드 업 애니메이션 */
+.slide-up-animate {
+    animation: slideUp 0.2s ease-out forwards;
+}
+
+@keyframes slideUp {
     from {
         opacity: 0;
         transform: translateY(15px);
@@ -494,109 +586,15 @@
     }
 }
 
-/* 페이지 떠나기 애니메이션 */
-.page-leaving {
-    animation: pageLeave 0.25s ease-in forwards;
-}
-
-@keyframes pageLeave {
-    from {
-        opacity: 1;
-        transform: scale(1);
-    }
-    to {
-        opacity: 0;
-        transform: scale(0.98);
-    }
-}
-
-/* 섹션별 순차 애니메이션 */
-.section-animate {
-    opacity: 0;
-    animation: sectionEnter 0.4s ease-out forwards;
-}
-
-.section-animate:nth-child(1) { animation-delay: 0.05s; }
-.section-animate:nth-child(2) { animation-delay: 0.1s; }
-.section-animate:nth-child(3) { animation-delay: 0.15s; }
-.section-animate:nth-child(4) { animation-delay: 0.2s; }
-.section-animate:nth-child(5) { animation-delay: 0.25s; }
-
-@keyframes sectionEnter {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 카드 호버 애니메이션 강화 */
-.card-hover-animate {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-hover-animate:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-}
-
-/* 리스트 아이템 순차 페이드 인 */
-.list-item-animate {
-    opacity: 0;
-    animation: listItemEnter 0.3s ease-out forwards;
-}
-
-/* 최대 20개 아이템까지 순차 딜레이 */
-.list-item-animate:nth-child(1) { animation-delay: 0.02s; }
-.list-item-animate:nth-child(2) { animation-delay: 0.04s; }
-.list-item-animate:nth-child(3) { animation-delay: 0.06s; }
-.list-item-animate:nth-child(4) { animation-delay: 0.08s; }
-.list-item-animate:nth-child(5) { animation-delay: 0.1s; }
-.list-item-animate:nth-child(6) { animation-delay: 0.12s; }
-.list-item-animate:nth-child(7) { animation-delay: 0.14s; }
-.list-item-animate:nth-child(8) { animation-delay: 0.16s; }
-.list-item-animate:nth-child(9) { animation-delay: 0.18s; }
-.list-item-animate:nth-child(10) { animation-delay: 0.2s; }
-
-@keyframes listItemEnter {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* 슬라이드 업 애니메이션 */
-.slide-up-animate {
-    animation: slideUp 0.4s ease-out forwards;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 /* 줌 인 애니메이션 */
 .zoom-in-animate {
-    animation: zoomIn 0.3s ease-out forwards;
+    animation: zoomIn 0.15s ease-out forwards;
 }
 
 @keyframes zoomIn {
     from {
         opacity: 0;
-        transform: scale(0.95);
+        transform: scale(0.98);
     }
     to {
         opacity: 1;
@@ -632,13 +630,13 @@
     background: white;
     border-radius: 16px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    animation: emptyStateEnter 0.5s ease-out forwards;
+    animation: emptyStateEnter 0.2s ease-out forwards;
 }
 
 @keyframes emptyStateEnter {
     from {
         opacity: 0;
-        transform: scale(0.95);
+        transform: scale(0.98);
     }
     to {
         opacity: 1;
@@ -686,13 +684,13 @@
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .empty-state-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.35);
 }
 
 .empty-state-action .icon {
