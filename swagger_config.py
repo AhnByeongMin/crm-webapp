@@ -49,13 +49,14 @@ API 호출은 Rate Limiting이 적용됩니다:
 - 검색 API: 분당 60회
 
 ## 최근 업데이트 (2024-12)
+- **개인 메모 API 추가** (폴더, 메모 CRUD, 하위 폴더 지원)
 - 사용자 설정 API 추가 (채팅 푸시 알림 내용 표시 설정)
 - 채팅방 관리 API 추가 (제목 변경, 멤버 관리, 나가기)
 - 알림 설정 API 추가 (예약 알림, 일일 요약)
 - 푸시 알림 테스트 API 추가
 - Service Worker 버전 조회 API 추가
         """,
-        "version": "1.1.0",
+        "version": "1.2.0",
         "contact": {
             "name": "하루CRM 개발팀",
             "email": "dev@harucrm.com"
@@ -125,6 +126,14 @@ API 호출은 Rate Limiting이 적용됩니다:
         {
             "name": "파일",
             "description": "파일 업로드/다운로드 API"
+        },
+        {
+            "name": "메모",
+            "description": "개인 메모 관리 API"
+        },
+        {
+            "name": "메모 폴더",
+            "description": "메모 폴더 관리 API (하위 폴더 지원)"
         }
     ],
     "paths": {
@@ -1057,6 +1066,222 @@ API 호출은 Rate Limiting이 적용됩니다:
                 "description": "현재 사용자에게 일일 요약 테스트 알림 발송",
                 "responses": {"200": {"description": "발송 결과"}}
             }
+        },
+        "/api/memos/folders": {
+            "get": {
+                "tags": ["메모 폴더"],
+                "summary": "폴더 목록 조회",
+                "description": "현재 사용자의 메모 폴더 목록 조회 (최상위 폴더만)",
+                "responses": {
+                    "200": {
+                        "description": "폴더 목록",
+                        "schema": {"type": "array", "items": {"$ref": "#/definitions/MemoFolder"}}
+                    }
+                }
+            },
+            "post": {
+                "tags": ["메모 폴더"],
+                "summary": "새 폴더 생성",
+                "parameters": [
+                    {"name": "body", "in": "body", "schema": {
+                        "type": "object",
+                        "required": ["name"],
+                        "properties": {
+                            "name": {"type": "string", "description": "폴더 이름"},
+                            "parent_id": {"type": "integer", "description": "부모 폴더 ID (null이면 최상위)"}
+                        }
+                    }}
+                ],
+                "responses": {
+                    "201": {"description": "폴더 생성됨"},
+                    "400": {"description": "잘못된 요청"}
+                }
+            }
+        },
+        "/api/memos/folders/tree": {
+            "get": {
+                "tags": ["메모 폴더"],
+                "summary": "전체 폴더 트리 조회",
+                "description": "재귀적으로 모든 폴더를 트리 구조로 조회 (depth 포함)",
+                "responses": {
+                    "200": {
+                        "description": "폴더 트리",
+                        "schema": {"type": "array", "items": {"$ref": "#/definitions/MemoFolderTree"}}
+                    }
+                }
+            }
+        },
+        "/api/memos/folders/{folder_id}": {
+            "put": {
+                "tags": ["메모 폴더"],
+                "summary": "폴더 이름 수정",
+                "parameters": [
+                    {"name": "folder_id", "in": "path", "type": "integer", "required": True},
+                    {"name": "body", "in": "body", "schema": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}}
+                    }}
+                ],
+                "responses": {
+                    "200": {"description": "수정됨"},
+                    "404": {"description": "폴더를 찾을 수 없음"}
+                }
+            },
+            "delete": {
+                "tags": ["메모 폴더"],
+                "summary": "폴더 삭제",
+                "description": "폴더와 하위 폴더, 포함된 메모 모두 삭제",
+                "parameters": [
+                    {"name": "folder_id", "in": "path", "type": "integer", "required": True}
+                ],
+                "responses": {
+                    "200": {"description": "삭제됨"},
+                    "404": {"description": "폴더를 찾을 수 없음"}
+                }
+            }
+        },
+        "/api/memos/folders/{folder_id}/move": {
+            "put": {
+                "tags": ["메모 폴더"],
+                "summary": "폴더 이동",
+                "description": "폴더를 다른 부모 폴더로 이동 (순환 참조 방지)",
+                "parameters": [
+                    {"name": "folder_id", "in": "path", "type": "integer", "required": True},
+                    {"name": "body", "in": "body", "schema": {
+                        "type": "object",
+                        "properties": {"parent_id": {"type": "integer", "description": "새 부모 폴더 ID (null이면 최상위로)"}}
+                    }}
+                ],
+                "responses": {
+                    "200": {"description": "이동됨"},
+                    "400": {"description": "순환 참조 오류"}
+                }
+            }
+        },
+        "/api/memos": {
+            "get": {
+                "tags": ["메모"],
+                "summary": "메모 목록 조회",
+                "parameters": [
+                    {"name": "folder_id", "in": "query", "type": "string", "description": "폴더 ID (null=전체, root=미분류, 숫자=특정 폴더)"}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "메모 목록",
+                        "schema": {"type": "array", "items": {"$ref": "#/definitions/Memo"}}
+                    }
+                }
+            },
+            "post": {
+                "tags": ["메모"],
+                "summary": "새 메모 생성",
+                "parameters": [
+                    {"name": "body", "in": "body", "schema": {"$ref": "#/definitions/MemoInput"}}
+                ],
+                "responses": {
+                    "201": {"description": "메모 생성됨", "schema": {"$ref": "#/definitions/Memo"}}
+                }
+            }
+        },
+        "/api/memos/{memo_id}": {
+            "get": {
+                "tags": ["메모"],
+                "summary": "메모 상세 조회",
+                "parameters": [
+                    {"name": "memo_id", "in": "path", "type": "integer", "required": True}
+                ],
+                "responses": {
+                    "200": {"description": "메모 상세", "schema": {"$ref": "#/definitions/Memo"}},
+                    "404": {"description": "메모를 찾을 수 없음"}
+                }
+            },
+            "put": {
+                "tags": ["메모"],
+                "summary": "메모 수정",
+                "parameters": [
+                    {"name": "memo_id", "in": "path", "type": "integer", "required": True},
+                    {"name": "body", "in": "body", "schema": {"$ref": "#/definitions/MemoInput"}}
+                ],
+                "responses": {
+                    "200": {"description": "수정됨"},
+                    "404": {"description": "메모를 찾을 수 없음"}
+                }
+            },
+            "delete": {
+                "tags": ["메모"],
+                "summary": "메모 삭제",
+                "parameters": [
+                    {"name": "memo_id", "in": "path", "type": "integer", "required": True}
+                ],
+                "responses": {
+                    "200": {"description": "삭제됨"},
+                    "404": {"description": "메모를 찾을 수 없음"}
+                }
+            }
+        },
+        "/api/memos/{memo_id}/move": {
+            "put": {
+                "tags": ["메모"],
+                "summary": "메모 이동",
+                "description": "메모를 다른 폴더로 이동",
+                "parameters": [
+                    {"name": "memo_id", "in": "path", "type": "integer", "required": True},
+                    {"name": "body", "in": "body", "schema": {
+                        "type": "object",
+                        "properties": {"folder_id": {"type": "integer", "description": "대상 폴더 ID (null이면 미분류)"}}
+                    }}
+                ],
+                "responses": {"200": {"description": "이동됨"}}
+            }
+        },
+        "/api/memos/{memo_id}/pin": {
+            "patch": {
+                "tags": ["메모"],
+                "summary": "메모 고정/해제",
+                "description": "메모의 고정 상태를 토글합니다",
+                "parameters": [
+                    {"name": "memo_id", "in": "path", "type": "integer", "required": True}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "고정 상태 변경됨",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "success": {"type": "boolean"},
+                                "is_pinned": {"type": "boolean"}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/memos/search": {
+            "get": {
+                "tags": ["메모"],
+                "summary": "메모 검색",
+                "parameters": [
+                    {"name": "q", "in": "query", "type": "string", "required": True, "description": "검색어"}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "검색 결과",
+                        "schema": {"type": "array", "items": {"$ref": "#/definitions/Memo"}}
+                    }
+                }
+            }
+        },
+        "/api/memos/stats": {
+            "get": {
+                "tags": ["메모"],
+                "summary": "메모 통계 조회",
+                "responses": {
+                    "200": {
+                        "description": "통계 정보",
+                        "schema": {"$ref": "#/definitions/MemoStats"}
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1267,6 +1492,57 @@ API 호출은 Rate Limiting이 적용됩니다:
                 "repeat_until_minutes": {"type": "integer", "description": "반복 종료 시간 (분)", "default": 0},
                 "daily_summary_enabled": {"type": "boolean", "description": "일일 요약 활성화", "default": True},
                 "daily_summary_time": {"type": "string", "description": "일일 요약 시간 (HH:MM)", "default": "09:00"}
+            }
+        },
+        "MemoFolder": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "폴더 ID"},
+                "name": {"type": "string", "description": "폴더 이름"},
+                "parent_id": {"type": "integer", "description": "부모 폴더 ID (null이면 최상위)"},
+                "sort_order": {"type": "integer", "description": "정렬 순서"},
+                "created_at": {"type": "string", "format": "date-time"},
+                "updated_at": {"type": "string", "format": "date-time"}
+            }
+        },
+        "MemoFolderTree": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "폴더 ID"},
+                "name": {"type": "string", "description": "폴더 이름"},
+                "parent_id": {"type": "integer", "description": "부모 폴더 ID"},
+                "depth": {"type": "integer", "description": "트리 깊이 (0=최상위)"},
+                "sort_order": {"type": "integer", "description": "정렬 순서"}
+            }
+        },
+        "Memo": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "description": "메모 ID"},
+                "title": {"type": "string", "description": "제목"},
+                "content": {"type": "string", "description": "내용"},
+                "folder_id": {"type": "integer", "description": "폴더 ID (null이면 미분류)"},
+                "folder_name": {"type": "string", "description": "폴더 이름"},
+                "is_pinned": {"type": "boolean", "description": "고정 여부"},
+                "created_at": {"type": "string", "format": "date-time"},
+                "updated_at": {"type": "string", "format": "date-time"}
+            }
+        },
+        "MemoInput": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "제목"},
+                "content": {"type": "string", "description": "내용"},
+                "folder_id": {"type": "integer", "description": "폴더 ID (null이면 미분류)"}
+            }
+        },
+        "MemoStats": {
+            "type": "object",
+            "properties": {
+                "total_memos": {"type": "integer", "description": "총 메모 수"},
+                "total_folders": {"type": "integer", "description": "총 폴더 수"},
+                "pinned_memos": {"type": "integer", "description": "고정된 메모 수"},
+                "recent_memo": {"$ref": "#/definitions/Memo"}
             }
         }
     }
