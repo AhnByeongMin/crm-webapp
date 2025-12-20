@@ -55,7 +55,7 @@
 
         /* 폴더 리스트 */
         .folder-list { flex: 1; overflow-y: auto; padding: 10px 0; }
-        .folder-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: all 0.2s; gap: 10px; }
+        .folder-item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; transition: all 0.2s; gap: 10px; width: 100%; border: none; background: transparent; text-align: left; font-family: inherit; }
         .folder-item:hover { background: #f8f9fa; }
         .folder-item.active { background: #667eea; color: white; }
         .folder-item.active .folder-icon { color: white; }
@@ -64,9 +64,23 @@
         .folder-name { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .folder-count { font-size: 12px; padding: 2px 8px; background: #e9ecef; border-radius: 10px; color: #666; }
         .folder-item.root .folder-icon { color: #667eea; }
-        .folder-depth-1 { padding-left: 30px; }
-        .folder-depth-2 { padding-left: 45px; }
-        .folder-depth-3 { padding-left: 60px; }
+        .folder-depth-1 { padding-left: 35px; }
+        .folder-depth-2 { padding-left: 55px; }
+        .folder-depth-3 { padding-left: 75px; }
+
+        /* 폴더 접기/펼치기 */
+        .folder-toggle { width: 20px; height: 20px; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999; transition: transform 0.2s; flex-shrink: 0; border-radius: 4px; margin-left: -5px; }
+        .folder-toggle:hover { background: rgba(0,0,0,0.05); color: #667eea; }
+        .folder-toggle.expanded { transform: rotate(90deg); }
+        .folder-item.active .folder-toggle { color: rgba(255,255,255,0.8); }
+        .folder-item.active .folder-toggle:hover { background: rgba(255,255,255,0.2); color: white; }
+        .folder-children { overflow: hidden; transition: max-height 0.3s ease; }
+        .folder-children.collapsed { max-height: 0 !important; }
+        .folder-add-child { font-size: 14px; color: #999; opacity: 0; transition: opacity 0.2s; margin-left: auto; padding: 2px 6px; border-radius: 4px; }
+        .folder-item:hover .folder-add-child { opacity: 1; }
+        .folder-add-child:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+        .folder-item.active .folder-add-child { color: rgba(255,255,255,0.7); }
+        .folder-item.active .folder-add-child:hover { background: rgba(255,255,255,0.2); color: white; }
 
         /* 메인 영역 */
         .main-content { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
@@ -123,8 +137,9 @@
         .empty-state p { font-size: 14px; margin-bottom: 20px; }
 
         /* 모달 */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-overlay.show { display: flex; }
+        .modal-overlay { display: none !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex !important; }
+        .modal { position: relative; z-index: 10001; }
         .modal { background: white; border-radius: 12px; padding: 25px; max-width: 400px; width: 90%; animation: modalIn 0.2s ease-out; }
         @keyframes modalIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         .modal h3 { font-size: 18px; margin-bottom: 20px; color: #333; }
@@ -152,14 +167,130 @@
         .folder-select-item:hover { background: #f8f9fa; }
         .folder-select-item.selected { background: #f0f4ff; border-left: 3px solid #667eea; }
 
-        /* 반응형 */
+        /* 모바일 버튼 기본 숨김 (데스크탑) */
+        .mobile-menu-btn { display: none !important; }
+        .mobile-close-btn { display: none !important; }
+
+        /* 반응형 - 모바일 최적화 */
         @media (max-width: 768px) {
-            .main-layout { grid-template-columns: 1fr; }
-            .sidebar { display: none; }
-            .sidebar.mobile-show { display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 999; border-radius: 0; }
-            .page-header { padding: 10px 0; }
-            .page-header h1 { font-size: 20px; }
-            .content-header { flex-direction: column; align-items: flex-start; }
+            body { padding: 10px; }
+            .container { padding: 0; }
+
+            /* 모바일 토글 버튼 표시 */
+            .mobile-menu-btn { display: inline-flex !important; }
+
+            /* 헤더 */
+            .memo-header { margin: 10px 0 !important; }
+            .memo-header h2 { font-size: 18px !important; }
+
+            /* 개인정보 보호 안내 */
+            .privacy-notice { padding: 10px 12px !important; margin-bottom: 12px !important; flex-direction: column !important; text-align: center; gap: 8px !important; }
+            .privacy-notice span:first-child { font-size: 24px !important; }
+            .privacy-notice p { font-size: 12px !important; line-height: 1.4; }
+
+            /* 메인 레이아웃 - 모바일에서 세로 배치 */
+            .main-layout { grid-template-columns: 1fr; gap: 12px; min-height: auto; }
+
+            /* 사이드바 (폴더) - 아코디언 방식 */
+            .sidebar {
+                display: none;
+                border-radius: 10px;
+                margin-bottom: 12px;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+            }
+            .sidebar.mobile-show {
+                display: block !important;
+                max-height: 400px;
+                overflow: visible;
+            }
+            .sidebar-header {
+                padding: 15px;
+            }
+            .sidebar-header h3 { font-size: 15px; font-weight: 600; }
+            #newFolderBtn { padding: 8px 12px !important; font-size: 13px !important; }
+
+            .search-box { padding: 10px 15px; }
+            .search-input { padding: 10px 12px; font-size: 15px; }
+
+            /* 폴더 리스트 */
+            .folder-list {
+                max-height: 250px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .folder-item {
+                padding: 12px 15px !important;
+            }
+            .folder-item:active {
+                background: rgba(102, 126, 234, 0.2) !important;
+            }
+            .folder-name { font-size: 14px; }
+
+            /* 닫기 버튼 숨김 (아코디언이므로 불필요) */
+            .mobile-close-btn { display: none !important; }
+
+            /* 메인 콘텐츠 */
+            .main-content { border-radius: 10px; }
+            .content-header { padding: 15px; flex-direction: row !important; align-items: center !important; justify-content: space-between; }
+            .content-header h2 { font-size: 16px; }
+            .content-header .btn { padding: 10px 16px; font-size: 14px; }
+
+            /* 메모 리스트 */
+            .memo-item { padding: 14px 15px; gap: 12px; }
+            .memo-title { font-size: 15px; }
+            .memo-preview { font-size: 13px; }
+            .memo-meta { font-size: 11px; }
+            .memo-actions { opacity: 1 !important; }
+
+            /* 메모 에디터 */
+            .memo-editor { border-radius: 10px; }
+            .editor-header { padding: 12px 15px; flex-wrap: wrap; gap: 10px; }
+            .editor-title { width: 100%; font-size: 16px; padding: 12px 14px; order: 1; }
+            .editor-actions { width: 100%; order: 2; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+            .editor-actions .btn-save-main { flex: 1; min-width: 80px; padding: 12px !important; font-size: 15px !important; }
+            .editor-actions .btn { padding: 10px 12px; font-size: 13px; }
+            .editor-body { padding: 12px 15px; }
+            .editor-content { font-size: 16px; line-height: 1.7; padding: 14px; }
+            .editor-footer { padding: 12px 15px; flex-direction: column; gap: 8px; align-items: flex-start !important; }
+            .editor-meta { font-size: 12px; }
+
+            /* 민감정보 경고 */
+            #sensitiveWarning { padding: 12px !important; font-size: 14px !important; }
+
+            /* 빈 상태 */
+            .empty-state { padding: 40px 20px; }
+            .empty-state .icon { font-size: 48px; }
+            .empty-state h3 { font-size: 16px; }
+            .empty-state p { font-size: 13px; }
+
+            /* 모달 */
+            .modal { padding: 20px; max-width: 95%; width: 100%; margin: 10px; }
+            .modal h3 { font-size: 17px; margin-bottom: 16px; }
+            .modal-input { padding: 14px 16px; font-size: 16px; margin-bottom: 16px; }
+            .modal-actions { gap: 10px; }
+            .modal-actions .btn { flex: 1; padding: 14px; font-size: 15px; justify-content: center; }
+
+            /* 폴더 선택 (이동 모달) */
+            .folder-select { max-height: 250px; }
+            .folder-select-item { padding: 14px 15px; font-size: 15px; touch-action: manipulation; -webkit-tap-highlight-color: rgba(102, 126, 234, 0.3); }
+            .folder-select-item.selected { background: #667eea !important; color: white !important; }
+            .folder-select-item.selected span { color: white !important; }
+
+            /* 컨텍스트 메뉴 */
+            .context-menu { min-width: 180px; }
+            .context-menu-item { padding: 14px 18px; font-size: 15px; }
+
+            /* 토스트 */
+            .toast { padding: 14px 24px; font-size: 14px; bottom: 20px; left: 10px; right: 10px; transform: none; text-align: center; }
+        }
+
+        /* 태블릿 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .main-layout { grid-template-columns: 240px 1fr; gap: 15px; }
+            .sidebar-header h3 { font-size: 15px; }
+            .folder-item { padding: 10px 12px; }
         }
 
         /* 다크모드 */
@@ -171,6 +302,10 @@
         [data-theme="dark"] .search-input, [data-theme="dark"] .editor-title, [data-theme="dark"] .editor-content, [data-theme="dark"] .modal-input { background: #1e1e38; color: #fff; border-color: rgba(96, 165, 250, 0.3); }
         [data-theme="dark"] .folder-item:hover, [data-theme="dark"] .memo-item:hover { background: rgba(96, 165, 250, 0.1); }
         [data-theme="dark"] .folder-item.active { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        [data-theme="dark"] .folder-toggle { color: #a1a1aa; }
+        [data-theme="dark"] .folder-toggle:hover { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+        [data-theme="dark"] .folder-add-child { color: #a1a1aa; }
+        [data-theme="dark"] .folder-add-child:hover { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
         [data-theme="dark"] .memo-item.active { background: rgba(96, 165, 250, 0.15); border-left-color: #60a5fa; }
         [data-theme="dark"] .memo-title { color: #fff; }
         [data-theme="dark"] .memo-preview, [data-theme="dark"] .memo-meta, [data-theme="dark"] .editor-meta { color: #a1a1aa; }
@@ -185,9 +320,17 @@
         [data-theme="dark"] .breadcrumb span:hover { color: #60a5fa; }
         [data-theme="dark"] .btn-outline { border-color: rgba(96, 165, 250, 0.3); color: #e5e7eb; }
         [data-theme="dark"] .btn-outline:hover { background: rgba(96, 165, 250, 0.1); }
+        [data-theme="dark"] .privacy-notice { background: linear-gradient(135deg, #3d3200 0%, #4a3d00 100%) !important; border-color: #ffc107 !important; }
+        [data-theme="dark"] .privacy-notice strong, [data-theme="dark"] .privacy-notice p { color: #ffd54f !important; }
+        [data-theme="dark"] #sensitiveWarning { background: linear-gradient(135deg, #4a1a1a 0%, #5c2020 100%) !important; border-color: #dc3545 !important; color: #f8b4b4 !important; }
+        [data-theme="dark"] .mobile-close-btn { background: rgba(255,255,255,0.15) !important; color: #fff !important; }
+        [data-theme="dark"] .memo-header h2 { color: #fff !important; }
     </style>
 </head>
-<body>
+<body data-page="memos">
+    <!-- 메모 페이지에서는 터치 제스처 스크립트 비활성화 -->
+    <script>window.DISABLE_TOUCH_GESTURES = true;</script>
+
     <div class="toast-container" id="toastContainer"></div>
 
     <div class="container">
@@ -195,7 +338,16 @@
 
         <div class="memo-header" style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0; flex-wrap: wrap; gap: 10px;">
             <h2 style="margin: 0; color: #333;">📝 내 메모</h2>
-            <button class="mobile-menu-btn" onclick="toggleSidebar()" style="display:none; padding: 8px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">📁 폴더</button>
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" style="padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);">📁 폴더 보기</button>
+        </div>
+
+        <!-- 개인정보 보호 안내 -->
+        <div class="privacy-notice" style="background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); border: 1px solid #ffc107; border-left: 4px solid #ff9800; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 20px;">🔒</span>
+            <div style="flex: 1;">
+                <strong style="color: #856404;">개인정보 보호</strong>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #856404;">전화번호, 생년월일은 저장할 수 없습니다. <strong>CU.</strong>(고객번호) 또는 <strong>CO.</strong>(상담번호)로 시작하면 허용됩니다.</p>
+            </div>
         </div>
 
         <div class="main-layout">
@@ -203,8 +355,11 @@
             <div class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <h3>📁 폴더</h3>
-                    <div class="sidebar-actions">
-                        <button class="icon-btn primary" onclick="showNewFolderModal()" title="새 폴더">➕</button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button type="button" id="newFolderBtn" style="padding: 8px 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; font-weight: 500;">
+                            <span>➕</span> 새 폴더
+                        </button>
+                        <button class="mobile-close-btn" onclick="toggleSidebar()">✕</button>
                     </div>
                 </div>
                 <div class="search-box">
@@ -231,6 +386,7 @@
                 <div class="editor-header">
                     <input type="text" class="editor-title" id="editorTitle" placeholder="제목을 입력하세요">
                     <div class="editor-actions">
+                        <button type="button" class="btn-save-main" onclick="saveMemo()" style="padding: 8px 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);">💾 저장</button>
                         <button class="btn btn-outline btn-sm" onclick="pinMemo()"><span id="pinIcon">📌</span></button>
                         <button class="btn btn-outline btn-sm" onclick="showMoveMemoModal()">📁 이동</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteMemo()">🗑️</button>
@@ -238,11 +394,15 @@
                     </div>
                 </div>
                 <div class="editor-body">
+                    <!-- 민감정보 경고 배너 (실시간 감지) -->
+                    <div id="sensitiveWarning" style="display: none; background: #f8d7da; border: 1px solid #f5c6cb; border-left: 4px solid #dc3545; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: #721c24;">
+                        <strong>⚠️ 저장 불가:</strong> <span id="sensitiveWarningText"></span>
+                    </div>
                     <textarea class="editor-content" id="editorContent" placeholder="내용을 입력하세요..."></textarea>
                 </div>
                 <div class="editor-footer">
                     <span class="editor-meta" id="editorMeta"></span>
-                    <button class="btn btn-success" onclick="saveMemo()">💾 저장</button>
+                    <span style="font-size: 12px; color: #999;">자동 저장 (3초)</span>
                 </div>
             </div>
         </div>
@@ -253,6 +413,12 @@
         <div class="modal">
             <h3 id="folderModalTitle">📁 새 폴더</h3>
             <input type="text" class="modal-input" id="folderNameInput" placeholder="폴더 이름">
+            <div id="parentFolderSection" style="margin-top: 12px;">
+                <label style="font-size: 13px; color: #666; display: block; margin-bottom: 6px;">상위 폴더</label>
+                <select id="parentFolderSelect" class="modal-input" style="padding: 10px 12px;">
+                    <option value="">루트 (최상위)</option>
+                </select>
+            </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" onclick="closeFolderModal()">취소</button>
                 <button class="btn btn-primary" onclick="saveFolderModal()">저장</button>
@@ -278,6 +444,7 @@
     <div class="context-menu" id="contextMenu">
         <div class="context-menu-item" onclick="contextAction('rename')">✏️ 이름 변경</div>
         <div class="context-menu-item" onclick="contextAction('move')">📁 이동</div>
+        <div class="context-menu-item folder-only" onclick="contextAction('addChild')">➕ 하위 폴더 추가</div>
         <div class="context-menu-divider"></div>
         <div class="context-menu-item danger" onclick="contextAction('delete')">🗑️ 삭제</div>
     </div>
@@ -293,32 +460,136 @@
         let contextType = null;
         let selectedMoveFolder = null;
         let editingFolderId = null;
+        let newFolderParentId = null;  // 새 폴더 생성 시 부모 폴더
+        let expandedFolders = new Set();  // 펼쳐진 폴더 ID 저장
+
+        // 민감정보 패턴 (클라이언트 측 실시간 감지용)
+        const sensitivePatterns = {
+            phone: [
+                /01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/,
+                /01[016789]\d{7,8}/
+            ],
+            landline: [
+                /0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}/
+            ],
+            birthdate: [
+                /\b(19[2-9]\d|200\d|201[0-5])[-./]?(0[1-9]|1[0-2])[-./]?(0[1-9]|[12]\d|3[01])\b/,
+                /\b[2-9]\d[-./](0[1-9]|1[0-2])[-./](0[1-9]|[12]\d|3[01])\b/,
+                /\b[0-1][0-5][-./](0[1-9]|1[0-2])[-./](0[1-9]|[12]\d|3[01])\b/
+            ]
+        };
+
+        // 민감정보 실시간 감지
+        function checkSensitiveInfo(text) {
+            if (!text) return { hasSensitive: false };
+
+            // CU. 또는 CO.로 시작하면 허용
+            if (text.trim().match(/^(CU\.|CO\.|cu\.|co\.)/i)) {
+                return { hasSensitive: false };
+            }
+
+            for (const pattern of sensitivePatterns.phone) {
+                if (pattern.test(text)) {
+                    return { hasSensitive: true, type: '휴대폰 번호가 감지되었습니다' };
+                }
+            }
+            for (const pattern of sensitivePatterns.landline) {
+                if (pattern.test(text)) {
+                    return { hasSensitive: true, type: '전화번호(국선)가 감지되었습니다' };
+                }
+            }
+            for (const pattern of sensitivePatterns.birthdate) {
+                if (pattern.test(text)) {
+                    return { hasSensitive: true, type: '생년월일이 감지되었습니다' };
+                }
+            }
+            return { hasSensitive: false };
+        }
+
+        // 경고 배너 표시/숨김
+        function updateSensitiveWarning() {
+            const title = document.getElementById('editorTitle').value;
+            const content = document.getElementById('editorContent').value;
+            const fullText = title + '\n' + content;
+
+            const result = checkSensitiveInfo(fullText);
+            const warningDiv = document.getElementById('sensitiveWarning');
+            const warningText = document.getElementById('sensitiveWarningText');
+            const saveBtn = document.querySelector('.btn-save-main');
+
+            if (result.hasSensitive) {
+                warningDiv.style.display = 'block';
+                warningText.textContent = result.type + ' (CU. 또는 CO.로 시작하면 허용)';
+                if (saveBtn) {
+                    saveBtn.style.opacity = '0.5';
+                    saveBtn.style.cursor = 'not-allowed';
+                }
+            } else {
+                warningDiv.style.display = 'none';
+                if (saveBtn) {
+                    saveBtn.style.opacity = '1';
+                    saveBtn.style.cursor = 'pointer';
+                }
+            }
+        }
 
         // 초기화
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded - 메모 페이지 초기화');
+
+            // 새 폴더 버튼 이벤트 연결
+            const newFolderBtn = document.getElementById('newFolderBtn');
+            if (newFolderBtn) {
+                newFolderBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('새 폴더 버튼 클릭됨');
+                    showNewFolderModal();
+                });
+                console.log('새 폴더 버튼 이벤트 연결 완료');
+            } else {
+                console.error('새 폴더 버튼을 찾을 수 없음');
+            }
+
+            // 폴더 리스트 이벤트 설정 (한 번만)
+            setupFolderListEvents();
+
             loadFolders();
             loadMemos();
 
-            // 자동저장 (3초 디바운스)
+            // 자동저장 (3초 디바운스) + 실시간 민감정보 감지
             let saveTimeout;
-            document.getElementById('editorTitle').addEventListener('input', () => {
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(autoSave, 3000);
-            });
-            document.getElementById('editorContent').addEventListener('input', () => {
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(autoSave, 3000);
-            });
+            const editorTitle = document.getElementById('editorTitle');
+            const editorContent = document.getElementById('editorContent');
+
+            if (editorTitle) {
+                editorTitle.addEventListener('input', () => {
+                    updateSensitiveWarning();
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(autoSave, 3000);
+                });
+            }
+            if (editorContent) {
+                editorContent.addEventListener('input', () => {
+                    updateSensitiveWarning();
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(autoSave, 3000);
+                });
+            }
 
             // 클릭 이벤트로 컨텍스트 메뉴 닫기
             document.addEventListener('click', () => {
-                document.getElementById('contextMenu').classList.remove('show');
+                const contextMenu = document.getElementById('contextMenu');
+                if (contextMenu) contextMenu.classList.remove('show');
             });
 
             // 모바일 대응
             if (window.innerWidth <= 768) {
-                document.querySelector('.mobile-menu-btn').style.display = 'inline-flex';
+                const mobileBtn = document.querySelector('.mobile-menu-btn');
+                if (mobileBtn) mobileBtn.style.display = 'inline-flex';
             }
+
+            console.log('메모 페이지 초기화 완료');
         });
 
         // 폴더 로드
@@ -332,29 +603,158 @@
             }
         }
 
+        // 폴더를 트리 구조로 변환
+        function buildFolderTree(flatFolders) {
+            const folderMap = new Map();
+            const rootFolders = [];
+
+            // 모든 폴더를 맵에 저장
+            flatFolders.forEach(folder => {
+                folderMap.set(folder.id, { ...folder, children: [] });
+            });
+
+            // 부모-자식 관계 설정
+            flatFolders.forEach(folder => {
+                const folderNode = folderMap.get(folder.id);
+                if (folder.parent_id && folderMap.has(folder.parent_id)) {
+                    folderMap.get(folder.parent_id).children.push(folderNode);
+                } else {
+                    rootFolders.push(folderNode);
+                }
+            });
+
+            return rootFolders;
+        }
+
+        // 폴더에 자식이 있는지 확인
+        function hasChildren(folderId) {
+            return folders.some(f => f.parent_id === folderId);
+        }
+
+        // 폴더 접기/펼치기 토글
+        function toggleFolderExpand(folderId, event) {
+            event.stopPropagation();
+            if (expandedFolders.has(folderId)) {
+                expandedFolders.delete(folderId);
+            } else {
+                expandedFolders.add(folderId);
+            }
+            renderFolders();
+        }
+
+        // 하위 폴더 추가 버튼 클릭
+        function addChildFolder(parentId, event) {
+            event.stopPropagation();
+            showNewFolderModal(parentId);
+        }
+
         // 폴더 렌더링
         function renderFolders() {
             const list = document.getElementById('folderList');
+            // "전체"는 모든 메모를 보는 필터 (currentFolderId = null)
+            // "루트"는 폴더에 속하지 않은 메모만 보기 (currentFolderId = 'root')
             let html = `
-                <div class="folder-item root ${currentFolderId === null ? 'active' : ''}" onclick="selectFolder(null)">
+                <button type="button" class="folder-item ${currentFolderId === null ? 'active' : ''}" data-folder-id="null">
+                    <span class="folder-icon">📋</span>
+                    <span class="folder-name">전체 메모</span>
+                </button>
+                <button type="button" class="folder-item ${currentFolderId === 'root' ? 'active' : ''}" data-folder-id="root">
                     <span class="folder-icon">📂</span>
-                    <span class="folder-name">모든 메모</span>
-                </div>
+                    <span class="folder-name">루트 (미분류)</span>
+                </button>
             `;
 
+            // 폴더를 depth 순서대로 렌더링 (이미 API에서 정렬되어 옴)
             folders.forEach(folder => {
                 const depthClass = folder.depth > 0 ? `folder-depth-${Math.min(folder.depth, 3)}` : '';
+                const hasChild = hasChildren(folder.id);
+                const isExpanded = expandedFolders.has(folder.id);
+
+                // 부모가 접혀있으면 숨김
+                let isHidden = false;
+                if (folder.parent_id) {
+                    // 조상 폴더 중 하나라도 접혀있으면 숨김
+                    let parentId = folder.parent_id;
+                    while (parentId) {
+                        if (!expandedFolders.has(parentId)) {
+                            isHidden = true;
+                            break;
+                        }
+                        const parentFolder = folders.find(f => f.id === parentId);
+                        parentId = parentFolder ? parentFolder.parent_id : null;
+                    }
+                }
+
+                const hiddenStyle = isHidden ? 'display: none;' : '';
+
                 html += `
-                    <div class="folder-item ${depthClass} ${currentFolderId === folder.id ? 'active' : ''}"
-                         onclick="selectFolder(${folder.id})"
+                    <button type="button" class="folder-item ${depthClass} ${currentFolderId === folder.id ? 'active' : ''}"
+                         data-folder-id="${folder.id}"
+                         style="${hiddenStyle}"
                          oncontextmenu="showContextMenu(event, 'folder', ${folder.id})">
-                        <span class="folder-icon">📁</span>
+                        ${hasChild ? `<span class="folder-toggle ${isExpanded ? 'expanded' : ''}" onclick="toggleFolderExpand(${folder.id}, event)">▶</span>` : '<span style="width: 20px;"></span>'}
+                        <span class="folder-icon">${hasChild ? '📂' : '📁'}</span>
                         <span class="folder-name">${escapeHtml(folder.name)}</span>
-                    </div>
+                        <span class="folder-add-child" onclick="addChildFolder(${folder.id}, event)" title="하위 폴더 추가">+</span>
+                    </button>
                 `;
             });
 
             list.innerHTML = html;
+        }
+
+        // 폴더 리스트 이벤트 위임 설정
+        function setupFolderListEvents() {
+            const folderList = document.getElementById('folderList');
+            if (!folderList) return;
+
+            // 클릭 이벤트 위임
+            folderList.addEventListener('click', function(e) {
+                const folderItem = e.target.closest('.folder-item');
+                if (folderItem) {
+                    const folderId = folderItem.dataset.folderId;
+                    if (folderId === 'null') {
+                        selectFolder(null);
+                    } else if (folderId === 'root') {
+                        selectFolder('root');
+                    } else {
+                        selectFolder(parseInt(folderId));
+                    }
+                }
+            });
+
+            // 터치 이벤트 위임 (모바일용)
+            let touchStartY = 0;
+            let touchMoved = false;
+
+            folderList.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+                touchMoved = false;
+            }, { passive: true });
+
+            folderList.addEventListener('touchmove', function(e) {
+                const touchY = e.touches[0].clientY;
+                if (Math.abs(touchY - touchStartY) > 10) {
+                    touchMoved = true;
+                }
+            }, { passive: true });
+
+            folderList.addEventListener('touchend', function(e) {
+                if (touchMoved) return; // 스크롤 중이면 무시
+
+                const folderItem = e.target.closest('.folder-item');
+                if (folderItem) {
+                    e.preventDefault();
+                    const folderId = folderItem.dataset.folderId;
+                    if (folderId === 'null') {
+                        selectFolder(null);
+                    } else if (folderId === 'root') {
+                        selectFolder('root');
+                    } else {
+                        selectFolder(parseInt(folderId));
+                    }
+                }
+            }, { passive: false });
         }
 
         // 폴더 선택
@@ -363,19 +763,40 @@
             renderFolders();
             loadMemos();
 
-            const title = folderId === null ? '📄 모든 메모' : '📁 ' + (folders.find(f => f.id === folderId)?.name || '폴더');
+            // 타이틀 설정
+            let title;
+            if (folderId === null) {
+                title = '📋 전체 메모';
+            } else if (folderId === 'root') {
+                title = '📂 루트 (미분류)';
+            } else {
+                title = '📁 ' + (folders.find(f => f.id === folderId)?.name || '폴더');
+            }
             document.getElementById('contentTitle').textContent = title;
 
             // 에디터가 열려있으면 닫기
             if (isEditing) {
                 closeEditor();
             }
+
+            // 모바일에서 폴더 선택 시 사이드바 닫기
+            closeSidebarIfMobile();
         }
 
         // 메모 로드
         async function loadMemos() {
             try {
-                const url = currentFolderId ? `/api/memos?folder_id=${currentFolderId}` : '/api/memos';
+                let url;
+                if (currentFolderId === null) {
+                    // 전체 메모 (모든 폴더 포함)
+                    url = '/api/memos';
+                } else if (currentFolderId === 'root') {
+                    // 루트 메모 (폴더에 속하지 않은 메모만)
+                    url = '/api/memos?folder_id=root';
+                } else {
+                    // 특정 폴더의 메모
+                    url = `/api/memos?folder_id=${currentFolderId}`;
+                }
                 const response = await fetch(url);
                 memos = await response.json();
                 renderMemos();
@@ -422,13 +843,16 @@
         // 새 메모 생성
         async function createNewMemo() {
             try {
+                // 'root'는 미분류 폴더를 의미하므로 API에는 null로 전달
+                const folderId = (currentFolderId === 'root' || currentFolderId === null) ? null : currentFolderId;
+
                 const response = await fetch('/api/memos', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         title: '새 메모',
                         content: '',
-                        folder_id: currentFolderId
+                        folder_id: folderId
                     })
                 });
 
@@ -489,6 +913,14 @@
             const title = document.getElementById('editorTitle').value.trim();
             const content = document.getElementById('editorContent').value;
 
+            // 민감정보 검사 - 감지되면 저장 차단
+            const fullText = title + '\n' + content;
+            const sensitiveCheck = checkSensitiveInfo(fullText);
+            if (sensitiveCheck.hasSensitive) {
+                if (!silent) showToast('민감정보가 포함되어 저장할 수 없습니다', 'error');
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/memos/${currentMemoId}`, {
                     method: 'PUT',
@@ -511,7 +943,13 @@
         // 자동 저장
         function autoSave() {
             if (isEditing && currentMemoId) {
-                saveMemo(true);
+                // 민감정보가 있으면 자동 저장 안 함
+                const title = document.getElementById('editorTitle').value.trim();
+                const content = document.getElementById('editorContent').value;
+                const sensitiveCheck = checkSensitiveInfo(title + '\n' + content);
+                if (!sensitiveCheck.hasSensitive) {
+                    saveMemo(true);
+                }
             }
         }
 
@@ -576,17 +1014,63 @@
             }, 300);
         }
 
+        // 부모 폴더 선택 드롭다운 업데이트
+        function updateParentFolderSelect(excludeFolderId = null) {
+            const select = document.getElementById('parentFolderSelect');
+            let html = '<option value="">루트 (최상위)</option>';
+
+            folders.forEach(folder => {
+                // 자기 자신과 자신의 하위 폴더는 제외
+                if (excludeFolderId && (folder.id === excludeFolderId || isDescendantOf(folder.id, excludeFolderId))) {
+                    return;
+                }
+                const indent = '　'.repeat(folder.depth);  // 전각 공백으로 들여쓰기
+                html += `<option value="${folder.id}">${indent}${escapeHtml(folder.name)}</option>`;
+            });
+
+            select.innerHTML = html;
+        }
+
+        // 특정 폴더가 다른 폴더의 하위인지 확인
+        function isDescendantOf(folderId, ancestorId) {
+            const folder = folders.find(f => f.id === folderId);
+            if (!folder) return false;
+            if (folder.parent_id === ancestorId) return true;
+            if (folder.parent_id) return isDescendantOf(folder.parent_id, ancestorId);
+            return false;
+        }
+
         // 새 폴더 모달
         function showNewFolderModal(parentId = null) {
-            editingFolderId = null;
-            document.getElementById('folderModalTitle').textContent = '📁 새 폴더';
-            document.getElementById('folderNameInput').value = '';
-            document.getElementById('folderModal').classList.add('show');
-            document.getElementById('folderNameInput').focus();
+            console.log('showNewFolderModal called, parentId:', parentId);
+            try {
+                editingFolderId = null;
+                newFolderParentId = parentId;
+
+                document.getElementById('folderModalTitle').textContent = parentId ? '📁 하위 폴더 추가' : '📁 새 폴더';
+                document.getElementById('folderNameInput').value = '';
+
+                // 부모 폴더 선택 드롭다운 업데이트 및 표시
+                const parentSection = document.getElementById('parentFolderSection');
+                parentSection.style.display = 'block';
+                updateParentFolderSelect();
+
+                // parentId가 지정되었으면 선택
+                const parentSelect = document.getElementById('parentFolderSelect');
+                parentSelect.value = parentId || '';
+
+                document.getElementById('folderModal').classList.add('show');
+                document.getElementById('folderNameInput').focus();
+                console.log('Modal should be visible now');
+            } catch (e) {
+                console.error('showNewFolderModal error:', e);
+                alert('폴더 모달 오류: ' + e.message);
+            }
         }
 
         function closeFolderModal() {
             document.getElementById('folderModal').classList.remove('show');
+            newFolderParentId = null;
         }
 
         async function saveFolderModal() {
@@ -595,6 +1079,10 @@
                 showToast('폴더 이름을 입력하세요', 'error');
                 return;
             }
+
+            // 부모 폴더 ID 가져오기
+            const parentSelect = document.getElementById('parentFolderSelect');
+            const parentId = parentSelect.value ? parseInt(parentSelect.value) : null;
 
             try {
                 let response;
@@ -608,8 +1096,13 @@
                     response = await fetch('/api/memos/folders', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, parent_id: currentFolderId })
+                        body: JSON.stringify({ name, parent_id: parentId })
                     });
+
+                    // 새 폴더 생성 시 부모 폴더 자동 펼치기
+                    if (parentId) {
+                        expandedFolders.add(parentId);
+                    }
                 }
 
                 if (response.ok) {
@@ -634,6 +1127,13 @@
             contextType = type;
 
             const menu = document.getElementById('contextMenu');
+
+            // 폴더 전용 메뉴 아이템 표시/숨김
+            const folderOnlyItems = menu.querySelectorAll('.folder-only');
+            folderOnlyItems.forEach(item => {
+                item.style.display = type === 'folder' ? 'flex' : 'none';
+            });
+
             menu.style.left = event.clientX + 'px';
             menu.style.top = event.clientY + 'px';
             menu.classList.add('show');
@@ -648,8 +1148,13 @@
                     editingFolderId = contextTarget;
                     document.getElementById('folderModalTitle').textContent = '✏️ 폴더 이름 변경';
                     document.getElementById('folderNameInput').value = folder?.name || '';
+                    // 이름 변경 시 부모 폴더 선택 숨김
+                    document.getElementById('parentFolderSection').style.display = 'none';
                     document.getElementById('folderModal').classList.add('show');
                     document.getElementById('folderNameInput').focus();
+                } else if (action === 'addChild') {
+                    // 하위 폴더 추가
+                    showNewFolderModal(contextTarget);
                 } else if (action === 'move') {
                     showMoveFolderModal(contextTarget);
                 } else if (action === 'delete') {
@@ -687,35 +1192,51 @@
         }
 
         // 폴더/메모 이동 모달
+        // 'root'는 루트 선택, null은 미선택 상태
         function showMoveMemoModal() {
-            selectedMoveFolder = null;
+            // 모바일 사이드바가 열려있으면 먼저 닫기
+            closeSidebarIfMobile();
+
+            selectedMoveFolder = 'root';  // 기본값: 루트 선택
+            contextType = 'memo';
             renderFolderSelectList('memo');
             document.getElementById('moveModal').classList.add('show');
         }
 
         function showMoveFolderModal(folderId) {
-            selectedMoveFolder = null;
+            // 모바일 사이드바가 열려있으면 먼저 닫기
+            closeSidebarIfMobile();
+
+            selectedMoveFolder = 'root';  // 기본값: 루트 선택
             contextTarget = folderId;
+            contextType = 'folder';
             renderFolderSelectList('folder');
             document.getElementById('moveModal').classList.add('show');
         }
 
         function renderFolderSelectList(type) {
             const list = document.getElementById('folderSelectList');
+            // "루트 (폴더 없음)"은 메모가 어떤 폴더에도 속하지 않는 상태
             let html = `
-                <div class="folder-select-item ${selectedMoveFolder === null ? 'selected' : ''}" onclick="selectMoveFolder(null)">
-                    <span>📂</span> <span>루트 (최상위)</span>
+                <div class="folder-select-item ${selectedMoveFolder === 'root' ? 'selected' : ''}"
+                     onclick="selectMoveFolder('root')"
+                     style="touch-action: manipulation;">
+                    <span>📂</span> <span>폴더 없음 (루트)</span>
                 </div>
             `;
 
             folders.forEach(folder => {
-                // 자기 자신이거나 하위 폴더면 제외 (폴더 이동 시)
-                if (type === 'folder' && folder.id === contextTarget) return;
+                // 폴더 이동 시: 자기 자신 및 자기 하위 폴더 제외
+                if (type === 'folder') {
+                    if (folder.id === contextTarget) return;
+                    if (isDescendantOf(folder.id, contextTarget)) return;
+                }
 
-                const indent = '&nbsp;'.repeat(folder.depth * 4);
+                const indent = '　'.repeat(folder.depth);  // 전각 공백으로 들여쓰기
                 html += `
                     <div class="folder-select-item ${selectedMoveFolder === folder.id ? 'selected' : ''}"
-                         onclick="selectMoveFolder(${folder.id})">
+                         onclick="selectMoveFolder(${folder.id})"
+                         style="touch-action: manipulation;">
                         <span>${indent}📁</span> <span>${escapeHtml(folder.name)}</span>
                     </div>
                 `;
@@ -725,6 +1246,7 @@
         }
 
         function selectMoveFolder(folderId) {
+            console.log('폴더 선택:', folderId);
             selectedMoveFolder = folderId;
             renderFolderSelectList(contextType);
         }
@@ -734,19 +1256,26 @@
         }
 
         async function confirmMove() {
+            console.log('이동 확인 - 선택된 폴더:', selectedMoveFolder, 'contextType:', contextType);
+
+            // 'root'를 null로 변환 (API에서는 null이 루트)
+            const targetFolder = selectedMoveFolder === 'root' ? null : selectedMoveFolder;
+
             try {
                 let response;
                 if (contextType === 'folder') {
+                    console.log('폴더 이동 API 호출:', contextTarget, '->', targetFolder);
                     response = await fetch(`/api/memos/folders/${contextTarget}/move`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ parent_id: selectedMoveFolder })
+                        body: JSON.stringify({ parent_id: targetFolder })
                     });
                 } else {
+                    console.log('메모 이동 API 호출:', currentMemoId, '->', targetFolder);
                     response = await fetch(`/api/memos/${currentMemoId}/move`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ folder_id: selectedMoveFolder })
+                        body: JSON.stringify({ folder_id: targetFolder })
                     });
                 }
 
@@ -757,16 +1286,35 @@
                     showToast('이동되었습니다', 'success');
                 } else {
                     const error = await response.json();
+                    console.error('이동 실패:', error);
                     showToast(error.error || '이동 실패', 'error');
                 }
             } catch (error) {
+                console.error('이동 오류:', error);
                 showToast('이동 실패', 'error');
             }
         }
 
-        // 모바일 사이드바 토글
+        // 모바일 폴더 섹션 토글 (아코디언 방식)
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('mobile-show');
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.querySelector('.mobile-menu-btn');
+            const isOpen = sidebar.classList.contains('mobile-show');
+
+            if (isOpen) {
+                sidebar.classList.remove('mobile-show');
+                if (btn) btn.innerHTML = '📁 폴더 보기';
+            } else {
+                sidebar.classList.add('mobile-show');
+                if (btn) btn.innerHTML = '📁 폴더 접기';
+            }
+        }
+
+        // 모바일에서 폴더 선택 시 폴더 섹션 자동 접기
+        function closeSidebarIfMobile() {
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
         }
 
         // 유틸리티

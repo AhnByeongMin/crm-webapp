@@ -6,6 +6,12 @@
 (function() {
     'use strict';
 
+    // 메모 페이지 등 특정 페이지에서 비활성화
+    if (window.DISABLE_TOUCH_GESTURES) {
+        window.TouchFeedback = { applyTouchFeedback: () => {}, addRippleEffect: () => {}, trapFocus: () => {} };
+        return;
+    }
+
     // 터치 피드백 클래스
     const TOUCH_ACTIVE_CLASS = 'touch-active';
 

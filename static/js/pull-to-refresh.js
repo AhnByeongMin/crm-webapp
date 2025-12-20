@@ -3,6 +3,11 @@
  * 모바일에서 당겨서 새로고침 기능 제공
  */
 
+// 메모 페이지 등 특정 페이지에서 비활성화
+if (window.DISABLE_TOUCH_GESTURES) {
+    window.PullToRefresh = class { constructor() {} };
+} else {
+
 class PullToRefresh {
     constructor(options = {}) {
         this.threshold = options.threshold || 80;  // 트리거 임계값 (px)
@@ -129,6 +134,12 @@ class PullToRefresh {
         this.container.addEventListener('touchstart', (e) => {
             if (this.refreshing) return;
 
+            // 사이드바가 열려 있으면 비활성화
+            if (document.body.classList.contains('sidebar-open')) return;
+
+            // 모달이 열려 있으면 비활성화
+            if (document.querySelector('.modal-overlay.show')) return;
+
             scrollTop = window.scrollY || document.documentElement.scrollTop;
 
             // 페이지 최상단에서만 활성화
@@ -141,6 +152,12 @@ class PullToRefresh {
 
         this.container.addEventListener('touchmove', (e) => {
             if (this.refreshing) return;
+
+            // 사이드바가 열려 있으면 비활성화
+            if (document.body.classList.contains('sidebar-open')) return;
+
+            // 모달이 열려 있으면 비활성화
+            if (document.querySelector('.modal-overlay.show')) return;
 
             const scrollTop = window.scrollY || document.documentElement.scrollTop;
             if (scrollTop > 5) {
@@ -264,3 +281,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 전역 노출
 window.PullToRefresh = PullToRefresh;
+
+} // end of else block for DISABLE_TOUCH_GESTURES

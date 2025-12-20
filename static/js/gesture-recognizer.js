@@ -6,6 +6,12 @@
 (function() {
     'use strict';
 
+    // 메모 페이지 등 특정 페이지에서 비활성화
+    if (window.DISABLE_TOUCH_GESTURES) {
+        window.GestureRecognizer = { GestureType: {}, create: () => null, setupPinchZoom: () => null, setupSwipeNavigation: () => null };
+        return;
+    }
+
     // 제스처 타입
     const GestureType = {
         SWIPE_LEFT: 'swipe-left',
@@ -76,6 +82,16 @@
          * 터치 시작
          */
         handleTouchStart(e) {
+            // 사이드바가 열려 있으면 제스처 인식 비활성화
+            if (document.body.classList.contains('sidebar-open')) {
+                return;
+            }
+
+            // 모달이 열려 있으면 제스처 인식 비활성화
+            if (document.querySelector('.modal-overlay.show')) {
+                return;
+            }
+
             const touch = e.touches[0];
 
             this.touchState.startX = touch.clientX;
@@ -104,6 +120,16 @@
          * 터치 이동
          */
         handleTouchMove(e) {
+            // 사이드바가 열려 있으면 제스처 인식 비활성화
+            if (document.body.classList.contains('sidebar-open')) {
+                return;
+            }
+
+            // 모달이 열려 있으면 제스처 인식 비활성화
+            if (document.querySelector('.modal-overlay.show')) {
+                return;
+            }
+
             this.touchState.isMoving = true;
 
             // 롱 프레스 취소

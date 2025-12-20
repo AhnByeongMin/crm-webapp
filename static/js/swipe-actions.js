@@ -3,6 +3,11 @@
  * 모바일에서 스와이프로 수정/삭제 등의 액션을 수행합니다.
  */
 
+// 메모 페이지 등 특정 페이지에서 비활성화
+if (window.DISABLE_TOUCH_GESTURES) {
+    window.SwipeActions = class { constructor() {} };
+} else {
+
 class SwipeActions {
     constructor(options = {}) {
         this.options = {
@@ -51,6 +56,11 @@ class SwipeActions {
     }
 
     handleTouchStart(e) {
+        // 사이드바가 열려있으면 무시
+        if (document.body.classList.contains('sidebar-open')) return;
+        // 모달이 열려있으면 무시
+        if (document.querySelector('.modal-overlay.show')) return;
+
         const target = e.target.closest(this.options.selector);
         if (!target) return;
 
@@ -71,6 +81,12 @@ class SwipeActions {
 
     handleTouchMove(e) {
         if (!this.activeItem) return;
+
+        // 사이드바가 열려있으면 무시
+        if (document.body.classList.contains('sidebar-open')) {
+            this.activeItem = null;
+            return;
+        }
 
         const touchX = e.touches[0].clientX;
         const touchY = e.touches[0].clientY;
@@ -338,3 +354,5 @@ class SwipeActions {
 
 // 전역에서 사용 가능하도록
 window.SwipeActions = SwipeActions;
+
+} // end of else block for DISABLE_TOUCH_GESTURES
