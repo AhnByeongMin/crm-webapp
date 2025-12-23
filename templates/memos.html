@@ -346,7 +346,7 @@
             <span style="font-size: 20px;">🔒</span>
             <div style="flex: 1;">
                 <strong style="color: #856404;">개인정보 보호</strong>
-                <p style="margin: 4px 0 0 0; font-size: 13px; color: #856404;">전화번호, 생년월일은 저장할 수 없습니다. <strong>CU.</strong>(고객번호) 또는 <strong>CO.</strong>(상담번호)로 시작하면 허용됩니다.</p>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #856404;">전화번호, 생년월일은 저장할 수 없습니다. <strong>CU.</strong>(고객번호), <strong>CO.</strong>(상담번호), <strong>RP</strong>(품목코드)는 허용됩니다.</p>
             </div>
         </div>
 
@@ -483,23 +483,23 @@
         function checkSensitiveInfo(text) {
             if (!text) return { hasSensitive: false };
 
-            // CU. 또는 CO.로 시작하면 허용
-            if (text.trim().match(/^(CU\.|CO\.|cu\.|co\.)/i)) {
-                return { hasSensitive: false };
-            }
+            // 허용 패턴 제거: CU., CO. (고객ID), RP (품목코드)
+            let textForCheck = text;
+            textForCheck = textForCheck.replace(/\b(CU|CO)\.[A-Za-z0-9]+/gi, '');
+            textForCheck = textForCheck.replace(/\bRP\d{10,}/gi, '');
 
             for (const pattern of sensitivePatterns.phone) {
-                if (pattern.test(text)) {
+                if (pattern.test(textForCheck)) {
                     return { hasSensitive: true, type: '휴대폰 번호가 감지되었습니다' };
                 }
             }
             for (const pattern of sensitivePatterns.landline) {
-                if (pattern.test(text)) {
+                if (pattern.test(textForCheck)) {
                     return { hasSensitive: true, type: '전화번호(국선)가 감지되었습니다' };
                 }
             }
             for (const pattern of sensitivePatterns.birthdate) {
-                if (pattern.test(text)) {
+                if (pattern.test(textForCheck)) {
                     return { hasSensitive: true, type: '생년월일이 감지되었습니다' };
                 }
             }

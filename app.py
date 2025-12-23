@@ -150,19 +150,26 @@ def contains_sensitive_info(text: str) -> tuple[bool, str]:
     if not text:
         return False, ''
 
-    # CU. 또는 CO.로 시작하면 허용 (고객ID 형식)
-    if text.strip().startswith(('CU.', 'CO.', 'cu.', 'co.')):
-        return False, ''
+    # 허용 패턴: CU., CO. (고객ID), RP (품목코드)
+    # 이 패턴들을 먼저 제거한 후 민감정보 검사
+    text_for_check = text
+
+    # CU., CO. 고객ID 제거 (CU.12345, CO.67890 등)
+    text_for_check = re.sub(r'\b(CU|CO)\.[A-Za-z0-9]+', '', text_for_check, flags=re.IGNORECASE)
+
+    # RP 품목코드 제거 (RP0000001469081 등)
+    text_for_check = re.sub(r'\bRP\d{10,}', '', text_for_check, flags=re.IGNORECASE)
 
     # 핸드폰 번호 패턴 (010-0000-0000, 010.0000.0000, 01000000000 등)
     phone_patterns = [
-        r'01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}',  # 010-1234-5678, 010.1234.5678
+        r'01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}',  # 010-1234-5678
         r'01[016789]\d{7,8}',  # 01012345678
     ]
 
     # 국선 전화번호 패턴 (02-0000-0000, 031-000-0000 등)
+    # 반드시 구분자(-, ., 공백)가 있어야 함
     landline_patterns = [
-        r'0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}',  # 02-123-4567, 031-1234-5678
+        r'0\d{1,2}[-.\s]\d{3,4}[-.\s]\d{4}',  # 02-123-4567, 031-1234-5678 (구분자 필수)
     ]
 
     # 생년월일 패턴 (과거 날짜만: 1920~2015년)
@@ -175,18 +182,18 @@ def contains_sensitive_info(text: str) -> tuple[bool, str]:
         r'\b[0-1][0-5](0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\b',  # 000101 ~ 151231 (6자리, 2000~2015)
     ]
 
-    # 전화번호 검사
+    # 전화번호 검사 (RP 코드 제거된 텍스트에서)
     for pattern in phone_patterns:
-        if re.search(pattern, text):
+        if re.search(pattern, text_for_check):
             return True, '휴대폰 번호는 저장할 수 없습니다.'
 
     for pattern in landline_patterns:
-        if re.search(pattern, text):
+        if re.search(pattern, text_for_check):
             return True, '전화번호는 저장할 수 없습니다.'
 
-    # 생년월일 검사
+    # 생년월일 검사 (RP 코드 제거된 텍스트에서)
     for pattern in birthdate_patterns:
-        if re.search(pattern, text):
+        if re.search(pattern, text_for_check):
             return True, '생년월일 형식은 저장할 수 없습니다.'
 
     return False, ''
@@ -3094,12 +3101,29 @@ def delete_memo_folder(folder_id):
 
 @app.route('/api/memos', methods=['GET'])
 def get_memos():
-    """메모 목록 조회"""
+    """메모 목록 조회
+
+    folder_id 파라미터:
+    - 없음: 전체 메모 (모든 폴더 포함)
+    - 'root': 루트 메모만 (폴더에 속하지 않은 메모)
+    - 숫자: 해당 폴더의 메모
+    """
     if 'username' not in session and not is_localhost():
         return jsonify({'error': 'Unauthorized'}), 401
 
     username = session.get('username', 'Admin')
-    folder_id = request.args.get('folder_id', type=int)
+    folder_id_param = request.args.get('folder_id')
+
+    # 'root'는 폴더에 속하지 않은 메모만 조회
+    if folder_id_param == 'root':
+        folder_id = 'root'
+    elif folder_id_param:
+        try:
+            folder_id = int(folder_id_param)
+        except ValueError:
+            folder_id = None
+    else:
+        folder_id = None
 
     memos = database.get_memos(username, folder_id)
     return jsonify(memos)
