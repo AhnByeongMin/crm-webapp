@@ -1089,26 +1089,32 @@
                     steps: [
                         {
                             target: '.calendar-section',
-                            title: '캘린더',
-                            description: '날짜를 클릭하면 해당 날짜의 예약만 필터링됩니다. 노란색은 예약이 있는 날짜입니다.',
+                            title: '📅 캘린더',
+                            description: '날짜를 클릭하면 해당 날짜의 예약만 필터링됩니다.<br><strong>🟡 노란색</strong>: 예약이 있는 날짜<br><strong>🔴 빨간색</strong>: 오늘/과거 미완료 예약',
                             position: 'right'
                         },
                         {
                             target: '#addReminderBtn',
-                            title: '예약 추가',
-                            description: '새로운 예약을 추가할 수 있습니다. 시간과 내용을 입력하세요.',
+                            title: '➕ 예약 추가',
+                            description: '새로운 예약을 추가할 수 있습니다. 날짜, 시간, 제목을 입력하세요.',
                             position: 'bottom'
                         },
                         {
                             target: '#notificationSettingsBtn',
-                            title: '알림 설정',
-                            description: '예약 전 알림 시간, 반복 알림, 아침 일일 요약 등을 설정할 수 있습니다.',
+                            title: '🔔 알림 설정',
+                            description: '예약 전 알림 시간(5분~1시간 전), 반복 알림, 아침 일일 요약을 설정할 수 있습니다. 웹 푸시 알림을 받아보세요!',
                             position: 'top'
                         },
                         {
                             target: '#searchKeyword',
-                            title: '검색',
-                            description: '제목이나 내용으로 예약을 검색할 수 있습니다.',
+                            title: '🔍 검색',
+                            description: '제목이나 내용으로 예약을 빠르게 검색할 수 있습니다.',
+                            position: 'bottom'
+                        },
+                        {
+                            target: '.header-settings',
+                            title: '⚙️ 화면 설정',
+                            description: '다크모드 전환과 글꼴 크기 조절이 가능합니다.',
                             position: 'bottom'
                         }
                     ]

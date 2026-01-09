@@ -1859,23 +1859,50 @@ def delete_memo_folder(folder_id: int, user_id: str) -> bool:
 
 
 @log_slow_query
-def get_memos(user_id: str, folder_id: Optional[int] = None) -> list[dict[str, Any]]:
-    """메모 목록 조회"""
+def get_memos(user_id: str, folder_id=None) -> list[dict[str, Any]]:
+    """메모 목록 조회
+
+    folder_id:
+    - None: 전체 메모 (모든 폴더 포함)
+    - 'root': 루트 메모만 (폴더에 속하지 않은 메모)
+    - int: 특정 폴더의 메모
+    """
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if folder_id is None:
-            # 루트 레벨 메모 (폴더에 속하지 않은)
+            # 전체 메모 (모든 폴더 포함)
             cursor.execute('''
-                SELECT id, title, content, folder_id, is_pinned, sort_order,
+                SELECT id, title, content, folder_id, is_pinned, is_favorite, sort_order,
+                       TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                       TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+                FROM memos
+                WHERE user_id = %s
+                ORDER BY is_pinned DESC, sort_order, updated_at DESC
+            ''', (user_id,))
+        elif folder_id == 'root':
+            # 루트 메모 (폴더에 속하지 않은 메모만)
+            cursor.execute('''
+                SELECT id, title, content, folder_id, is_pinned, is_favorite, sort_order,
                        TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
                        TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
                 FROM memos
                 WHERE user_id = %s AND folder_id IS NULL
                 ORDER BY is_pinned DESC, sort_order, updated_at DESC
             ''', (user_id,))
-        else:
+        elif folder_id == 'favorites':
+            # 즐겨찾기 메모
             cursor.execute('''
-                SELECT id, title, content, folder_id, is_pinned, sort_order,
+                SELECT id, title, content, folder_id, is_pinned, is_favorite, sort_order,
+                       TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
+                       TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
+                FROM memos
+                WHERE user_id = %s AND is_favorite = true
+                ORDER BY is_pinned DESC, sort_order, updated_at DESC
+            ''', (user_id,))
+        else:
+            # 특정 폴더의 메모
+            cursor.execute('''
+                SELECT id, title, content, folder_id, is_pinned, is_favorite, sort_order,
                        TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
                        TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
                 FROM memos
@@ -1891,7 +1918,7 @@ def get_memo(memo_id: int, user_id: str) -> Optional[dict[str, Any]]:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, title, content, folder_id, is_pinned, sort_order,
+            SELECT id, title, content, folder_id, is_pinned, is_favorite, sort_order,
                    TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
                    TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
             FROM memos
@@ -1971,6 +1998,24 @@ def toggle_memo_pin(memo_id: int, user_id: str) -> tuple[bool, bool]:
             return False, False
 
 
+def toggle_memo_favorite(memo_id: int, user_id: str) -> tuple[bool, bool]:
+    """메모 즐겨찾기 상태 토글"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE memos
+                SET is_favorite = NOT is_favorite, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND user_id = %s
+                RETURNING is_favorite
+            ''', (memo_id, user_id))
+            row = cursor.fetchone()
+            conn.commit()
+            if row:
+                return True, row['is_favorite']
+            return False, False
+
+
 def delete_memo(memo_id: int, user_id: str) -> bool:
     """메모 삭제"""
     with db_lock:
@@ -1991,7 +2036,7 @@ def search_memos(user_id: str, query: str) -> list[dict[str, Any]]:
         cursor = conn.cursor()
         search_pattern = f'%{query}%'
         cursor.execute('''
-            SELECT m.id, m.title, m.content, m.folder_id, m.is_pinned,
+            SELECT m.id, m.title, m.content, m.folder_id, m.is_pinned, m.is_favorite,
                    f.name as folder_name,
                    TO_CHAR(m.created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at,
                    TO_CHAR(m.updated_at, 'YYYY-MM-DD HH24:MI:SS') as updated_at
@@ -2013,9 +2058,10 @@ def get_memo_counts(user_id: str) -> dict[str, int]:
             SELECT
                 COUNT(*) as total_memos,
                 COUNT(CASE WHEN folder_id IS NULL THEN 1 END) as root_memos,
+                COUNT(CASE WHEN is_favorite = true THEN 1 END) as favorite_memos,
                 (SELECT COUNT(*) FROM memo_folders WHERE user_id = %s) as total_folders
             FROM memos
             WHERE user_id = %s
         ''', (user_id, user_id))
         row = cursor.fetchone()
-        return dict(row) if row else {'total_memos': 0, 'root_memos': 0, 'total_folders': 0}
+        return dict(row) if row else {'total_memos': 0, 'root_memos': 0, 'favorite_memos': 0, 'total_folders': 0}

@@ -82,6 +82,10 @@
         .folder-item.active .folder-add-child { color: rgba(255,255,255,0.7); }
         .folder-item.active .folder-add-child:hover { background: rgba(255,255,255,0.2); color: white; }
 
+        /* 드래그 앤 드롭 */
+        .folder-item.drag-over { background: #e8f4fd; border: 2px dashed #667eea; }
+        .folder-item.drag-over.active { background: #5568d3; border: 2px dashed #fff; }
+
         /* 메인 영역 */
         .main-content { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -96,7 +100,14 @@
         .memo-item { display: flex; padding: 15px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: all 0.2s; gap: 15px; align-items: flex-start; }
         .memo-item:hover { background: #f8f9fa; }
         .memo-item.active { background: #f0f4ff; border-left: 3px solid #667eea; }
+        .memo-item.dragging { opacity: 0.5; background: #e3e8f0; }
+        .memo-item[draggable="true"] { cursor: grab; }
+        .memo-item[draggable="true"]:active { cursor: grabbing; }
         .memo-pin { font-size: 14px; color: #ffc107; flex-shrink: 0; }
+        .memo-favorite { font-size: 14px; color: #ffc107; flex-shrink: 0; cursor: pointer; transition: transform 0.2s; }
+        .memo-favorite:hover { transform: scale(1.2); }
+        .memo-favorite.inactive { color: #ddd; }
+        .memo-favorite.inactive:hover { color: #ffc107; }
         .memo-info { flex: 1; min-width: 0; }
         .memo-title { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .memo-preview { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -388,6 +399,7 @@
                     <div class="editor-actions">
                         <button type="button" class="btn-save-main" onclick="saveMemo()" style="padding: 8px 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);">💾 저장</button>
                         <button class="btn btn-outline btn-sm" onclick="pinMemo()"><span id="pinIcon">📌</span></button>
+                        <button class="btn btn-outline btn-sm" onclick="favoriteMemo()"><span id="favoriteIcon">☆</span></button>
                         <button class="btn btn-outline btn-sm" onclick="showMoveMemoModal()">📁 이동</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteMemo()">🗑️</button>
                         <button class="btn btn-secondary btn-sm" onclick="closeEditor()">✕</button>
@@ -652,13 +664,21 @@
         function renderFolders() {
             const list = document.getElementById('folderList');
             // "전체"는 모든 메모를 보는 필터 (currentFolderId = null)
+            // "즐겨찾기"는 즐겨찾기된 메모만 보기 (currentFolderId = 'favorites')
             // "루트"는 폴더에 속하지 않은 메모만 보기 (currentFolderId = 'root')
             let html = `
                 <button type="button" class="folder-item ${currentFolderId === null ? 'active' : ''}" data-folder-id="null">
                     <span class="folder-icon">📋</span>
                     <span class="folder-name">전체 메모</span>
                 </button>
-                <button type="button" class="folder-item ${currentFolderId === 'root' ? 'active' : ''}" data-folder-id="root">
+                <button type="button" class="folder-item ${currentFolderId === 'favorites' ? 'active' : ''}" data-folder-id="favorites">
+                    <span class="folder-icon">⭐</span>
+                    <span class="folder-name">즐겨찾기</span>
+                </button>
+                <button type="button" class="folder-item ${currentFolderId === 'root' ? 'active' : ''}" data-folder-id="root"
+                        ondragover="handleFolderDragOver(event)"
+                        ondragleave="handleFolderDragLeave(event)"
+                        ondrop="handleFolderDrop(event, 'root')">
                     <span class="folder-icon">📂</span>
                     <span class="folder-name">루트 (미분류)</span>
                 </button>
@@ -691,7 +711,10 @@
                     <button type="button" class="folder-item ${depthClass} ${currentFolderId === folder.id ? 'active' : ''}"
                          data-folder-id="${folder.id}"
                          style="${hiddenStyle}"
-                         oncontextmenu="showContextMenu(event, 'folder', ${folder.id})">
+                         oncontextmenu="showContextMenu(event, 'folder', ${folder.id})"
+                         ondragover="handleFolderDragOver(event)"
+                         ondragleave="handleFolderDragLeave(event)"
+                         ondrop="handleFolderDrop(event, ${folder.id})">
                         ${hasChild ? `<span class="folder-toggle ${isExpanded ? 'expanded' : ''}" onclick="toggleFolderExpand(${folder.id}, event)">▶</span>` : '<span style="width: 20px;"></span>'}
                         <span class="folder-icon">${hasChild ? '📂' : '📁'}</span>
                         <span class="folder-name">${escapeHtml(folder.name)}</span>
@@ -717,6 +740,8 @@
                         selectFolder(null);
                     } else if (folderId === 'root') {
                         selectFolder('root');
+                    } else if (folderId === 'favorites') {
+                        selectFolder('favorites');
                     } else {
                         selectFolder(parseInt(folderId));
                     }
@@ -767,6 +792,8 @@
             let title;
             if (folderId === null) {
                 title = '📋 전체 메모';
+            } else if (folderId === 'favorites') {
+                title = '⭐ 즐겨찾기';
             } else if (folderId === 'root') {
                 title = '📂 루트 (미분류)';
             } else {
@@ -790,6 +817,9 @@
                 if (currentFolderId === null) {
                     // 전체 메모 (모든 폴더 포함)
                     url = '/api/memos';
+                } else if (currentFolderId === 'favorites') {
+                    // 즐겨찾기 메모
+                    url = '/api/memos?folder_id=favorites';
                 } else if (currentFolderId === 'root') {
                     // 루트 메모 (폴더에 속하지 않은 메모만)
                     url = '/api/memos?folder_id=root';
@@ -826,9 +856,18 @@
                 const preview = memo.content?.substring(0, 100) || '내용 없음';
                 html += `
                     <div class="memo-item ${currentMemoId === memo.id ? 'active' : ''}"
+                         draggable="true"
+                         data-memo-id="${memo.id}"
                          onclick="openMemo(${memo.id})"
-                         oncontextmenu="showContextMenu(event, 'memo', ${memo.id})">
+                         oncontextmenu="showContextMenu(event, 'memo', ${memo.id})"
+                         ondragstart="handleMemoDragStart(event, ${memo.id})"
+                         ondragend="handleMemoDragEnd(event)">
                         ${memo.is_pinned ? '<span class="memo-pin">📌</span>' : ''}
+                        <span class="memo-favorite ${memo.is_favorite ? '' : 'inactive'}"
+                              onclick="toggleFavorite(${memo.id}, event)"
+                              title="${memo.is_favorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}">
+                            ${memo.is_favorite ? '⭐' : '☆'}
+                        </span>
                         <div class="memo-info">
                             <div class="memo-title">${escapeHtml(memo.title)}</div>
                             <div class="memo-preview">${escapeHtml(preview)}</div>
@@ -883,6 +922,7 @@
                 document.getElementById('editorContent').value = memo.content || '';
                 document.getElementById('editorMeta').textContent = `수정: ${formatDate(memo.updated_at)}`;
                 document.getElementById('pinIcon').textContent = memo.is_pinned ? '📌' : '📍';
+                document.getElementById('favoriteIcon').textContent = memo.is_favorite ? '⭐' : '☆';
 
                 document.getElementById('mainContent').style.display = 'none';
                 document.getElementById('memoEditor').style.display = 'flex';
@@ -987,6 +1027,55 @@
                     const data = await response.json();
                     document.getElementById('pinIcon').textContent = data.is_pinned ? '📌' : '📍';
                     showToast(data.is_pinned ? '고정되었습니다' : '고정 해제됨', 'success');
+                }
+            } catch (error) {
+                showToast('오류가 발생했습니다', 'error');
+            }
+        }
+
+        // 즐겨찾기 토글 (목록에서)
+        async function toggleFavorite(memoId, event) {
+            event.stopPropagation();
+
+            try {
+                const response = await fetch(`/api/memos/${memoId}/favorite`, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // 메모 목록에서 해당 메모의 상태 업데이트
+                    const memo = memos.find(m => m.id === memoId);
+                    if (memo) {
+                        memo.is_favorite = data.is_favorite;
+                    }
+                    renderMemos();
+                    showToast(data.is_favorite ? '⭐ 즐겨찾기에 추가됨' : '즐겨찾기 해제됨', 'success');
+                }
+            } catch (error) {
+                showToast('오류가 발생했습니다', 'error');
+            }
+        }
+
+        // 즐겨찾기 토글 (에디터에서)
+        async function favoriteMemo() {
+            if (!currentMemoId) return;
+
+            try {
+                const response = await fetch(`/api/memos/${currentMemoId}/favorite`, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('favoriteIcon').textContent = data.is_favorite ? '⭐' : '☆';
+                    // 목록도 업데이트
+                    const memo = memos.find(m => m.id === currentMemoId);
+                    if (memo) {
+                        memo.is_favorite = data.is_favorite;
+                    }
+                    renderMemos();
+                    showToast(data.is_favorite ? '⭐ 즐겨찾기에 추가됨' : '즐겨찾기 해제됨', 'success');
                 }
             } catch (error) {
                 showToast('오류가 발생했습니다', 'error');
@@ -1317,6 +1406,109 @@
             }
         }
 
+        // ==================== 드래그 앤 드롭 ====================
+        let draggingMemoId = null;
+
+        // 메모 드래그 시작
+        function handleMemoDragStart(event, memoId) {
+            draggingMemoId = memoId;
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', memoId);
+
+            // 드래그 이미지 설정 (선택사항)
+            const memo = memos.find(m => m.id === memoId);
+            if (memo) {
+                const dragImage = document.createElement('div');
+                dragImage.textContent = memo.title || '메모';
+                dragImage.style.cssText = 'position: absolute; top: -1000px; padding: 8px 16px; background: #667eea; color: white; border-radius: 6px; font-size: 14px;';
+                document.body.appendChild(dragImage);
+                event.dataTransfer.setDragImage(dragImage, 0, 0);
+                setTimeout(() => dragImage.remove(), 0);
+            }
+        }
+
+        // 메모 드래그 종료
+        function handleMemoDragEnd(event) {
+            draggingMemoId = null;
+            event.target.classList.remove('dragging');
+
+            // 모든 폴더에서 drag-over 클래스 제거
+            document.querySelectorAll('.folder-item.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+        }
+
+        // 폴더 위로 드래그 중
+        function handleFolderDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+
+            const folderItem = event.target.closest('.folder-item');
+            if (folderItem && draggingMemoId) {
+                folderItem.classList.add('drag-over');
+            }
+        }
+
+        // 폴더에서 드래그 벗어남
+        function handleFolderDragLeave(event) {
+            const folderItem = event.target.closest('.folder-item');
+            if (folderItem) {
+                // 자식 요소로 이동한 경우 무시
+                const relatedTarget = event.relatedTarget;
+                if (relatedTarget && folderItem.contains(relatedTarget)) {
+                    return;
+                }
+                folderItem.classList.remove('drag-over');
+            }
+        }
+
+        // 폴더에 드롭
+        async function handleFolderDrop(event, folderId) {
+            event.preventDefault();
+
+            const folderItem = event.target.closest('.folder-item');
+            if (folderItem) {
+                folderItem.classList.remove('drag-over');
+            }
+
+            if (!draggingMemoId) return;
+
+            // 'root'를 null로 변환 (API에서는 null이 루트)
+            const targetFolderId = folderId === 'root' ? null : folderId;
+            const memoId = draggingMemoId;
+            draggingMemoId = null;
+
+            // 현재 폴더로 이동하려는 경우 무시
+            const memo = memos.find(m => m.id === memoId);
+            if (memo && memo.folder_id === targetFolderId) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/memos/${memoId}/move`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder_id: targetFolderId })
+                });
+
+                if (response.ok) {
+                    const folderName = folderId === 'root'
+                        ? '루트'
+                        : folders.find(f => f.id === folderId)?.name || '폴더';
+                    showToast(`📁 "${folderName}"(으)로 이동됨`, 'success');
+                    loadMemos();
+                    loadFolders();
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || '이동 실패', 'error');
+                }
+            } catch (error) {
+                console.error('드래그 앤 드롭 이동 오류:', error);
+                showToast('이동 실패', 'error');
+            }
+        }
+
         // 유틸리티
         function escapeHtml(text) {
             if (!text) return '';
@@ -1347,6 +1539,70 @@
 
             setTimeout(() => toast.remove(), 3000);
         }
+
+        // ==================== 튜토리얼 ====================
+        let memosTutorial = null;
+
+        function initMemosTutorial() {
+            // 이미 완료된 경우 건너뛰기
+            if (localStorage.getItem('crm_onboarding_memos') === 'true') {
+                return;
+            }
+
+            // onboarding.js 로드 확인
+            if (typeof CRMOnboarding === 'undefined') {
+                const script = document.createElement('script');
+                script.src = '/static/js/onboarding.js';
+                script.onload = startMemosTutorial;
+                document.head.appendChild(script);
+            } else {
+                startMemosTutorial();
+            }
+        }
+
+        function startMemosTutorial() {
+            memosTutorial = new CRMOnboarding({
+                storageKey: 'crm_onboarding_memos',
+                steps: [
+                    {
+                        target: '.sidebar',
+                        title: '📁 폴더 사이드바',
+                        description: '폴더로 메모를 체계적으로 정리하세요.<br><strong>전체 메모</strong>: 모든 메모<br><strong>⭐ 즐겨찾기</strong>: 중요 메모<br><strong>루트</strong>: 미분류 메모',
+                        position: 'right'
+                    },
+                    {
+                        target: '.content-header',
+                        title: '✏️ 새 메모 작성',
+                        description: '<strong>새 메모</strong> 버튼을 클릭하여 메모를 작성하세요. 3초마다 자동 저장됩니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.search-box',
+                        title: '🔍 메모 검색',
+                        description: '제목이나 내용으로 메모를 빠르게 검색할 수 있습니다.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.privacy-notice',
+                        title: '🔒 개인정보 보호',
+                        description: '전화번호, 생년월일은 저장 불가.<br><strong>CU.</strong>(고객), <strong>CO.</strong>(상담), <strong>RP</strong>(품목)는 허용됩니다.',
+                        position: 'bottom'
+                    }
+                ],
+                onComplete: function() {
+                    showToast('메모 사용법을 익혔습니다! 🎉', 'success');
+                }
+            });
+
+            // 튜토리얼 시작
+            memosTutorial.start();
+        }
+
+        // 페이지 로드 완료 후 튜토리얼 시작
+        document.addEventListener('DOMContentLoaded', function() {
+            // 폴더 및 메모 로드 완료 후 튜토리얼 시작 (1.5초 대기)
+            setTimeout(initMemosTutorial, 1500);
+        });
     </script>
 
     {% include 'includes/today_reminders.html' %}

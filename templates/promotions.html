@@ -1462,17 +1462,18 @@
         let selectedChannel = ''; // 현재 선택된 채널 필터
 
         // 채널별 색상 고정 매핑
-        // 전사: 기안 불필요 (초록)
+        // 전사, CRM: 기안 불필요 (자체 툴/전사)
         // 그 외 (라운지, 온라인, 홈쇼핑): 기안 필수
         const CHANNEL_COLOR_MAP = {
             '전사': { bg: '#28a745', name: '초록', needsApproval: false },      // 전사 - 기안 불필요
+            'CRM': { bg: '#17a2b8', name: '시안', needsApproval: false },       // CRM - 기안 불필요 (자체 툴)
             '라운지': { bg: '#e91e63', name: '핑크', needsApproval: true },     // 라운지 - 기안 필수
             '온라인': { bg: '#3f51b5', name: '인디고', needsApproval: true },   // 온라인 - 기안 필수
             '홈쇼핑': { bg: '#ff9800', name: '오렌지', needsApproval: true },   // 홈쇼핑 - 기안 필수
         };
 
-        // 채널 표시 순서 (전사가 제일 앞)
-        const CHANNEL_ORDER = ['전사', '라운지', '온라인', '홈쇼핑'];
+        // 채널 표시 순서 (전사, CRM이 앞)
+        const CHANNEL_ORDER = ['전사', 'CRM', '라운지', '온라인', '홈쇼핑'];
 
         // 기본 색상 (신규 채널용)
         const DEFAULT_CHANNEL_COLOR = { bg: '#6c757d', name: '기본', needsApproval: true };

@@ -205,6 +205,10 @@
 }
 
 /* 모달 */
+[data-theme="dark"] .modal {
+    background: var(--overlay-bg) !important;
+}
+
 [data-theme="dark"] .modal-content,
 [data-theme="dark"] .help-modal-content {
     background: var(--modal-bg);
@@ -1019,26 +1023,49 @@
 }
 
 [data-theme="dark"] .modal-overlay {
-    background: var(--overlay-bg);
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
 }
 
 [data-theme="dark"] .modal-box {
-    background: var(--modal-bg);
-    color: var(--text-primary);
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
 }
 
 [data-theme="dark"] .modal-title {
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
 }
 
 [data-theme="dark"] .modal-message {
-    color: var(--text-secondary);
+    color: var(--text-secondary) !important;
 }
 
 [data-theme="dark"] .modal-input {
-    background: var(--input-bg);
-    border-color: var(--input-border);
-    color: var(--text-primary);
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-input:focus {
+    border-color: var(--input-focus-border) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .modal-buttons button {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-buttons .btn-primary {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .modal-buttons .btn-secondary,
+[data-theme="dark"] .modal-buttons .btn-cancel {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
 }
 
 [data-theme="dark"] #paginationButtons button {
@@ -2706,4 +2733,224 @@
     background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.3), transparent) !important;
     height: 1px !important;
     border: none !important;
+}
+
+/* ========== 프로모션 페이지 모달 다크모드 ========== */
+/* 모달 오버레이 (배경) */
+[data-theme="dark"] .modal {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
+}
+
+/* 모달 컨텐츠 박스 */
+[data-theme="dark"] .modal-content {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* 프로모션 editModal, detailModal 특화 */
+[data-theme="dark"] #editModal .modal-content,
+[data-theme="dark"] #detailModal .modal-content {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+}
+
+/* 모달 헤더 */
+[data-theme="dark"] .modal-header {
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-header h2 {
+    color: var(--text-primary) !important;
+}
+
+/* 모달 닫기 버튼 */
+[data-theme="dark"] .close-btn {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .close-btn:hover {
+    color: var(--text-primary) !important;
+}
+
+/* 프로모션 폼 요소 */
+[data-theme="dark"] .form-group label {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .form-group textarea {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-group input:focus,
+[data-theme="dark"] .form-group select:focus,
+[data-theme="dark"] .form-group textarea:focus {
+    border-color: var(--input-focus-border) !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
+}
+
+/* 체크박스 그룹 */
+[data-theme="dark"] .checkbox-group {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .checkbox-group label {
+    color: var(--text-primary) !important;
+}
+
+/* 상세보기 모달 내용 */
+[data-theme="dark"] #detailModal .modal-content p,
+[data-theme="dark"] #detailModal .modal-content span,
+[data-theme="dark"] #detailModal .modal-content div {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #detailModal .modal-content strong {
+    color: var(--text-secondary) !important;
+}
+
+/* 버튼 스타일 */
+[data-theme="dark"] .btn-secondary {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: var(--bg-hover) !important;
+}
+
+/* 헬프 모달 */
+[data-theme="dark"] .help-modal {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .help-modal-content {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .help-modal-header {
+    border-bottom-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .help-modal-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .help-modal-close {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .help-modal-close:hover {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .help-modal-body {
+    color: var(--text-primary) !important;
+}
+
+/* ========== 스켈레톤 로딩 다크모드 강화 ========== */
+[data-theme="dark"] .skeleton-promo-loading,
+[data-theme="dark"] .skeleton-promo-card {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .skeleton-promo-card {
+    border-bottom-color: var(--border-color) !important;
+}
+
+/* ========== 프로모션 페이지 전반적인 다크모드 ========== */
+/* 컨트롤 영역 */
+[data-theme="dark"] .controls {
+    background: var(--card-bg) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+/* 검색박스 */
+[data-theme="dark"] .search-box {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .search-box:focus {
+    border-color: var(--input-focus-border) !important;
+}
+
+[data-theme="dark"] .search-box::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* 필터 select */
+[data-theme="dark"] .filter-select {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+/* 필터 칩 */
+[data-theme="dark"] .filter-chips {
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .filter-chip {
+    background: var(--bg-hover) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 채널 탭 */
+[data-theme="dark"] .channel-tabs {
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .channel-tab {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .channel-tab:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .channel-tab.active {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+/* 빈 상태 */
+[data-theme="dark"] .empty {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .empty p {
+    color: var(--text-secondary) !important;
+}
+
+/* 프로모션 카드/블록 */
+[data-theme="dark"] .promo-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 잠금 정보 배너 */
+[data-theme="dark"] #lockInfo {
+    background: #4a3c00 !important;
+    color: #ffd700 !important;
+    border-color: #665500 !important;
+}
+
+/* 입력 필드 placeholder */
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+    color: var(--text-muted) !important;
 }

@@ -66,7 +66,14 @@
       "Bash(/svc/was/crm/crm-webapp/scripts/restart.sh:*)",
       "Bash(lsof:*)",
       "Bash(do echo '=== 12월 $day일 ===')",
-      "Bash(do echo '--- 12/$day ---')"
+      "Bash(do echo '--- 12/$day ---')",
+      "Bash(sudo fail2ban-client:*)",
+      "Bash(sudo grep:*)",
+      "Bash(sudo bash -c 'cat > /etc/fail2ban/jail.local << EOF\n[DEFAULT]\n# 내부 네트워크 및 로컬호스트는 차단 제외\nignoreip = 127.0.0.1/8 ::1 192.168.50.0/24\nEOF')",
+      "Bash(CSRF=\"IjUwNzc3ZWMxYjhhOTlmYTZhNjZmNjU0MjM3ZmI2M2IwMDljMTNiMWYi.aUSuKQ.1fxtIe193-OZJcuGu_5emHaliyA\")",
+      "Bash(CSRF=\"ImJlMzExNTI1NThkZDE5MzNhNjQ4MDQ2OTA2NDQzZjgwZTk1MjViMjEi.aUSuRA.qhv39XR_jAyfMdBVqXBtNr0a7MY\")",
+      "Bash(CSRF=\"ImFmNmE1NWUwZWY2NTg3YzJmODE4ZmE4MTA4MDhlMjYzZDFjNTg0NGUi.aUXnzA.VNR5_g_rNCs0qzaTwv680WPUCm0\")",
+      "Bash(/svc/was/crm/crm-webapp/scripts/start.sh:*)"
     ],
     "deny": [],
     "ask": []

@@ -451,6 +451,24 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* 다크모드 로딩 오버레이 */
+[data-theme="dark"] .loading-overlay {
+    background: rgba(15, 15, 26, 0.95);
+}
+
+[data-theme="dark"] .loading-container {
+    color: #b0b0b0;
+}
+
+[data-theme="dark"] .loading-text {
+    color: #a0a0a0;
+}
+
+[data-theme="dark"] .loading-spinner {
+    border-color: #333;
+    border-top-color: #667eea;
+}
+
 /* 다크모드 스켈레톤 */
 [data-theme="dark"] .skeleton {
     background: linear-gradient(90deg, #2d2d2d 25%, #3a3a3a 50%, #2d2d2d 75%);

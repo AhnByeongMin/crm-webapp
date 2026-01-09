@@ -3106,6 +3106,7 @@ def get_memos():
     folder_id 파라미터:
     - 없음: 전체 메모 (모든 폴더 포함)
     - 'root': 루트 메모만 (폴더에 속하지 않은 메모)
+    - 'favorites': 즐겨찾기 메모만
     - 숫자: 해당 폴더의 메모
     """
     if 'username' not in session and not is_localhost():
@@ -3114,9 +3115,11 @@ def get_memos():
     username = session.get('username', 'Admin')
     folder_id_param = request.args.get('folder_id')
 
-    # 'root'는 폴더에 속하지 않은 메모만 조회
+    # 특수 폴더 처리
     if folder_id_param == 'root':
         folder_id = 'root'
+    elif folder_id_param == 'favorites':
+        folder_id = 'favorites'
     elif folder_id_param:
         try:
             folder_id = int(folder_id_param)
@@ -3221,6 +3224,21 @@ def toggle_memo_pin(memo_id):
         return jsonify({'error': '메모를 찾을 수 없습니다.'}), 404
 
     return jsonify({'success': True, 'is_pinned': is_pinned})
+
+
+@app.route('/api/memos/<int:memo_id>/favorite', methods=['PATCH'])
+def toggle_memo_favorite(memo_id):
+    """메모 즐겨찾기 상태 토글"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    username = session.get('username', 'Admin')
+
+    success, is_favorite = database.toggle_memo_favorite(memo_id, username)
+    if not success:
+        return jsonify({'error': '메모를 찾을 수 없습니다.'}), 404
+
+    return jsonify({'success': True, 'is_favorite': is_favorite})
 
 
 @app.route('/api/memos/<int:memo_id>', methods=['DELETE'])
