@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>채팅방 만들기</title>
     <!-- PWA 메타 태그 -->
     <meta name="description" content="스마트한 고객 관리와 팀 협업을 위한 CRM 시스템">
@@ -151,21 +152,31 @@
 
     <script>
         let selectedUsers = [];
+        let searchDebounceTimer = null;
+
+        // CSRF 토큰
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.content : '';
+        }
 
         const userSearch = document.getElementById('userSearch');
         const searchResults = document.getElementById('searchResults');
 
-        userSearch.addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-
-            if (query.length < 1) {
-                searchResults.classList.remove('show');
-                return;
-            }
-
+        function searchUsers(query) {
             fetch(`/api/search_users?q=${encodeURIComponent(query)}`)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(res.status === 429 ? '요청이 너무 많습니다' : '검색 실패');
+                    }
+                    return res.json();
+                })
                 .then(users => {
+                    if (!Array.isArray(users)) {
+                        searchResults.innerHTML = '<div class="search-result-item">검색 오류</div>';
+                        searchResults.classList.add('show');
+                        return;
+                    }
                     if (users.length === 0) {
                         searchResults.innerHTML = '<div class="search-result-item">검색 결과 없음</div>';
                     } else {
@@ -175,7 +186,24 @@
                             .join('');
                     }
                     searchResults.classList.add('show');
+                })
+                .catch(err => {
+                    console.error('사용자 검색 실패:', err);
+                    searchResults.classList.remove('show');
                 });
+        }
+
+        userSearch.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+
+            if (query.length < 1) {
+                searchResults.classList.remove('show');
+                return;
+            }
+
+            // 디바운스: 300ms 동안 입력이 없을 때만 검색
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => searchUsers(query), 300);
         });
 
         document.addEventListener('click', (e) => {
@@ -235,19 +263,31 @@
 
             fetch('/api/chats', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
                 body: JSON.stringify({
                     title: title,
                     participants: selectedUsers
                 })
             })
-            .then(res => res.json())
-            .then(data => {
+            .then(res => res.json().then(data => ({ ok: res.ok, status: res.status, data })))
+            .then(({ ok, status, data }) => {
+                if (!ok) {
+                    if (status === 401) {
+                        throw new Error('로그인이 필요합니다');
+                    }
+                    throw new Error(data.error || '채팅방 생성 실패');
+                }
+                if (!data.chat_id) {
+                    throw new Error('채팅방 ID를 받지 못했습니다');
+                }
                 showAlert('채팅방이 생성되었습니다!', 'success');
                 location.href = `/chat/${data.chat_id}`;
             })
             .catch(err => {
-                showAlert('채팅방 생성에 실패했습니다.', 'error');
+                showAlert(err.message || '채팅방 생성에 실패했습니다.', 'error');
                 console.error(err);
             });
         }

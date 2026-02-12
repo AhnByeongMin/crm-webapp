@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>오늘의 운세 - CRM</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" href="/static/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    {% include 'includes/header.html' %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 입력 섹션 */
+        .input-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .input-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .input-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .submit-btn {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 메인 탭 (사주/타로) */
+        .main-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .main-tab {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            background: white;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .main-tab:hover {
+            background: #f8f9fa;
+        }
+        .main-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .main-tab-icon {
+            font-size: 20px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        [data-theme="dark"] .main-tabs {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .main-tab {
+            background: transparent;
+            color: #888;
+        }
+        [data-theme="dark"] .main-tab:hover {
+            background: rgba(96, 165, 250, 0.1);
+        }
+        [data-theme="dark"] .main-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* 타로 섹션 스타일 */
+        .tarot-input-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .tarot-input-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .spread-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .spread-option {
+            padding: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .spread-option:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .spread-option.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+        .spread-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .spread-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .spread-desc {
+            font-size: 12px;
+            color: #888;
+        }
+        .question-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+        .question-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .tarot-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #9333ea 0%, #c026d3 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .tarot-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+        }
+        .tarot-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 타로 결과 */
+        .tarot-result-section {
+            display: none;
+        }
+        .tarot-result-section.active {
+            display: block;
+        }
+        .tarot-spread-title {
+            background: linear-gradient(135deg, #9333ea 0%, #c026d3 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .tarot-spread-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .tarot-question {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .tarot-cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .tarot-card-wrapper {
+            text-align: center;
+        }
+        .tarot-position-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .tarot-card {
+            width: 120px;
+            height: 180px;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+            border: 3px solid #9333ea;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .tarot-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(147, 51, 234, 0.3);
+        }
+        .tarot-card.reversed {
+            border-color: #dc2626;
+        }
+        .tarot-card-symbol {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+        .tarot-card.reversed .tarot-card-symbol {
+            transform: rotate(180deg);
+        }
+        .tarot-card-number {
+            font-size: 14px;
+            color: #9333ea;
+            font-weight: bold;
+        }
+        .tarot-card.reversed .tarot-card-number {
+            color: #dc2626;
+        }
+        .tarot-card-name {
+            font-size: 11px;
+            color: #e0e0e0;
+            margin-top: 6px;
+            text-align: center;
+            padding: 0 6px;
+        }
+        .reversed-badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: #dc2626;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* 카드 선택 UI */
+        .card-selection-section {
+            display: none;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card-selection-section.active {
+            display: block;
+        }
+        .selection-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .selection-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .selection-subtitle {
+            font-size: 14px;
+            color: #a0a0a0;
+        }
+        .selection-progress {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .progress-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #444;
+            transition: all 0.3s;
+        }
+        .progress-dot.active {
+            background: #9333ea;
+            box-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+        }
+        .progress-dot.done {
+            background: #22c55e;
+        }
+        .card-deck {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 100%;
+            perspective: 1000px;
+        }
+        .deck-card {
+            width: 45px;
+            height: 68px;
+            border-radius: 6px;
+            background: linear-gradient(145deg, #4a1d96 0%, #7c3aed 100%);
+            border: 1.5px solid #9333ea;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .deck-card::before {
+            content: '🎴';
+            font-size: 18px;
+            opacity: 0.8;
+        }
+        .deck-card:hover {
+            transform: translateY(-8px) rotateY(5deg);
+            box-shadow: 0 8px 25px rgba(147, 51, 234, 0.4);
+            border-color: #c084fc;
+            z-index: 10;
+        }
+        @media (max-width: 480px) {
+            .deck-card {
+                width: 36px;
+                height: 54px;
+            }
+            .deck-card::before {
+                font-size: 14px;
+            }
+        }
+        .deck-card.selected {
+            opacity: 0.3;
+            pointer-events: none;
+            transform: scale(0.9);
+        }
+        .deck-card.picking {
+            animation: cardPick 0.6s ease-out forwards;
+        }
+        @keyframes cardPick {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-50px) rotateY(180deg); }
+            100% { transform: translateY(-30px) rotateY(180deg) scale(1.1); opacity: 0; }
+        }
+        .selected-cards-preview {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 20px;
+            min-height: 100px;
+        }
+        .selected-card-slot {
+            width: 70px;
+            height: 105px;
+            border: 2px dashed #555;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .selected-card-slot.filled {
+            border-style: solid;
+            border-color: #9333ea;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+        }
+        .selected-card-slot .slot-label {
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+        .selected-card-slot .slot-symbol {
+            font-size: 24px;
+        }
+        .shuffle-animation {
+            animation: shuffle 0.5s ease-in-out;
+        }
+        @keyframes shuffle {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-2deg); }
+            75% { transform: translateX(5px) rotate(2deg); }
+        }
+        .selection-instruction {
+            color: #a0a0a0;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .deck-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-width: 100%;
+            padding: 20px 0;
+        }
+        .selection-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .shuffle-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .shuffle-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+        }
+        .cancel-btn {
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .cancel-btn:hover {
+            background: #4b5563;
+        }
+        .deck-card.shake {
+            animation: cardShake 0.5s ease-in-out;
+        }
+        @keyframes cardShake {
+            0%, 100% { transform: translateX(0) rotate(0); }
+            20% { transform: translateX(-8px) rotate(-3deg); }
+            40% { transform: translateX(8px) rotate(3deg); }
+            60% { transform: translateX(-6px) rotate(-2deg); }
+            80% { transform: translateX(6px) rotate(2deg); }
+        }
+
+        .tarot-reading-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+        }
+        .tarot-reading-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .tarot-reading-symbol {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #9333ea 0%, #c026d3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .tarot-reading-title {
+            flex: 1;
+        }
+        .tarot-reading-title h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .tarot-reading-title .position {
+            font-size: 12px;
+            color: #9333ea;
+            font-weight: 600;
+        }
+        .tarot-orientation {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .tarot-orientation.upright {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .tarot-orientation.reversed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .tarot-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .tarot-keyword {
+            padding: 4px 10px;
+            background: #f3e8ff;
+            color: #7c3aed;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .tarot-meaning-section {
+            margin-bottom: 16px;
+        }
+        .tarot-meaning-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #9333ea;
+            margin-bottom: 6px;
+        }
+        .tarot-meaning-text {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #444;
+        }
+        .tarot-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .tarot-detail-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .tarot-detail-icon {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        .tarot-detail-label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .tarot-detail-text {
+            font-size: 13px;
+            color: #333;
+            line-height: 1.5;
+        }
+        .tarot-advice-card {
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(192, 38, 211, 0.1) 100%);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+        }
+        .tarot-advice-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #9333ea;
+            margin-bottom: 8px;
+        }
+        .tarot-advice-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+        .tarot-overall-message {
+            background: linear-gradient(135deg, #9333ea 0%, #c026d3 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        .tarot-overall-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tarot-overall-text {
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        /* 타로 다크모드 */
+        [data-theme="dark"] .tarot-input-section {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .tarot-input-section h2 {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .spread-option {
+            background: #1e1e38;
+            border-color: rgba(147, 51, 234, 0.3);
+        }
+        [data-theme="dark"] .spread-option:hover {
+            background: rgba(147, 51, 234, 0.1);
+            border-color: #9333ea;
+        }
+        [data-theme="dark"] .spread-option.selected {
+            background: rgba(147, 51, 234, 0.2);
+            border-color: #9333ea;
+        }
+        [data-theme="dark"] .spread-name {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .spread-desc {
+            color: #888;
+        }
+        [data-theme="dark"] .question-input {
+            background: #1e1e38;
+            border-color: rgba(147, 51, 234, 0.3);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .tarot-position-label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .tarot-reading-card {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(147, 51, 234, 0.2);
+        }
+        [data-theme="dark"] .tarot-reading-header {
+            border-bottom-color: rgba(147, 51, 234, 0.2);
+        }
+        [data-theme="dark"] .tarot-reading-title h3 {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .tarot-meaning-text,
+        [data-theme="dark"] .tarot-detail-text {
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .tarot-detail-item {
+            background: rgba(147, 51, 234, 0.1);
+        }
+        [data-theme="dark"] .tarot-advice-card {
+            background: rgba(147, 51, 234, 0.15);
+        }
+        [data-theme="dark"] .tarot-advice-text {
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .tarot-keyword {
+            background: rgba(147, 51, 234, 0.3);
+            color: #c4b5fd;
+            border: 1px solid rgba(147, 51, 234, 0.5);
+        }
+        [data-theme="dark"] .tarot-meaning-label {
+            color: #c4b5fd;
+        }
+        [data-theme="dark"] .tarot-detail-label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .tarot-orientation.upright {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        [data-theme="dark"] .tarot-orientation.reversed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        /* 결과 섹션 */
+        .result-section {
+            display: none;
+        }
+        .result-section.active {
+            display: block;
+        }
+
+        /* 사주 정보 카드 */
+        .saju-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .saju-card::before {
+            content: '☯';
+            position: absolute;
+            right: -20px;
+            top: -20px;
+            font-size: 150px;
+            opacity: 0.1;
+        }
+        .saju-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .saju-name {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .saju-date {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .saju-zodiac {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .saju-pillars {
+            display: flex;
+            gap: 16px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        .pillar {
+            text-align: center;
+            background: rgba(255,255,255,0.15);
+            padding: 12px 16px;
+            border-radius: 12px;
+            min-width: 80px;
+        }
+        .pillar-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 6px;
+        }
+        .pillar-hangul {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 2px;
+        }
+        .pillar-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .saju-ohang {
+            text-align: center;
+            padding: 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            margin-top: 16px;
+        }
+        .ohang-element {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .ohang-trait {
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        /* 사주 풀이 섹션 */
+        .analysis-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .analysis-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .analysis-tab {
+            padding: 10px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .analysis-tab:hover {
+            border-color: #667eea;
+        }
+        .analysis-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+        .analysis-content {
+            display: none;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            line-height: 1.9;
+            font-size: 15px;
+            color: #444;
+            white-space: pre-line;
+        }
+        .analysis-content.active {
+            display: block;
+        }
+        .analysis-highlight {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .day-master-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            margin-bottom: 16px;
+        }
+        .day-master-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .day-master-symbol {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .trait-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .trait-item {
+            background: rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .trait-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        .trait-value {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 운세 카테고리 */
+        .category-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .category-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .category-card:hover {
+            transform: translateY(-3px);
+        }
+        .category-card.good { border-left: 4px solid #28a745; }
+        .category-card.normal { border-left: 4px solid #ffc107; }
+        .category-card.caution { border-left: 4px solid #dc3545; }
+        .category-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        .category-name {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        .category-stars {
+            color: #ffc107;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        /* 총운 */
+        .overall-score {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .score-info {
+            text-align: left;
+        }
+        .score-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .score-stars {
+            font-size: 24px;
+            color: #ffc107;
+            letter-spacing: 3px;
+        }
+
+        /* 기간별 운세 */
+        .period-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .period-tab {
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .period-tab:hover {
+            border-color: #667eea;
+        }
+        .period-tab.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+        .period-content {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            line-height: 1.8;
+            font-size: 15px;
+            color: #444;
+        }
+        .period-content.active {
+            display: block;
+        }
+        .period-content.good { border-left: 4px solid #28a745; }
+        .period-content.normal { border-left: 4px solid #ffc107; }
+        .period-content.caution { border-left: 4px solid #dc3545; }
+
+        /* 행운 요소 */
+        .lucky-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .lucky-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+        .lucky-item {
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+        }
+        .lucky-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .lucky-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .lucky-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 길흉화복 섹션 */
+        .gilhyung-summary {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            color: white;
+        }
+        .gilhyung-score-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .gilhyung-summary-text {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .gilhyung-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .gilhyung-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .gilhyung-card-icon {
+            font-size: 20px;
+        }
+        .gilhyung-card-title {
+            font-weight: 600;
+            flex: 1;
+        }
+        .gilhyung-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .gilhyung-badge.good {
+            background: #d4edda;
+            color: #155724;
+        }
+        .gilhyung-badge.normal {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .gilhyung-badge.caution {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .gilhyung-badge.danger {
+            background: #dc3545;
+            color: white;
+        }
+        .gilhyung-card-body {
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #555;
+        }
+        .gilhyung-card.samjae-active {
+            border: 2px solid #dc3545;
+        }
+        .gilhyung-card.samjae-active .gilhyung-card-header {
+            background: #fff5f5;
+        }
+
+        /* 주(柱)별 풀이 섹션 */
+        .pillar-readings-section {
+            margin-top: 20px;
+        }
+        .pillar-reading-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .pillar-reading-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .pillar-reading-card.expanded .pillar-reading-body {
+            display: block;
+        }
+        .pillar-reading-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .pillar-reading-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+        .pillar-reading-icon.year { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .pillar-reading-icon.month { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .pillar-reading-icon.day { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .pillar-reading-title {
+            flex: 1;
+        }
+        .pillar-reading-title-main {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+        }
+        .pillar-reading-title-sub {
+            font-size: 12px;
+            color: #888;
+            margin-top: 2px;
+        }
+        .pillar-reading-ganji {
+            text-align: right;
+            min-width: 60px;
+        }
+        .pillar-reading-hangul {
+            font-size: 13px;
+            color: #666;
+        }
+        .pillar-reading-hanja {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .pillar-reading-toggle {
+            font-size: 12px;
+            color: #888;
+            transition: transform 0.3s;
+            margin-left: 8px;
+        }
+        .pillar-reading-card.expanded .pillar-reading-toggle {
+            transform: rotate(180deg);
+        }
+        .pillar-reading-body {
+            display: none;
+            padding: 16px;
+            background: #fafbfc;
+            border-top: 1px solid #e9ecef;
+        }
+        .pillar-reading-summary {
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 8px;
+            font-size: 14px;
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .pillar-reading-item {
+            margin-bottom: 12px;
+        }
+        .pillar-reading-item:last-child {
+            margin-bottom: 0;
+        }
+        .pillar-reading-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+        .pillar-reading-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+        .pillar-reading-advice {
+            margin-top: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        /* 다크모드 주별 풀이 */
+        [data-theme="dark"] .pillar-reading-card {
+            background: rgba(30, 30, 56, 0.8);
+        }
+        [data-theme="dark"] .pillar-reading-header {
+            background: #1e1e38;
+            border-bottom-color: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .pillar-reading-title-main {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .pillar-reading-title-sub {
+            color: #888;
+        }
+        [data-theme="dark"] .pillar-reading-hangul {
+            color: #aaa;
+        }
+        [data-theme="dark"] .pillar-reading-hanja {
+            color: #60a5fa;
+        }
+        [data-theme="dark"] .pillar-reading-body {
+            background: rgba(20, 20, 40, 0.8);
+            border-top-color: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .pillar-reading-summary {
+            background: rgba(96, 165, 250, 0.15);
+            color: #e0e0e0;
+        }
+        [data-theme="dark"] .pillar-reading-label {
+            color: #60a5fa;
+        }
+        [data-theme="dark"] .pillar-reading-text {
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .pillar-reading-advice {
+            background: rgba(96, 165, 250, 0.1);
+            color: #d0d0d0;
+        }
+
+        /* 카테고리 상세 모달 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .modal-icon {
+            font-size: 40px;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .modal-stars {
+            color: #ffc107;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+        .modal-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #444;
+        }
+        .modal-close {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        /* 로딩 */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .loading.active {
+            display: block;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 안내 문구 */
+        .disclaimer {
+            text-align: center;
+            padding: 16px;
+            color: #888;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+
+        /* 다크모드 */
+        [data-theme="dark"] body {
+            background: #121212;
+        }
+        [data-theme="dark"] .input-section,
+        [data-theme="dark"] .category-section,
+        [data-theme="dark"] .lucky-section,
+        [data-theme="dark"] .analysis-section {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .analysis-tab {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .analysis-content {
+            background: rgba(30, 30, 56, 0.8);
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .input-section h2,
+        [data-theme="dark"] .section-title {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .form-group label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .form-group input {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .category-card {
+            background: rgba(30, 30, 56, 0.8);
+        }
+        [data-theme="dark"] .category-name {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .overall-score,
+        [data-theme="dark"] .period-content,
+        [data-theme="dark"] .lucky-item {
+            background: rgba(30, 30, 56, 0.8);
+        }
+        [data-theme="dark"] .period-tab {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .period-content {
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .lucky-label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .lucky-value {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .modal-box {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .modal-title {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .modal-text {
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .score-label {
+            color: #b0b0b0;
+        }
+        /* 다크모드 길흉화복 */
+        [data-theme="dark"] .gilhyung-card {
+            background: rgba(30, 30, 56, 0.8);
+        }
+        [data-theme="dark"] .gilhyung-card-header {
+            background: #1e1e38;
+            border-bottom-color: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .gilhyung-card-title {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .gilhyung-card-body {
+            color: #d0d0d0;
+        }
+        [data-theme="dark"] .gilhyung-card.samjae-active {
+            border-color: #dc3545;
+        }
+        [data-theme="dark"] .gilhyung-card.samjae-active .gilhyung-card-header {
+            background: rgba(220, 53, 69, 0.2);
+        }
+
+        /* 반응형 */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+            }
+            .input-form {
+                flex-direction: column;
+            }
+            .form-group {
+                width: 100%;
+            }
+            .submit-btn {
+                width: 100%;
+            }
+            .saju-pillars {
+                flex-wrap: wrap;
+            }
+            .pillar {
+                min-width: 60px;
+            }
+            .category-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 입력 섹션 -->
+        <div class="input-section">
+            <h2>🔮 운세 정보 입력</h2>
+            <div class="input-form">
+                <div class="form-group">
+                    <label for="fortuneName">이름</label>
+                    <input type="text" id="fortuneName" placeholder="이름을 입력하세요" maxlength="20">
+                </div>
+                <div class="form-group">
+                    <label for="fortuneBirth">생년월일</label>
+                    <input type="date" id="fortuneBirth">
+                </div>
+                <div class="form-group">
+                    <label for="fortuneTarget">운세 날짜</label>
+                    <input type="date" id="fortuneTarget" title="운세를 볼 날짜 (기본: 오늘)">
+                </div>
+                <button class="submit-btn" id="submitBtn" onclick="getFortune()">운세 보기</button>
+            </div>
+        </div>
+
+        <!-- 메인 탭 (사주/타로) -->
+        <div class="main-tabs">
+            <button class="main-tab active" id="sajuTab" onclick="switchMainTab('saju')">
+                <span class="main-tab-icon">☯️</span>
+                사주 운세
+            </button>
+            <button class="main-tab" id="tarotTab" onclick="switchMainTab('tarot')">
+                <span class="main-tab-icon">🎴</span>
+                타로 카드
+            </button>
+        </div>
+
+        <!-- 사주 탭 컨텐츠 -->
+        <div class="tab-content active" id="sajuContent">
+            <!-- 로딩 -->
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div>운세를 분석하고 있습니다...</div>
+            </div>
+
+            <!-- 결과 섹션 -->
+            <div class="result-section" id="resultSection">
+            <!-- 사주 정보 -->
+            <div class="saju-card" id="sajuCard">
+                <div class="saju-header">
+                    <div>
+                        <div class="saju-name" id="sajuName">-</div>
+                        <div class="saju-date" id="sajuDate">-</div>
+                    </div>
+                    <div class="saju-zodiac" id="sajuZodiac">-</div>
+                </div>
+                <div class="saju-pillars" id="sajuPillars">
+                    <div class="pillar">
+                        <div class="pillar-label">년주</div>
+                        <div class="pillar-hangul" id="yearPillarText">-</div>
+                        <div class="pillar-value" id="yearPillar">-</div>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-label">월주</div>
+                        <div class="pillar-hangul" id="monthPillarText">-</div>
+                        <div class="pillar-value" id="monthPillar">-</div>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-label">일주</div>
+                        <div class="pillar-hangul" id="dayPillarText">-</div>
+                        <div class="pillar-value" id="dayPillar">-</div>
+                    </div>
+                </div>
+                <div class="saju-ohang">
+                    <div class="ohang-element" id="ohangElement">-</div>
+                    <div class="ohang-trait" id="ohangTrait">-</div>
+                </div>
+
+                <!-- 주별 풀이 -->
+                <div class="pillar-readings-section" id="pillarReadings">
+                    <!-- 년주 -->
+                    <div class="pillar-reading-card" id="yearPillarCard" onclick="togglePillarReading('year')">
+                        <div class="pillar-reading-header">
+                            <div class="pillar-reading-icon year" id="yearPillarIcon">-</div>
+                            <div class="pillar-reading-title">
+                                <div class="pillar-reading-title-main">년주(年柱) - 조상궁</div>
+                                <div class="pillar-reading-title-sub" id="yearPillarSub">0~20세 초년운</div>
+                            </div>
+                            <div class="pillar-reading-ganji">
+                                <div class="pillar-reading-hangul" id="yearPillarHangul">-</div>
+                                <div class="pillar-reading-hanja" id="yearPillarHanja">-</div>
+                            </div>
+                            <div class="pillar-reading-toggle">▼</div>
+                        </div>
+                        <div class="pillar-reading-body" id="yearPillarBody">
+                            <div class="pillar-reading-summary" id="yearPillarSummary">-</div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">천간 해석</div>
+                                <div class="pillar-reading-text" id="yearCheonganReading">-</div>
+                            </div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">지지(띠) 해석</div>
+                                <div class="pillar-reading-text" id="yearJijiReading">-</div>
+                            </div>
+                            <div class="pillar-reading-advice" id="yearPillarAdvice">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 월주 -->
+                    <div class="pillar-reading-card" id="monthPillarCard" onclick="togglePillarReading('month')">
+                        <div class="pillar-reading-header">
+                            <div class="pillar-reading-icon month" id="monthPillarIcon">-</div>
+                            <div class="pillar-reading-title">
+                                <div class="pillar-reading-title-main">월주(月柱) - 부모궁</div>
+                                <div class="pillar-reading-title-sub" id="monthPillarSub">20~40세 청년운</div>
+                            </div>
+                            <div class="pillar-reading-ganji">
+                                <div class="pillar-reading-hangul" id="monthPillarHangul">-</div>
+                                <div class="pillar-reading-hanja" id="monthPillarHanja">-</div>
+                            </div>
+                            <div class="pillar-reading-toggle">▼</div>
+                        </div>
+                        <div class="pillar-reading-body" id="monthPillarBody">
+                            <div class="pillar-reading-summary" id="monthPillarSummary">-</div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">천간 해석</div>
+                                <div class="pillar-reading-text" id="monthCheonganReading">-</div>
+                            </div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">계절/시기 해석</div>
+                                <div class="pillar-reading-text" id="monthJijiReading">-</div>
+                            </div>
+                            <div class="pillar-reading-advice" id="monthPillarAdvice">-</div>
+                        </div>
+                    </div>
+
+                    <!-- 일주 -->
+                    <div class="pillar-reading-card" id="dayPillarCard" onclick="togglePillarReading('day')">
+                        <div class="pillar-reading-header">
+                            <div class="pillar-reading-icon day" id="dayPillarIcon">-</div>
+                            <div class="pillar-reading-title">
+                                <div class="pillar-reading-title-main">일주(日柱) - 본인궁</div>
+                                <div class="pillar-reading-title-sub" id="dayPillarSub">40~60세 장년운 · 배우자운</div>
+                            </div>
+                            <div class="pillar-reading-ganji">
+                                <div class="pillar-reading-hangul" id="dayPillarHangul">-</div>
+                                <div class="pillar-reading-hanja" id="dayPillarHanjaDisplay">-</div>
+                            </div>
+                            <div class="pillar-reading-toggle">▼</div>
+                        </div>
+                        <div class="pillar-reading-body" id="dayPillarBody">
+                            <div class="pillar-reading-summary" id="dayPillarSummary">-</div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">천간 해석 (본인 성격)</div>
+                                <div class="pillar-reading-text" id="dayCheonganReading">-</div>
+                            </div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">지지 해석 (장년운)</div>
+                                <div class="pillar-reading-text" id="dayJijiReading">-</div>
+                            </div>
+                            <div class="pillar-reading-item">
+                                <div class="pillar-reading-label">배우자 궁합</div>
+                                <div class="pillar-reading-text" id="daySpouseReading">-</div>
+                            </div>
+                            <div class="pillar-reading-advice" id="dayPillarAdvice">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 사주 풀이 -->
+            <div class="analysis-section">
+                <div class="section-title">📜 사주 풀이</div>
+                <!-- 일간 카드 -->
+                <div class="day-master-card" id="dayMasterCard">
+                    <div class="day-master-name" id="dayMasterName">-</div>
+                    <div class="day-master-symbol" id="dayMasterSymbol">-</div>
+                    <div class="trait-grid">
+                        <div class="trait-item">
+                            <div class="trait-label">주요 강점</div>
+                            <div class="trait-value" id="dayMasterStrength">-</div>
+                        </div>
+                        <div class="trait-item">
+                            <div class="trait-label">보완할 점</div>
+                            <div class="trait-value" id="dayMasterWeakness">-</div>
+                        </div>
+                        <div class="trait-item">
+                            <div class="trait-label">궁합 천간</div>
+                            <div class="trait-value" id="dayMasterCompatible">-</div>
+                        </div>
+                        <div class="trait-item">
+                            <div class="trait-label">적합 직업</div>
+                            <div class="trait-value" id="dayMasterCareer">-</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 풀이 탭 -->
+                <div class="analysis-tabs" id="analysisTabs">
+                    <button class="analysis-tab active" data-tab="summary">총평</button>
+                    <button class="analysis-tab" data-tab="personality">성격</button>
+                    <button class="analysis-tab" data-tab="career">적성/직업</button>
+                    <button class="analysis-tab" data-tab="relationship">대인관계</button>
+                    <button class="analysis-tab" data-tab="advice">인생조언</button>
+                </div>
+                <div id="analysisContents">
+                    <div class="analysis-content active" id="analysis-summary">-</div>
+                    <div class="analysis-content" id="analysis-personality">-</div>
+                    <div class="analysis-content" id="analysis-career">-</div>
+                    <div class="analysis-content" id="analysis-relationship">-</div>
+                    <div class="analysis-content" id="analysis-advice">-</div>
+                </div>
+            </div>
+
+            <!-- 총운 -->
+            <div class="category-section">
+                <div class="section-title" id="overallTitle">🎯 오늘의 총운</div>
+                <div class="overall-score">
+                    <div class="score-circle" id="overallScore">-</div>
+                    <div class="score-info">
+                        <div class="score-label">행운지수</div>
+                        <div class="score-stars" id="overallStars">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 카테고리별 운세 -->
+            <div class="category-section">
+                <div class="section-title">📊 분야별 운세</div>
+                <div class="category-grid" id="categoryGrid">
+                    <!-- 동적 생성 -->
+                </div>
+            </div>
+
+            <!-- 기간별 운세 -->
+            <div class="category-section">
+                <div class="section-title">📅 기간별 운세</div>
+                <div class="period-tabs" id="periodTabs">
+                    <button class="period-tab active" data-period="daily">오늘</button>
+                    <button class="period-tab" data-period="weekly">이번 주</button>
+                    <button class="period-tab" data-period="monthly">이번 달</button>
+                    <button class="period-tab" data-period="yearly">올해</button>
+                </div>
+                <div id="periodContents">
+                    <!-- 동적 생성 -->
+                </div>
+            </div>
+
+            <!-- 행운 요소 -->
+            <div class="lucky-section">
+                <div class="section-title">🍀 오늘의 행운</div>
+                <div class="lucky-grid">
+                    <div class="lucky-item">
+                        <div class="lucky-icon">🎨</div>
+                        <div class="lucky-label">행운의 색</div>
+                        <div class="lucky-value" id="luckyColor">-</div>
+                    </div>
+                    <div class="lucky-item">
+                        <div class="lucky-icon">🔢</div>
+                        <div class="lucky-label">행운의 숫자</div>
+                        <div class="lucky-value" id="luckyNumbers">-</div>
+                    </div>
+                    <div class="lucky-item">
+                        <div class="lucky-icon">🧭</div>
+                        <div class="lucky-label">행운의 방향</div>
+                        <div class="lucky-value" id="luckyDirection">-</div>
+                    </div>
+                    <div class="lucky-item">
+                        <div class="lucky-icon">🎁</div>
+                        <div class="lucky-label">행운의 아이템</div>
+                        <div class="lucky-value" id="luckyItem">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 길흉화복 섹션 -->
+            <div class="category-section gilhyung-section">
+                <div class="section-title">⚖️ 길흉화복</div>
+
+                <!-- 종합 점수 -->
+                <div class="gilhyung-summary" id="gilhyungSummary">
+                    <div class="gilhyung-score-circle" id="gilhyungScore">-</div>
+                    <div class="gilhyung-summary-text" id="gilhyungSummaryText">-</div>
+                </div>
+
+                <!-- 삼재 -->
+                <div class="gilhyung-card" id="samjaeCard">
+                    <div class="gilhyung-card-header">
+                        <span class="gilhyung-card-icon">🔥</span>
+                        <span class="gilhyung-card-title">삼재(三災)</span>
+                        <span class="gilhyung-badge" id="samjaeBadge">-</span>
+                    </div>
+                    <div class="gilhyung-card-body" id="samjaeBody">-</div>
+                </div>
+
+                <!-- 대운 -->
+                <div class="gilhyung-card" id="daeunCard">
+                    <div class="gilhyung-card-header">
+                        <span class="gilhyung-card-icon">🌊</span>
+                        <span class="gilhyung-card-title">대운(大運)</span>
+                        <span class="gilhyung-badge good" id="daeunBadge">-</span>
+                    </div>
+                    <div class="gilhyung-card-body" id="daeunBody">-</div>
+                </div>
+
+                <!-- 오행 길흉 -->
+                <div class="gilhyung-card" id="ohangCard">
+                    <div class="gilhyung-card-header">
+                        <span class="gilhyung-card-icon">☯️</span>
+                        <span class="gilhyung-card-title">오행 길흉</span>
+                        <span class="gilhyung-badge" id="ohangBadge">-</span>
+                    </div>
+                    <div class="gilhyung-card-body" id="ohangBody">-</div>
+                </div>
+
+                <!-- 공망 -->
+                <div class="gilhyung-card" id="gongmangCard">
+                    <div class="gilhyung-card-header">
+                        <span class="gilhyung-card-icon">🕳️</span>
+                        <span class="gilhyung-card-title">공망(空亡)</span>
+                    </div>
+                    <div class="gilhyung-card-body" id="gongmangBody">-</div>
+                </div>
+            </div>
+
+            <div class="disclaimer">
+                본 운세는 재미로 보시기 바라며, 실제 결정에 참고하지 마세요.<br>
+                좋은 하루 되세요! 🌟
+            </div>
+        </div>
+        </div><!-- /sajuContent -->
+
+        <!-- 타로 탭 컨텐츠 -->
+        <div class="tab-content" id="tarotContent">
+            <!-- 타로 입력 섹션 -->
+            <div class="tarot-input-section">
+                <h2>🎴 타로카드 리딩</h2>
+                <p style="color: #888; font-size: 14px; margin-bottom: 16px;">스프레드를 선택하고 마음속 질문을 떠올리며 카드를 뽑아보세요.</p>
+
+                <div class="spread-selector" id="spreadSelector">
+                    <div class="spread-option selected" data-spread="one_card">
+                        <div class="spread-icon">🎴</div>
+                        <div class="spread-name">원카드</div>
+                        <div class="spread-desc">오늘의 메시지</div>
+                    </div>
+                    <div class="spread-option" data-spread="three_card">
+                        <div class="spread-icon">🎴🎴🎴</div>
+                        <div class="spread-name">쓰리카드</div>
+                        <div class="spread-desc">과거·현재·미래</div>
+                    </div>
+                    <div class="spread-option" data-spread="love_spread">
+                        <div class="spread-icon">💕</div>
+                        <div class="spread-name">연애운</div>
+                        <div class="spread-desc">나·상대·조언</div>
+                    </div>
+                    <div class="spread-option" data-spread="yes_no">
+                        <div class="spread-icon">❓</div>
+                        <div class="spread-name">예/아니오</div>
+                        <div class="spread-desc">결정이 필요할 때</div>
+                    </div>
+                </div>
+
+                <input type="text" class="question-input" id="tarotQuestion" placeholder="질문을 입력하세요 (선택)" maxlength="100">
+
+                <button class="tarot-btn" id="tarotBtn" onclick="getTarotReading()">
+                    🔮 카드 뽑기
+                </button>
+            </div>
+
+            <!-- 카드 선택 섹션 -->
+            <div class="card-selection-section" id="cardSelectionSection">
+                <div class="selection-header">
+                    <h3>🔮 카드를 선택하세요</h3>
+                    <p class="selection-instruction" id="selectionInstruction">마음을 집중하고 끌리는 카드를 클릭하세요</p>
+                </div>
+
+                <!-- 선택된 카드 슬롯 -->
+                <div class="selected-cards-preview" id="selectedCardsPreview">
+                    <!-- 동적 생성 -->
+                </div>
+
+                <!-- 덱 카드들 -->
+                <div class="deck-container" id="deckContainer">
+                    <!-- 동적 생성 -->
+                </div>
+
+                <div class="selection-actions">
+                    <button class="shuffle-btn" onclick="shuffleDeck()">🔀 다시 섞기</button>
+                    <button class="cancel-btn" onclick="cancelCardSelection()">취소</button>
+                </div>
+            </div>
+
+            <!-- 타로 로딩 -->
+            <div class="loading" id="tarotLoading">
+                <div class="loading-spinner"></div>
+                <div>카드를 해석하고 있습니다...</div>
+            </div>
+
+            <!-- 타로 결과 -->
+            <div class="tarot-result-section" id="tarotResultSection">
+                <div class="tarot-spread-title" id="tarotSpreadTitle">
+                    <div class="tarot-spread-name" id="tarotSpreadName">원카드 리딩</div>
+                    <div class="tarot-question" id="tarotQuestionDisplay"></div>
+                </div>
+
+                <!-- 카드 배열 -->
+                <div class="tarot-cards-container" id="tarotCardsContainer">
+                    <!-- 동적 생성 -->
+                </div>
+
+                <!-- 종합 메시지 -->
+                <div class="tarot-overall-message" id="tarotOverallMessage">
+                    <div class="tarot-overall-title">✨ 종합 메시지</div>
+                    <div class="tarot-overall-text" id="tarotOverallText">-</div>
+                </div>
+
+                <!-- 카드별 해석 -->
+                <div id="tarotReadingsContainer">
+                    <!-- 동적 생성 -->
+                </div>
+
+                <div class="disclaimer">
+                    타로는 현재의 에너지와 가능성을 보여줍니다.<br>
+                    미래는 당신의 선택으로 바뀔 수 있습니다. 🌟
+                </div>
+            </div>
+        </div><!-- /tarotContent -->
+    </div>
+
+    <!-- 카테고리 상세 모달 -->
+    <div class="modal-overlay" id="categoryModal" onclick="if(event.target===this)closeCategoryModal()">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-icon" id="modalIcon">-</div>
+                <div class="modal-title" id="modalTitle">-</div>
+            </div>
+            <div class="modal-stars" id="modalStars">-</div>
+            <div class="modal-text" id="modalText">-</div>
+            <button class="modal-close" onclick="closeCategoryModal()">확인</button>
+        </div>
+    </div>
+
+    <script>
+        let fortuneData = null;
+        let tarotData = null;
+        let selectedSpread = 'one_card';
+        let selectedCardIndices = [];  // 선택된 카드 인덱스들
+        let requiredCardCount = 1;     // 필요한 카드 수
+        let deckOrder = [];            // 섞인 덱 순서
+
+        // ==================== 메인 탭 전환 ====================
+        function switchMainTab(tab) {
+            // 탭 버튼 활성화
+            document.getElementById('sajuTab').classList.toggle('active', tab === 'saju');
+            document.getElementById('tarotTab').classList.toggle('active', tab === 'tarot');
+
+            // 컨텐츠 표시
+            document.getElementById('sajuContent').classList.toggle('active', tab === 'saju');
+            document.getElementById('tarotContent').classList.toggle('active', tab === 'tarot');
+        }
+
+        // ==================== 타로 관련 함수 ====================
+        // 스프레드 선택
+        document.addEventListener('DOMContentLoaded', function() {
+            const spreadOptions = document.querySelectorAll('.spread-option');
+            spreadOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    spreadOptions.forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedSpread = this.dataset.spread;
+                });
+            });
+        });
+
+        // 카드 뽑기 버튼 클릭 → 카드 선택 UI 시작
+        function getTarotReading() {
+            startCardSelection();
+        }
+
+        // 카드 선택 UI 시작
+        function startCardSelection() {
+            // 스프레드에 따른 필요 카드 수 설정
+            const spreadCardCounts = {
+                'one_card': 1,
+                'three_card': 3,
+                'love_spread': 3,
+                'yes_no': 1
+            };
+            requiredCardCount = spreadCardCounts[selectedSpread] || 1;
+            selectedCardIndices = [];
+
+            // 입력 섹션 숨기고 카드 선택 섹션 표시
+            document.querySelector('.tarot-input-section').style.display = 'none';
+            document.getElementById('cardSelectionSection').classList.add('active');
+            document.getElementById('tarotResultSection').classList.remove('active');
+
+            // 선택 슬롯 생성
+            createSelectionSlots();
+
+            // 덱 생성 및 섞기
+            createDeck();
+
+            // 안내 문구 업데이트
+            updateSelectionInstruction();
+
+            // 카드 선택 섹션으로 스크롤
+            document.getElementById('cardSelectionSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // 선택 슬롯 생성
+        function createSelectionSlots() {
+            const preview = document.getElementById('selectedCardsPreview');
+            preview.innerHTML = '';
+
+            const positions = getPositionLabels();
+            for (let i = 0; i < requiredCardCount; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'selected-card-slot';
+                slot.id = `slot${i}`;
+                slot.innerHTML = `
+                    <div class="slot-label">${positions[i] || (i + 1)}</div>
+                    <div class="slot-symbol">?</div>
+                `;
+                preview.appendChild(slot);
+            }
+        }
+
+        // 스프레드별 포지션 라벨
+        function getPositionLabels() {
+            switch(selectedSpread) {
+                case 'three_card':
+                    return ['과거', '현재', '미래'];
+                case 'love_spread':
+                    return ['나', '상대', '조언'];
+                default:
+                    return ['카드'];
+            }
+        }
+
+        // 덱 생성 (78장 전체)
+        function createDeck() {
+            const container = document.getElementById('deckContainer');
+            container.innerHTML = '';
+
+            // 78장의 카드 인덱스를 섞음 (메이저 22 + 마이너 56)
+            deckOrder = Array.from({length: 78}, (_, i) => i);
+            shuffleArray(deckOrder);
+
+            // 카드 뒷면 생성 (78장)
+            deckOrder.forEach((cardIdx, deckPos) => {
+                const card = document.createElement('div');
+                card.className = 'deck-card';
+                card.dataset.cardIndex = cardIdx;
+                card.dataset.deckPosition = deckPos;
+                card.onclick = () => selectCard(card, cardIdx);
+                container.appendChild(card);
+            });
+        }
+
+        // 배열 섞기 (Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 덱 다시 섞기
+        function shuffleDeck() {
+            const container = document.getElementById('deckContainer');
+            const cards = container.querySelectorAll('.deck-card:not(.selected)');
+
+            // 애니메이션 추가
+            cards.forEach((card, i) => {
+                setTimeout(() => {
+                    card.classList.add('shake');
+                    setTimeout(() => card.classList.remove('shake'), 500);
+                }, i * 10);  // 78장이므로 간격 줄임
+            });
+
+            // 덱 순서 재섞기
+            setTimeout(() => {
+                deckOrder = Array.from({length: 78}, (_, i) => i);
+                shuffleArray(deckOrder);
+
+                // 선택 안된 카드만 순서 변경
+                const availableCards = Array.from(cards);
+                shuffleArray(availableCards);
+                availableCards.forEach((card, i) => {
+                    container.appendChild(card);
+                });
+            }, 500);
+        }
+
+        // 카드 선택
+        function selectCard(cardElement, cardIndex) {
+            if (selectedCardIndices.length >= requiredCardCount) return;
+
+            // 선택 애니메이션
+            cardElement.classList.add('picking');
+
+            setTimeout(() => {
+                cardElement.classList.remove('picking');
+                cardElement.classList.add('selected');
+
+                // 인덱스 저장
+                selectedCardIndices.push(cardIndex);
+
+                // 슬롯 채우기
+                const slotIdx = selectedCardIndices.length - 1;
+                const slot = document.getElementById(`slot${slotIdx}`);
+                if (slot) {
+                    slot.classList.add('filled');
+                    slot.querySelector('.slot-symbol').textContent = '✓';
+                }
+
+                // 안내 문구 업데이트
+                updateSelectionInstruction();
+
+                // 필요한 카드 수만큼 선택했으면 API 호출
+                if (selectedCardIndices.length >= requiredCardCount) {
+                    setTimeout(() => {
+                        fetchTarotReading();
+                    }, 500);
+                }
+            }, 600);
+        }
+
+        // 안내 문구 업데이트
+        function updateSelectionInstruction() {
+            const instruction = document.getElementById('selectionInstruction');
+            const remaining = requiredCardCount - selectedCardIndices.length;
+            if (remaining > 0) {
+                instruction.textContent = `${remaining}장의 카드를 더 선택하세요`;
+            } else {
+                instruction.textContent = '카드 해석 중...';
+            }
+        }
+
+        // 카드 선택 취소
+        function cancelCardSelection() {
+            document.getElementById('cardSelectionSection').classList.remove('active');
+            document.querySelector('.tarot-input-section').style.display = 'block';
+            selectedCardIndices = [];
+        }
+
+        // 실제 API 호출
+        async function fetchTarotReading() {
+            const question = document.getElementById('tarotQuestion').value.trim();
+
+            // 카드 선택 섹션 숨기고 로딩 표시
+            document.getElementById('cardSelectionSection').classList.remove('active');
+            document.getElementById('tarotLoading').classList.add('active');
+
+            try {
+                let url = `/api/tarot?spread_type=${selectedSpread}`;
+                if (question) {
+                    url += `&question=${encodeURIComponent(question)}`;
+                }
+                // 선택한 카드 인덱스 전달
+                url += `&selected_cards=${selectedCardIndices.join(',')}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '타로 리딩 실패');
+                }
+
+                tarotData = data;
+                renderTarotReading(data);
+
+                // 결과 표시
+                document.getElementById('tarotLoading').classList.remove('active');
+                document.getElementById('tarotResultSection').classList.add('active');
+                document.querySelector('.tarot-input-section').style.display = 'block';
+
+                // 결과로 스크롤
+                document.getElementById('tarotResultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (error) {
+                alert(error.message);
+                document.getElementById('tarotLoading').classList.remove('active');
+                document.querySelector('.tarot-input-section').style.display = 'block';
+            }
+        }
+
+        // 타로 결과 렌더링
+        function renderTarotReading(data) {
+            // 스프레드 타이틀
+            document.getElementById('tarotSpreadName').textContent = data.spread.name + ' 리딩';
+            document.getElementById('tarotQuestionDisplay').textContent = data.question || '';
+
+            // 카드 배열
+            const cardsContainer = document.getElementById('tarotCardsContainer');
+            cardsContainer.innerHTML = '';
+
+            data.cards.forEach((card, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'tarot-card-wrapper';
+                wrapper.innerHTML = `
+                    <div class="tarot-position-label">${card.position}</div>
+                    <div class="tarot-card ${card.is_reversed ? 'reversed' : ''}" onclick="scrollToCardReading(${idx})">
+                        ${card.is_reversed ? '<span class="reversed-badge">역방향</span>' : ''}
+                        <div class="tarot-card-symbol">${card.symbol}</div>
+                        <div class="tarot-card-number">${card.number}</div>
+                        <div class="tarot-card-name">${card.name_kr}</div>
+                    </div>
+                `;
+                cardsContainer.appendChild(wrapper);
+            });
+
+            // 종합 메시지
+            document.getElementById('tarotOverallText').textContent = data.overall_message;
+
+            // 카드별 해석
+            const readingsContainer = document.getElementById('tarotReadingsContainer');
+            readingsContainer.innerHTML = '';
+
+            data.cards.forEach((card, idx) => {
+                const reading = card.reading;
+                const readingCard = document.createElement('div');
+                readingCard.className = 'tarot-reading-card';
+                readingCard.id = `cardReading${idx}`;
+                readingCard.innerHTML = `
+                    <div class="tarot-reading-header">
+                        <div class="tarot-reading-symbol">${card.symbol}</div>
+                        <div class="tarot-reading-title">
+                            <h3>${card.name}</h3>
+                            <div class="position">${card.position}</div>
+                        </div>
+                        <span class="tarot-orientation ${card.is_reversed ? 'reversed' : 'upright'}">
+                            ${card.is_reversed ? '역방향' : '정방향'}
+                        </span>
+                    </div>
+                    <div class="tarot-keywords">
+                        ${card.keywords.map(k => `<span class="tarot-keyword">${k}</span>`).join('')}
+                    </div>
+                    <div class="tarot-meaning-section">
+                        <div class="tarot-meaning-label">📖 카드 의미</div>
+                        <div class="tarot-meaning-text">${reading.meaning}</div>
+                    </div>
+                    <div class="tarot-detail-grid">
+                        <div class="tarot-detail-item">
+                            <div class="tarot-detail-icon">💕</div>
+                            <div class="tarot-detail-label">연애운</div>
+                            <div class="tarot-detail-text">${reading.love}</div>
+                        </div>
+                        <div class="tarot-detail-item">
+                            <div class="tarot-detail-icon">💰</div>
+                            <div class="tarot-detail-label">금전운</div>
+                            <div class="tarot-detail-text">${reading.money}</div>
+                        </div>
+                        <div class="tarot-detail-item">
+                            <div class="tarot-detail-icon">💼</div>
+                            <div class="tarot-detail-label">직장운</div>
+                            <div class="tarot-detail-text">${reading.work}</div>
+                        </div>
+                        <div class="tarot-detail-item">
+                            <div class="tarot-detail-icon">🌟</div>
+                            <div class="tarot-detail-label">조언</div>
+                            <div class="tarot-detail-text">${reading.advice}</div>
+                        </div>
+                    </div>
+                `;
+                readingsContainer.appendChild(readingCard);
+            });
+        }
+
+        function scrollToCardReading(idx) {
+            const el = document.getElementById(`cardReading${idx}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // ==================== 사주 운세 함수 ====================
+        // 운세 조회
+        async function getFortune() {
+            const name = document.getElementById('fortuneName').value.trim();
+            const birth = document.getElementById('fortuneBirth').value;
+            const targetDate = document.getElementById('fortuneTarget').value;
+
+            if (!name) {
+                alert('이름을 입력해주세요.');
+                document.getElementById('fortuneName').focus();
+                return;
+            }
+            if (!birth) {
+                alert('생년월일을 선택해주세요.');
+                document.getElementById('fortuneBirth').focus();
+                return;
+            }
+
+            // 로딩 표시
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('submitBtn').disabled = true;
+
+            try {
+                let url = `/api/fortune?name=${encodeURIComponent(name)}&birth_date=${birth}`;
+                if (targetDate) {
+                    url += `&target_date=${targetDate}`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '운세 조회 실패');
+                }
+
+                console.log('=== API Response ===');
+                console.log('data.saju:', data.saju);
+                console.log('data.saju.year:', data.saju.year);
+                console.log('data.saju.year.reading:', data.saju.year.reading);
+                console.log('data.saju.pillar_readings:', data.saju.pillar_readings);
+
+                fortuneData = data;
+                renderFortune(data);
+
+                // 결과 표시
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('resultSection').classList.add('active');
+
+                // 결과로 스크롤
+                document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (error) {
+                alert(error.message);
+                document.getElementById('loading').classList.remove('active');
+            } finally {
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        // 운세 렌더링
+        function renderFortune(data) {
+            // 사주 정보
+            document.getElementById('sajuName').textContent = `${data.name}님의 사주`;
+            document.getElementById('sajuDate').textContent = data.birth_date;
+            document.getElementById('sajuZodiac').textContent = `${data.saju.zodiac}띠`;
+            // 년월일주 한글+한자 표시
+            document.getElementById('yearPillarText').textContent = `${data.saju.year.cheongan} ${data.saju.year.jiji}`;
+            document.getElementById('yearPillar').textContent = data.saju.year.hanja;
+            document.getElementById('monthPillarText').textContent = `${data.saju.month.cheongan} ${data.saju.month.jiji}`;
+            document.getElementById('monthPillar').textContent = data.saju.month.hanja;
+            document.getElementById('dayPillarText').textContent = `${data.saju.day.cheongan} ${data.saju.day.jiji}`;
+            document.getElementById('dayPillar').textContent = data.saju.day.hanja;
+            document.getElementById('ohangElement').textContent = `${data.saju.ohang_info.element}(${data.saju.main_ohang}) 기운`;
+            document.getElementById('ohangTrait').textContent = data.saju.ohang_info.trait;
+
+            // 총운 타이틀 (목표 날짜에 따라)
+            const targetDate = document.getElementById('fortuneTarget').value;
+            if (targetDate) {
+                const dateObj = new Date(targetDate);
+                const month = dateObj.getMonth() + 1;
+                const day = dateObj.getDate();
+                document.getElementById('overallTitle').textContent = `🎯 ${month}월 ${day}일의 총운`;
+            } else {
+                document.getElementById('overallTitle').textContent = '🎯 오늘의 총운';
+            }
+
+            // 총운
+            document.getElementById('overallScore').textContent = data.overall.score;
+            document.getElementById('overallStars').textContent = '★'.repeat(data.overall.stars) + '☆'.repeat(5 - data.overall.stars);
+
+            // 사주 풀이 렌더링
+            renderSajuAnalysis(data.saju);
+
+            // 카테고리별 운세
+            const categoryGrid = document.getElementById('categoryGrid');
+            categoryGrid.innerHTML = '';
+            for (const [key, cat] of Object.entries(data.categories)) {
+                const card = document.createElement('div');
+                card.className = `category-card ${cat.level}`;
+                card.onclick = () => openCategoryModal(key);
+                card.innerHTML = `
+                    <div class="category-icon">${cat.icon}</div>
+                    <div class="category-name">${cat.name}</div>
+                    <div class="category-stars">${'★'.repeat(cat.stars)}${'☆'.repeat(5 - cat.stars)}</div>
+                `;
+                categoryGrid.appendChild(card);
+            }
+
+            // 기간별 운세
+            renderPeriodContents(data.periods);
+
+            // 행운 요소
+            document.getElementById('luckyColor').textContent = data.lucky.color;
+            document.getElementById('luckyNumbers').textContent = data.lucky.numbers.join(', ');
+            document.getElementById('luckyDirection').textContent = data.lucky.direction;
+            document.getElementById('luckyItem').textContent = data.lucky.item;
+
+            // 주별 풀이 렌더링 (먼저 실행)
+            try {
+                if (data.saju) {
+                    renderPillarReadings(data.saju);
+                }
+            } catch (e) {
+                console.error('renderPillarReadings error:', e);
+            }
+
+            // 길흉화복 렌더링
+            try {
+                if (data.gilhyung) {
+                    renderGilhyung(data.gilhyung);
+                }
+            } catch (e) {
+                console.error('renderGilhyung error:', e);
+            }
+        }
+
+        // 주별 풀이 토글
+        function togglePillarReading(pillar) {
+            const card = document.getElementById(`${pillar}PillarCard`);
+            card.classList.toggle('expanded');
+        }
+
+        // 주별 풀이 렌더링
+        function renderPillarReadings(saju) {
+            console.log('renderPillarReadings called with:', saju);
+            if (!saju || !saju.year || !saju.month || !saju.day) {
+                console.error('saju data missing');
+                return;
+            }
+
+            // pillar_readings 또는 각 주의 reading 필드에서 데이터 가져오기
+            console.log('saju.pillar_readings:', saju.pillar_readings);
+            console.log('saju.year.reading:', saju.year.reading);
+            const yearReading = saju.pillar_readings?.year || saju.year.reading || {};
+            const monthReading = saju.pillar_readings?.month || saju.month.reading || {};
+            const dayReading = saju.pillar_readings?.day || saju.day.reading || {};
+            console.log('yearReading:', yearReading);
+            console.log('monthReading:', monthReading);
+            console.log('dayReading:', dayReading);
+
+            // 년주
+            if (saju.year.hanja) {
+                document.getElementById('yearPillarIcon').textContent = saju.year.hanja.charAt(0);
+                document.getElementById('yearPillarHangul').textContent = `${saju.year.cheongan || ''} ${saju.year.jiji || ''}`;
+                document.getElementById('yearPillarHanja').textContent = saju.year.hanja;
+            }
+            document.getElementById('yearPillarSummary').textContent = yearReading.summary || '-';
+            document.getElementById('yearCheonganReading').textContent = yearReading.cheongan_reading || '-';
+            document.getElementById('yearJijiReading').textContent = yearReading.jiji_reading || '-';
+            document.getElementById('yearPillarAdvice').textContent = yearReading.advice || '-';
+
+            // 월주
+            if (saju.month.hanja) {
+                document.getElementById('monthPillarIcon').textContent = saju.month.hanja.charAt(0);
+                document.getElementById('monthPillarHangul').textContent = `${saju.month.cheongan || ''} ${saju.month.jiji || ''}`;
+                document.getElementById('monthPillarHanja').textContent = saju.month.hanja;
+            }
+            document.getElementById('monthPillarSummary').textContent = monthReading.summary || '-';
+            document.getElementById('monthCheonganReading').textContent = monthReading.cheongan_reading || '-';
+            document.getElementById('monthJijiReading').textContent = monthReading.jiji_reading || '-';
+            document.getElementById('monthPillarAdvice').textContent = monthReading.advice || '-';
+
+            // 일주
+            if (saju.day.hanja) {
+                document.getElementById('dayPillarIcon').textContent = saju.day.hanja.charAt(0);
+                document.getElementById('dayPillarHangul').textContent = `${saju.day.cheongan || ''} ${saju.day.jiji || ''}`;
+                document.getElementById('dayPillarHanjaDisplay').textContent = saju.day.hanja;
+            }
+            document.getElementById('dayPillarSummary').textContent = dayReading.summary || '-';
+            document.getElementById('dayCheonganReading').textContent = dayReading.cheongan_reading || '-';
+            document.getElementById('dayJijiReading').textContent = dayReading.jiji_reading || '-';
+            document.getElementById('daySpouseReading').textContent = dayReading.spouse_compatibility || '-';
+            document.getElementById('dayPillarAdvice').textContent = dayReading.advice || '-';
+        }
+
+        // 길흉화복 렌더링
+        function renderGilhyung(gilhyung) {
+            // 종합 점수
+            const summary = gilhyung.summary || {};
+            document.getElementById('gilhyungScore').textContent = summary.score || '-';
+            document.getElementById('gilhyungSummaryText').textContent = summary.summary || '-';
+
+            // 삼재
+            const samjae = gilhyung.samjae || {};
+            const samjaeCard = document.getElementById('samjaeCard');
+            const samjaeBadge = document.getElementById('samjaeBadge');
+
+            if (samjae.is_samjae) {
+                samjaeCard.classList.add('samjae-active');
+                samjaeBadge.textContent = `${samjae.type || '삼재'} (${samjae.year_num || ''})`;
+                samjaeBadge.className = 'gilhyung-badge ' + (samjae.level === 'danger' ? 'danger' : 'caution');
+            } else {
+                samjaeCard.classList.remove('samjae-active');
+                samjaeBadge.textContent = '해당없음';
+                samjaeBadge.className = 'gilhyung-badge good';
+            }
+            // 같이 삼재 드는 띠 그룹 & 삼재가 오는 해 띠
+            const buddyGroup = (samjae.samjae_buddy_group || []).join(', ');
+            const yearZodiacs = (samjae.samjae_year_zodiacs || []).join(', ');
+            let samjaeDetail = samjae.description || '-';
+            if (samjae.is_samjae) {
+                samjaeDetail += `<br><br><small style="color:#888;">같이 삼재 드는 띠: <strong>${buddyGroup}</strong></small>`;
+                samjaeDetail += `<br><small style="color:#888;">삼재 해당 연도 띠: ${yearZodiacs} (올해: ${samjae.year_zodiac}띠)</small>`;
+            } else {
+                samjaeDetail += `<br><br><small style="color:#888;">같이 삼재 드는 띠: ${buddyGroup}</small>`;
+                samjaeDetail += `<br><small style="color:#888;">삼재 오는 해: ${yearZodiacs}띠 연도</small>`;
+            }
+            document.getElementById('samjaeBody').innerHTML = samjaeDetail;
+
+            // 대운
+            const daeun = gilhyung.daeun || {};
+            document.getElementById('daeunBadge').textContent = daeun.current_daeun || '-';
+            document.getElementById('daeunBadge').className = 'gilhyung-badge ' + (daeun.fortune_level || 'normal');
+            document.getElementById('daeunBody').innerHTML =
+                `<strong>${daeun.period || ''}</strong><br>${daeun.description || '-'}`;
+
+            // 오행 길흉
+            const ohang = gilhyung.ohang || {};
+            document.getElementById('ohangBadge').textContent = ohang.relation || '-';
+            document.getElementById('ohangBadge').className = 'gilhyung-badge ' + (ohang.level || 'normal');
+            document.getElementById('ohangBody').innerHTML =
+                `<strong>나의 오행:</strong> ${ohang.my_ohang || '-'} → <strong>올해:</strong> ${ohang.year_ohang || '-'} (${ohang.year_cheongan || ''})<br><br>${ohang.description || '-'}<br><br><em>${ohang.advice || ''}</em>`;
+
+            // 공망
+            const gongmang = gilhyung.gongmang || {};
+            let gongmangHtml = gongmang.description || '-';
+            if (gongmang.meanings && gongmang.meanings.length > 0) {
+                gongmangHtml += '<br><br><strong>주의사항:</strong><ul style="margin:8px 0 0 16px;">';
+                gongmang.meanings.forEach(m => {
+                    gongmangHtml += `<li>${m.name}: ${m.meaning}</li>`;
+                });
+                gongmangHtml += '</ul>';
+            }
+            document.getElementById('gongmangBody').innerHTML = gongmangHtml;
+        }
+
+        // 사주 풀이 렌더링
+        function renderSajuAnalysis(saju) {
+            // 일간(Day Master) 카드 - saju.day_master에서 가져옴
+            if (saju.day_master) {
+                const dm = saju.day_master;
+                document.getElementById('dayMasterName').textContent = dm.name || '-';
+                document.getElementById('dayMasterSymbol').textContent = dm.symbol || '-';
+                document.getElementById('dayMasterStrength').textContent = dm.strength || '-';
+                document.getElementById('dayMasterWeakness').textContent = dm.weakness || '-';
+                document.getElementById('dayMasterCompatible').textContent = dm.compatible || '-';
+                document.getElementById('dayMasterCareer').textContent = dm.career || '-';
+            }
+
+            // 풀이 내용 - saju.analysis에서 가져옴
+            const analysis = saju.analysis || {};
+            document.getElementById('analysis-summary').textContent = analysis.summary || '-';
+            document.getElementById('analysis-personality').textContent = analysis.personality || '-';
+            document.getElementById('analysis-career').textContent = analysis.career || '-';
+            document.getElementById('analysis-relationship').textContent = analysis.relationship || '-';
+            document.getElementById('analysis-advice').textContent = analysis.advice || '-';
+        }
+
+        // 기간별 운세 렌더링
+        function renderPeriodContents(periods) {
+            const container = document.getElementById('periodContents');
+            container.innerHTML = '';
+
+            for (const [key, period] of Object.entries(periods)) {
+                const content = document.createElement('div');
+                content.className = `period-content ${period.level}`;
+                content.id = `period-${key}`;
+                if (key === 'daily') content.classList.add('active');
+                content.textContent = period.text;
+                container.appendChild(content);
+            }
+        }
+
+        // 기간 탭 클릭
+        document.getElementById('periodTabs').addEventListener('click', (e) => {
+            if (e.target.classList.contains('period-tab')) {
+                // 탭 활성화
+                document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // 콘텐츠 표시
+                const period = e.target.dataset.period;
+                document.querySelectorAll('.period-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`period-${period}`).classList.add('active');
+            }
+        });
+
+        // 사주 풀이 탭 클릭
+        document.getElementById('analysisTabs').addEventListener('click', (e) => {
+            if (e.target.classList.contains('analysis-tab')) {
+                // 탭 활성화
+                document.querySelectorAll('.analysis-tab').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // 콘텐츠 표시
+                const tab = e.target.dataset.tab;
+                document.querySelectorAll('.analysis-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`analysis-${tab}`).classList.add('active');
+            }
+        });
+
+        // 카테고리 모달 열기
+        function openCategoryModal(key) {
+            if (!fortuneData) return;
+
+            const cat = fortuneData.categories[key];
+            document.getElementById('modalIcon').textContent = cat.icon;
+            document.getElementById('modalTitle').textContent = cat.name;
+            document.getElementById('modalStars').textContent = '★'.repeat(cat.stars) + '☆'.repeat(5 - cat.stars);
+            document.getElementById('modalText').textContent = cat.text;
+            document.getElementById('categoryModal').classList.add('active');
+        }
+
+        // 카테고리 모달 닫기
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('active');
+        }
+
+        // ESC로 모달 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCategoryModal();
+            }
+        });
+
+        // 엔터키로 조회
+        document.getElementById('fortuneName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') getFortune();
+        });
+        document.getElementById('fortuneBirth').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') getFortune();
+        });
+
+        // 이전 입력값 복원 및 기본값 설정
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedName = localStorage.getItem('fortune_name');
+            const savedBirth = localStorage.getItem('fortune_birth');
+            if (savedName) document.getElementById('fortuneName').value = savedName;
+            if (savedBirth) document.getElementById('fortuneBirth').value = savedBirth;
+
+            // 운세 날짜 기본값: 오늘
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('fortuneTarget').value = `${yyyy}-${mm}-${dd}`;
+        });
+
+        // 입력값 저장
+        document.getElementById('fortuneName').addEventListener('change', (e) => {
+            localStorage.setItem('fortune_name', e.target.value);
+        });
+        document.getElementById('fortuneBirth').addEventListener('change', (e) => {
+            localStorage.setItem('fortune_birth', e.target.value);
+        });
+    </script>
+</body>
+</html>

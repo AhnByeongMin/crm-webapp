@@ -16,6 +16,7 @@ import time
 from contextlib import contextmanager
 from functools import wraps
 from typing import Any, Callable, Generator, TypeVar, Optional
+import os
 from password_helper import hash_password, verify_password, is_hashed
 
 logger = logging.getLogger('crm')
@@ -38,12 +39,12 @@ def log_slow_query(func: F) -> F:
         return result
     return wrapper  # type: ignore
 
-# PostgreSQL 연결 설정
+# PostgreSQL 연결 설정 (환경변수 우선, 폴백으로 기본값)
 DB_CONFIG = {
-    'host': '127.0.0.1',
-    'database': 'crm_db',
-    'user': 'crm_user',
-    'password': 'crm_password_2024'
+    'host': os.environ.get('DB_HOST', '127.0.0.1'),
+    'database': os.environ.get('DB_NAME', 'crm_db'),
+    'user': os.environ.get('DB_USER', 'crm_user'),
+    'password': os.environ.get('DB_PASSWORD', 'crm_password_2024')
 }
 
 # 연결 풀 (Thread-safe)
@@ -340,7 +341,7 @@ def load_all_users_detail() -> list[dict[str, Any]]:
         ''')
         return [dict(row) for row in cursor.fetchall()]
 
-def create_user(username: str, password: str, role: str, status: str = 'active', team: Optional[str] = None) -> bool:
+def create_user(username: str, password: str, role: str, status: str = 'active', team: Optional[str] = None, join_date: Optional[str] = None) -> bool:
     """새 사용자 생성 (관리자용) - 비밀번호는 bcrypt로 해싱"""
     # 비밀번호 해싱
     hashed_pw = hash_password(password)
@@ -350,9 +351,9 @@ def create_user(username: str, password: str, role: str, status: str = 'active',
             cursor = conn.cursor()
             try:
                 cursor.execute('''
-                    INSERT INTO users (username, password, role, status, team)
-                    VALUES (%s, %s, %s, %s, %s)
-                ''', (username, hashed_pw, role, status, team))
+                    INSERT INTO users (username, password, role, status, team, join_date)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                ''', (username, hashed_pw, role, status, team, join_date))
                 conn.commit()
                 logger.info(f"User created: {username} (role: {role})")
                 return True
@@ -360,25 +361,42 @@ def create_user(username: str, password: str, role: str, status: str = 'active',
                 conn.rollback()
                 return False  # 중복 username
 
-def delete_user(user_id: int) -> bool:
-    """사용자 삭제 (관리자용)"""
+def delete_user(user_id: int) -> tuple[bool, str]:
+    """사용자 삭제 (관리자용) - 비활성 상태인 경우에만 삭제 가능"""
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            # 먼저 사용자 상태 확인
+            cursor.execute('SELECT status, username FROM users WHERE id = %s', (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return False, '사용자를 찾을 수 없습니다.'
+            if user['status'] == 'active':
+                return False, '활성 상태의 사용자는 삭제할 수 없습니다. 먼저 비활성화해주세요.'
+            # 비활성 상태인 경우에만 삭제 (CASCADE로 KPI 점수도 함께 삭제됨)
             cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
             conn.commit()
-            return cursor.rowcount > 0
+            return cursor.rowcount > 0, '삭제되었습니다.'
 
 def update_user_status(user_id: int, status: str) -> bool:
-    """사용자 활성/비활성 상태 변경"""
+    """사용자 활성/비활성 상태 변경 (비활성화 시 날짜 기록)"""
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE users
-                SET status = %s
-                WHERE id = %s
-            ''', (status, user_id))
+            if status == 'inactive':
+                # 비활성화 시 현재 날짜 기록
+                cursor.execute('''
+                    UPDATE users
+                    SET status = %s, inactive_date = CURRENT_DATE
+                    WHERE id = %s
+                ''', (status, user_id))
+            else:
+                # 활성화 시 inactive_date 초기화
+                cursor.execute('''
+                    UPDATE users
+                    SET status = %s, inactive_date = NULL
+                    WHERE id = %s
+                ''', (status, user_id))
             conn.commit()
             return cursor.rowcount > 0
 
@@ -405,6 +423,19 @@ def update_user_role(user_id: int, role: str) -> bool:
                 SET role = %s
                 WHERE id = %s
             ''', (role, user_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+def update_user_join_date(user_id: int, join_date: Optional[str]) -> bool:
+    """사용자 입사일 변경"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users
+                SET join_date = %s
+                WHERE id = %s
+            ''', (join_date, user_id))
             conn.commit()
             return cursor.rowcount > 0
 
@@ -2065,3 +2096,306 @@ def get_memo_counts(user_id: str) -> dict[str, int]:
         ''', (user_id, user_id))
         row = cursor.fetchone()
         return dict(row) if row else {'total_memos': 0, 'root_memos': 0, 'favorite_memos': 0, 'total_folders': 0}
+
+
+# ==================== KPI 점수 관리 ====================
+
+def get_kpi_categories() -> list[dict]:
+    """KPI 카테고리 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, name, description, category_type, sort_order, is_active,
+                   created_at, updated_at
+            FROM kpi_categories
+            WHERE is_active = true
+            ORDER BY sort_order, id
+        ''')
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def create_kpi_category(name: str, description: str) -> int:
+    """KPI 카테고리 생성"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 현재 최대 sort_order 조회
+        cursor.execute('SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM kpi_categories')
+        next_order = cursor.fetchone()['next_order']
+
+        cursor.execute('''
+            INSERT INTO kpi_categories (name, description, sort_order)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        ''', (name, description, next_order))
+        category_id = cursor.fetchone()['id']
+        conn.commit()
+        return category_id
+
+
+def update_kpi_category(category_id: int, name: str, description: str) -> bool:
+    """KPI 카테고리 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE kpi_categories
+            SET name = %s, description = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''', (name, description, category_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def delete_kpi_category(category_id: int) -> bool:
+    """KPI 카테고리 삭제 (soft delete)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE kpi_categories
+            SET is_active = false, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''', (category_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def reorder_kpi_categories(orders: list[dict]) -> None:
+    """KPI 카테고리 순서 변경"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        for item in orders:
+            cursor.execute('''
+                UPDATE kpi_categories
+                SET sort_order = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            ''', (item['sort_order'], item['id']))
+        conn.commit()
+
+
+def get_kpi_consultants_with_scores(year: int, month: int) -> list[dict]:
+    """상담사 목록과 카테고리별 점수 합계 조회 (팀별, 입사일순)
+
+    비활성 사용자 표시 규칙:
+    - 활성 사용자: 항상 표시
+    - 비활성 사용자: 비활성화된 월까지만 표시 (이후 월부터 미표시)
+      예: 1월 15일 비활성화 → 1월까지 표시, 2월부터 미표시
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 상담사 목록 (관리자 제외)
+        # 비활성 사용자는 비활성화된 달까지만 표시
+        # 조회 조건: 조회년월 <= 비활성화년월 일 때 표시
+        # 예: 1월 29일 비활성화 → 1월 조회 시 표시, 2월 조회 시 미표시
+        cursor.execute('''
+            SELECT u.id, u.username, u.team, u.join_date, u.status, u.inactive_date,
+                   tso.sort_order as team_order
+            FROM users u
+            LEFT JOIN team_sort_order tso ON u.team = tso.team_name
+            WHERE u.role = '상담사'
+              AND (
+                  u.status = 'active'
+                  OR (
+                      u.status = 'inactive'
+                      AND u.inactive_date IS NOT NULL
+                      AND (
+                          %s < EXTRACT(YEAR FROM u.inactive_date)
+                          OR (
+                              %s = EXTRACT(YEAR FROM u.inactive_date)
+                              AND %s <= EXTRACT(MONTH FROM u.inactive_date)
+                          )
+                      )
+                  )
+              )
+            ORDER BY COALESCE(tso.sort_order, 999), u.join_date ASC NULLS LAST, u.id
+        ''', (year, year, month))
+        consultants = [dict(row) for row in cursor.fetchall()]
+
+        # 각 상담사의 카테고리별 점수 합계 조회
+        for consultant in consultants:
+            cursor.execute('''
+                SELECT ks.category_id,
+                       SUM(ks.score) as score,
+                       COUNT(*) as count,
+                       kc.name as category_name
+                FROM kpi_scores ks
+                JOIN kpi_categories kc ON ks.category_id = kc.id
+                WHERE ks.user_id = %s
+                  AND EXTRACT(YEAR FROM ks.score_date) = %s
+                  AND EXTRACT(MONTH FROM ks.score_date) = %s
+                  AND kc.is_active = true
+                GROUP BY ks.category_id, kc.name, kc.sort_order
+                ORDER BY kc.sort_order
+            ''', (consultant['id'], year, month))
+            consultant['scores'] = [dict(row) for row in cursor.fetchall()]
+
+            # join_date를 문자열로 변환
+            if consultant.get('join_date'):
+                consultant['join_date'] = str(consultant['join_date'])
+
+        return consultants
+
+
+def get_kpi_scores(year: int, month: int, user_id: int = None, category_id: int = None) -> list[dict]:
+    """KPI 점수 로우데이터 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = '''
+            SELECT ks.id, ks.user_id, ks.category_id, ks.score, ks.score_date, ks.note,
+                   u.username, u.team, kc.name as category_name
+            FROM kpi_scores ks
+            JOIN users u ON ks.user_id = u.id
+            JOIN kpi_categories kc ON ks.category_id = kc.id
+            WHERE EXTRACT(YEAR FROM ks.score_date) = %s
+              AND EXTRACT(MONTH FROM ks.score_date) = %s
+              AND kc.is_active = true
+        '''
+        params = [year, month]
+
+        if user_id:
+            query += ' AND ks.user_id = %s'
+            params.append(user_id)
+
+        if category_id:
+            query += ' AND ks.category_id = %s'
+            params.append(category_id)
+
+        query += ' ORDER BY ks.score_date DESC, u.username, kc.sort_order'
+
+        cursor.execute(query, params)
+        results = [dict(row) for row in cursor.fetchall()]
+
+        # score_date를 문자열로 변환
+        for r in results:
+            if r.get('score_date'):
+                r['score_date'] = str(r['score_date'])
+
+        return results
+
+
+def save_kpi_scores(scores: list[dict], created_by: str = None) -> None:
+    """KPI 점수 저장 (로우데이터 추가)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        for score in scores:
+            cursor.execute('''
+                INSERT INTO kpi_scores (user_id, category_id, score, score_date, note, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (
+                score['user_id'],
+                score['category_id'],
+                score.get('score', 0),
+                score['score_date'],
+                score.get('note', ''),
+                created_by
+            ))
+        conn.commit()
+
+
+def delete_kpi_score(score_id: int) -> bool:
+    """KPI 점수 삭제"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM kpi_scores WHERE id = %s', (score_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def update_kpi_score(score_id: int, score_date: str, score: float, note: str = '', updated_by: str = None) -> bool:
+    """KPI 점수 수정"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE kpi_scores
+            SET score_date = %s, score = %s, note = %s, updated_at = CURRENT_TIMESTAMP, updated_by = %s
+            WHERE id = %s
+        ''', (score_date, score, note, updated_by, score_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def get_kpi_user_history(user_id: int, year: int = None, month: int = None) -> list[dict]:
+    """사용자의 KPI 점수 로우데이터 이력"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = '''
+            SELECT ks.id, ks.category_id, ks.score, ks.score_date, ks.note,
+                   kc.name as category_name, ks.created_by, ks.updated_by,
+                   ks.created_at, ks.updated_at
+            FROM kpi_scores ks
+            JOIN kpi_categories kc ON ks.category_id = kc.id
+            WHERE ks.user_id = %s AND kc.is_active = true
+        '''
+        params = [user_id]
+
+        if year:
+            query += ' AND EXTRACT(YEAR FROM ks.score_date) = %s'
+            params.append(year)
+
+        if month:
+            query += ' AND EXTRACT(MONTH FROM ks.score_date) = %s'
+            params.append(month)
+
+        query += ' ORDER BY ks.score_date DESC, kc.sort_order'
+
+        cursor.execute(query, params)
+        results = [dict(row) for row in cursor.fetchall()]
+
+        for r in results:
+            if r.get('score_date'):
+                r['score_date'] = str(r['score_date'])
+            if r.get('created_at'):
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M')
+            if r.get('updated_at'):
+                r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M')
+
+        return results
+
+
+def get_kpi_category_scores(category_id: int, year: int, month: int) -> list[dict]:
+    """특정 카테고리의 로우데이터 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT ks.id, ks.user_id, ks.score, ks.score_date, ks.note,
+                   u.username, u.team,
+                   tso.sort_order as team_order
+            FROM kpi_scores ks
+            JOIN users u ON ks.user_id = u.id
+            LEFT JOIN team_sort_order tso ON u.team = tso.team_name
+            WHERE ks.category_id = %s
+              AND EXTRACT(YEAR FROM ks.score_date) = %s
+              AND EXTRACT(MONTH FROM ks.score_date) = %s
+            ORDER BY ks.score_date DESC, COALESCE(tso.sort_order, 999), u.username
+        ''', (category_id, year, month))
+        results = [dict(row) for row in cursor.fetchall()]
+
+        for r in results:
+            if r.get('score_date'):
+                r['score_date'] = str(r['score_date'])
+
+        return results
+
+
+def get_kpi_user_category_scores(user_id: int, category_id: int, year: int, month: int) -> list[dict]:
+    """특정 사용자의 특정 카테고리 로우데이터 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT ks.id, ks.score, ks.score_date, ks.note,
+                   ks.created_by, ks.updated_by, ks.created_at, ks.updated_at
+            FROM kpi_scores ks
+            WHERE ks.user_id = %s AND ks.category_id = %s
+              AND EXTRACT(YEAR FROM ks.score_date) = %s
+              AND EXTRACT(MONTH FROM ks.score_date) = %s
+            ORDER BY ks.score_date DESC
+        ''', (user_id, category_id, year, month))
+        results = [dict(row) for row in cursor.fetchall()]
+
+        for r in results:
+            if r.get('score_date'):
+                r['score_date'] = str(r['score_date'])
+            if r.get('created_at'):
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M')
+            if r.get('updated_at'):
+                r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M')
+
+        return results

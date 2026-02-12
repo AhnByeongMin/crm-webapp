@@ -579,6 +579,34 @@
             font-size: 14px;
         }
 
+        /* 다크모드 모달 */
+        [data-theme="dark"] .modal {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .modal-content {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            color: #e8e8e8;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .modal-header h2 {
+            color: #fff;
+        }
+        [data-theme="dark"] .close-btn {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .close-btn:hover {
+            color: #fff;
+        }
+        [data-theme="dark"] .form-group label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .form-group input,
+        [data-theme="dark"] .form-group textarea,
+        [data-theme="dark"] .form-group select {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
         /* 다크모드 상세 모달 */
         [data-theme="dark"] .detail-info-value {
             background: var(--bg-tertiary);
@@ -1573,7 +1601,7 @@
                     document.body.classList.add('has-banner');
                 }
             } catch (error) {
-                console.log('예약 체크 실패:', error);
+                console.debug('예약 체크 실패:', error);
             }
         }
 
@@ -2040,9 +2068,9 @@
 
         // 상세보기
         function viewDetail(id) {
-            console.log('viewDetail - id:', id);
+            console.debug('viewDetail - id:', id);
             currentPromoId = id;
-            console.log('viewDetail - currentPromoId 설정:', currentPromoId);
+            console.debug('viewDetail - currentPromoId 설정:', currentPromoId);
             fetch(`/api/promotions/${id}`)
                 .then(res => res.json())
                 .then(promo => {
@@ -2113,12 +2141,21 @@
                             ${promo.updated_at ? `<div class="detail-footer-item">🔄 최종 수정: ${new Date(promo.updated_at).toLocaleString('ko-KR')}</div>` : ''}
                         </div>
                     `;
-                    document.getElementById('detailModal').classList.add('show');
+                    const detailModal = document.getElementById('detailModal');
+                    // 인라인 스타일 초기화 후 show
+                    detailModal.style.display = '';
+                    detailModal.style.backdropFilter = '';
+                    detailModal.classList.add('show');
                 });
         }
 
         function closeDetailModal() {
-            document.getElementById('detailModal').classList.remove('show');
+            const detailModal = document.getElementById('detailModal');
+            if (detailModal) {
+                detailModal.classList.remove('show');
+                detailModal.style.display = 'none';
+                detailModal.style.backdropFilter = 'none';
+            }
             currentPromoId = null;
         }
 
@@ -2170,8 +2207,9 @@
         }
 
         function editFromDetail() {
+            console.log('[DEBUG] editFromDetail 호출됨');
             const promoId = currentPromoId;  // closeDetailModal 전에 ID 저장
-            console.log('editFromDetail - currentPromoId:', currentPromoId, 'promoId:', promoId);
+            console.log('[DEBUG] editFromDetail - currentPromoId:', currentPromoId, 'promoId:', promoId);
 
             // 상세 모달에서 수정 버튼을 눌렀음을 표시
             isFromDetailModal = true;
@@ -2189,7 +2227,11 @@
             document.getElementById('modalTitle').textContent = '새 프로모션';
             document.getElementById('promotionForm').reset();
             document.getElementById('promoId').value = '';
-            document.getElementById('editModal').classList.add('show');
+            const editModal = document.getElementById('editModal');
+            // 인라인 스타일 초기화 후 show
+            editModal.style.display = '';
+            editModal.style.backdropFilter = '';
+            editModal.classList.add('show');
         }
 
         // 수정 모달
@@ -2230,16 +2272,48 @@
                 });
         }
 
+        // 모든 모달 오버레이 강제 닫기 (검은 화면 버그 방지)
+        function closeAllOverlays() {
+            // 모든 .modal 클래스 요소 강제 닫기
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                modal.style.backdropFilter = 'none';
+            });
+
+            // helpModal (active 클래스 사용)
+            const helpModal = document.getElementById('helpModal');
+            if (helpModal) {
+                helpModal.classList.remove('active');
+                helpModal.style.display = 'none';
+            }
+
+            // alert 모달
+            const alertOverlay = document.getElementById('alertModalOverlay');
+            if (alertOverlay) {
+                alertOverlay.classList.remove('active');
+                alertOverlay.style.display = 'none';
+            }
+
+            // 상태 초기화
+            currentPromoId = null;
+            isFromDetailModal = false;
+            pendingEditData = null;
+            shouldOpenEditModal = false;  // 모달 재오픈 방지
+        }
+
         function closeModal() {
             // 잠금 해제
             unlockPromotion(currentEditingPromoId);
 
-            document.getElementById('editModal').classList.remove('show');
+            // 모든 모달 오버레이 강제 닫기 (backdrop-filter 렌더링 버그 포함 처리)
+            closeAllOverlays();
         }
 
         // 폼 제출
         document.getElementById('promotionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            console.log('[DEBUG] 폼 제출 시작');
 
             const id = document.getElementById('promoId').value;
 
@@ -2273,21 +2347,30 @@
                     body: JSON.stringify(data)
                 });
 
+                console.log('[DEBUG] response.ok:', response.ok, 'status:', response.status);
                 if (response.ok) {
                     showSimpleToast('성공', id ? '프로모션이 수정되었습니다.' : '프로모션이 등록되었습니다.', 'success');
-                    closeModal();
-                    // 필터 옵션 로드 완료 후 프로모션 목록 로드 (순차 실행으로 렌더링 충돌 방지)
-                    loadFilters().then(() => {
-                        loadPromotions();
-                    }).catch(() => {
-                        loadPromotions(); // 필터 로드 실패해도 목록은 로드
-                    });
+                    // 현재 필터 상태를 URL 파라미터로 저장 후 새로고침
+                    const params = new URLSearchParams();
+                    const search = document.getElementById('searchInput').value;
+                    const category = document.getElementById('categoryFilter').value;
+                    const product = document.getElementById('productFilter').value;
+                    const promotion = document.getElementById('promotionFilter').value;
+                    if (search) params.set('search', search);
+                    if (category) params.set('category', category);
+                    if (product) params.set('product', product);
+                    if (selectedChannel) params.set('channel', selectedChannel);
+                    if (promotion) params.set('promotion', promotion);
+
+                    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+                    window.location.href = newUrl;
                 } else {
                     const error = await response.json();
+                    console.log('[DEBUG] 저장 실패:', error);
                     showSimpleToast('오류', error.error || '오류가 발생했습니다.', 'error');
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('[DEBUG] catch error:', error);
                 showSimpleToast('오류', '오류가 발생했습니다.', 'error');
             }
         });
@@ -2312,13 +2395,20 @@
 
                 if (response.ok) {
                     showSimpleToast('성공', '프로모션이 삭제되었습니다.', 'success');
-                    closeDetailModal();
-                    // 필터 옵션 로드 완료 후 프로모션 목록 로드 (순차 실행으로 렌더링 충돌 방지)
-                    loadFilters().then(() => {
-                        loadPromotions();
-                    }).catch(() => {
-                        loadPromotions();
-                    });
+                    // 현재 필터 상태를 URL 파라미터로 저장 후 새로고침
+                    const params = new URLSearchParams();
+                    const search = document.getElementById('searchInput').value;
+                    const category = document.getElementById('categoryFilter').value;
+                    const product = document.getElementById('productFilter').value;
+                    const promotion = document.getElementById('promotionFilter').value;
+                    if (search) params.set('search', search);
+                    if (category) params.set('category', category);
+                    if (product) params.set('product', product);
+                    if (selectedChannel) params.set('channel', selectedChannel);
+                    if (promotion) params.set('promotion', promotion);
+
+                    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+                    window.location.href = newUrl;
                 } else {
                     showSimpleToast('오류', '삭제에 실패했습니다.', 'error');
                 }
@@ -2440,9 +2530,38 @@
         document.getElementById('productFilter').addEventListener('change', loadPromotions);
         document.getElementById('promotionFilter').addEventListener('change', loadPromotions);
 
+        // URL 파라미터에서 필터 상태 복원
+        function restoreFiltersFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('search')) {
+                document.getElementById('searchInput').value = params.get('search');
+                document.getElementById('searchInputMobile').value = params.get('search');
+            }
+            if (params.get('category')) {
+                document.getElementById('categoryFilter').value = params.get('category');
+                // 카테고리 변경 시 상품 필터 옵션도 업데이트 (loadPromotions 호출 없이)
+                const selectedCategory = params.get('category');
+                const productFilter = document.getElementById('productFilter');
+                if (selectedCategory && categoryProductMap[selectedCategory]) {
+                    const products = categoryProductMap[selectedCategory] || [];
+                    productFilter.innerHTML = '<option value="">전체 상품</option>' +
+                        products.map(p => `<option value="${p}">${p}</option>`).join('');
+                }
+            }
+            if (params.get('product')) document.getElementById('productFilter').value = params.get('product');
+            if (params.get('channel')) selectedChannel = params.get('channel');
+            if (params.get('promotion')) document.getElementById('promotionFilter').value = params.get('promotion');
+        }
+
         // 초기 로드
-        loadFilters();
-        loadPromotions();
+        loadFilters().then(() => {
+            restoreFiltersFromURL();
+            if (selectedChannel) renderChannelFilter();
+            loadPromotions();
+        }).catch(() => {
+            restoreFiltersFromURL();
+            loadPromotions();
+        });
 
         // Socket.IO 초기화 (자동 재연결 설정)
         const socket = io({
@@ -2603,6 +2722,7 @@
         let lockedBy = null;
         let pendingEditData = null;  // 잠금 확인 대기 중인 데이터
         let isFromDetailModal = false;  // 상세 모달에서 수정 버튼을 눌렀는지 여부
+        let shouldOpenEditModal = false;  // 모달이 열려야 하는지 여부 플래그 (저장 완료 후 재오픈 방지)
 
         // 잠금 알림 표시 (alert 대신 toast, 상황에 따라 클릭 동작 다름)
         function showLockNotification(message, promoId, fromDetailModal) {
@@ -2651,6 +2771,7 @@
         // 프로모션 수정 잠금 시도
         function attemptLockPromotion(promoId, promoData) {
             pendingEditData = promoData;  // 데이터 임시 저장
+            shouldOpenEditModal = true;  // 모달 열기 허용 플래그 설정
             socket.emit('lock_promotion_edit', {
                 promo_id: promoId,
                 username: currentUsername
@@ -2696,9 +2817,11 @@
             const promoId = data.promo_id;
 
             // 잠금 성공 - 대기 중인 데이터가 있고, 본인이 잠근 경우 모달 열기
-            if (pendingEditData && data.is_locked && data.locked_by === currentUsername) {
+            // shouldOpenEditModal 플래그로 저장 후 재오픈 방지
+            if (pendingEditData && data.is_locked && data.locked_by === currentUsername && shouldOpenEditModal) {
                 const promo = pendingEditData;
                 pendingEditData = null;  // 초기화
+                shouldOpenEditModal = false;  // 플래그 리셋
 
                 // 상세 모달에서 온 경우 상세 모달 닫기
                 if (isFromDetailModal) {
@@ -2726,7 +2849,11 @@
                 document.getElementById('content').value = promo.content;
                 document.getElementById('startDate').value = promo.start_date;
                 document.getElementById('endDate').value = promo.end_date === '무기한' ? '' : promo.end_date;
-                document.getElementById('editModal').classList.add('show');
+                const editModal = document.getElementById('editModal');
+                // 인라인 스타일 초기화 후 show
+                editModal.style.display = '';
+                editModal.style.backdropFilter = '';
+                editModal.classList.add('show');
             }
 
             // 현재 수정 모달이 열려있고, 해당 프로모션인 경우
@@ -2888,6 +3015,25 @@
 
         // 모달 외부 클릭 시 닫기
         document.addEventListener('DOMContentLoaded', () => {
+            // editModal 외부 클릭 시 닫기
+            const editModal = document.getElementById('editModal');
+            if (editModal) {
+                editModal.addEventListener('click', (e) => {
+                    if (e.target === editModal) {
+                        closeModal();
+                    }
+                });
+            }
+
+            // detailModal 외부 클릭 시 닫기
+            const detailModal = document.getElementById('detailModal');
+            if (detailModal) {
+                detailModal.addEventListener('click', (e) => {
+                    if (e.target === detailModal) {
+                        closeDetailModal();
+                    }
+                });
+            }
 
             const helpModal = document.getElementById('helpModal');
             if (helpModal) {
@@ -2896,6 +3042,24 @@
                         closeHelpModal();
                     }
                 });
+            }
+        });
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const editModal = document.getElementById('editModal');
+                const detailModal = document.getElementById('detailModal');
+                const helpModal = document.getElementById('helpModal');
+
+                // 열려있는 모달 순서대로 닫기 (가장 위에 있는 것부터)
+                if (editModal && editModal.classList.contains('show')) {
+                    closeModal();
+                } else if (detailModal && detailModal.classList.contains('show')) {
+                    closeDetailModal();
+                } else if (helpModal && helpModal.classList.contains('active')) {
+                    closeHelpModal();
+                }
             }
         });
     </script>

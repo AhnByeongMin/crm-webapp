@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>KPI 점수 관리</title>
+
+    <!-- PWA 메타 태그 -->
+    <meta name="description" content="KPI 점수 관리">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="하루CRM">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="/static/js/sw-register.js"></script>
+    <script src="/static/js/sw-auto-update.js"></script>
+    <script src="/static/js/push-notifications.js" defer></script>
+
+    {% include 'includes/header.html' %}
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--bg-primary, #f5f5f5); min-height: 100vh; color: var(--text-primary, #333); }
+
+        .page-container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+
+        /* 컨트롤 영역 */
+        .controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background: var(--bg-secondary, white); padding: 15px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .control-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .month-selector { display: flex; align-items: center; gap: 8px; }
+        .month-selector button { width: 36px; height: 36px; border: 1px solid var(--border-color, #ddd); background: var(--bg-secondary, white); color: var(--text-primary, #333); border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .month-selector button:hover { background: var(--bg-hover, #f0f0f0); }
+        .month-display { font-size: 18px; font-weight: 600; min-width: 130px; text-align: center; color: var(--text-primary, #333); }
+
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-secondary { background: var(--bg-tertiary, #6c757d); color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+        /* 메인 테이블 */
+        .table-container { background: var(--bg-secondary, white); border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; }
+        .table-wrapper { overflow: auto; max-height: calc(100vh - 180px); }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 600px; }
+        th, td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--border-color, #e9ecef); }
+        th { background: var(--bg-tertiary, #f8f9fa); font-weight: 600; color: var(--text-secondary, #495057); position: sticky; top: 0; z-index: 10; white-space: nowrap; }
+        th.name-col { text-align: left; min-width: 100px; position: sticky; left: 0; top: 0; background: var(--bg-tertiary, #f8f9fa); z-index: 12; }
+        td { color: var(--text-primary, #333); }
+        td.name-col { text-align: left; position: sticky; left: 0; background: var(--bg-secondary, white); z-index: 1; font-weight: 500; }
+        tr:hover td { background: var(--bg-hover, #f8f9fa); }
+        tr:hover td.name-col { background: var(--bg-hover, #f0f0f0); }
+
+        /* 팀 구분 */
+        .team-header { background: var(--bg-tertiary, #e9ecef) !important; }
+        .team-header td { text-align: left; padding-left: 20px; font-weight: 700; color: var(--text-secondary, #495057); background: var(--bg-tertiary, #e9ecef) !important; }
+
+        /* 점수 셀 */
+        .score-cell { cursor: pointer; transition: all 0.2s; min-width: 60px; }
+        .score-cell:hover { background: rgba(102, 126, 234, 0.15) !important; }
+        .score-cell.has-score { font-weight: 500; color: var(--text-primary, #333); }
+        .score-cell.no-score { color: var(--text-muted, #adb5bd); }
+        .total-cell { font-weight: 700; background: var(--bg-tertiary, #f8f9fa) !important; color: #667eea; }
+
+        /* 검색 가능한 셀렉트 */
+        .searchable-select { position: relative; }
+        .searchable-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--bg-secondary, white); color: var(--text-primary, #333); }
+        .searchable-input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        .searchable-dropdown { position: absolute; top: 100%; left: 0; right: 0; max-height: 200px; overflow-y: auto; background: var(--bg-secondary, white); border: 1px solid var(--border-color, #ddd); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; display: none; margin-top: 4px; }
+        .searchable-dropdown.show { display: block; }
+        .searchable-option { padding: 10px 12px; cursor: pointer; font-size: 14px; color: var(--text-primary, #333); border-bottom: 1px solid var(--border-color, #eee); }
+        .searchable-option:last-child { border-bottom: none; }
+        .searchable-option:hover, .searchable-option.highlighted { background: rgba(102, 126, 234, 0.1); }
+        .searchable-option.selected { background: #667eea; color: white; }
+
+        /* 다크모드 searchable dropdown */
+        [data-theme="dark"] .searchable-dropdown { background: #16213e; border-color: #2a3f5f; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        [data-theme="dark"] .searchable-option { background: #16213e; color: #e8e8e8; border-bottom-color: #2a3f5f; }
+        [data-theme="dark"] .searchable-option:hover, [data-theme="dark"] .searchable-option.highlighted { background: #1f3460; }
+        [data-theme="dark"] .searchable-option.selected { background: #667eea; color: white; }
+        .searchable-no-result { padding: 10px 12px; color: var(--text-muted, #adb5bd); text-align: center; font-size: 13px; }
+
+        /* 카테고리 헤더 클릭 */
+        th.category-header { cursor: pointer; }
+        th.category-header:hover { background: var(--bg-hover, #e9ecef); }
+
+        /* 모달 공통 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: var(--bg-secondary, white); border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; color: var(--text-primary, #333); }
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border-color, #e9ecef); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; color: var(--text-primary, #333); }
+        .modal-close { width: 32px; height: 32px; border: none; background: var(--bg-tertiary, #f0f0f0); color: var(--text-primary, #333); border-radius: 6px; cursor: pointer; font-size: 18px; }
+        .modal-close:hover { background: var(--bg-hover, #e0e0e0); }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color, #e9ecef); display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* 폼 */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-secondary, #495057); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 6px; font-size: 14px; background: var(--bg-secondary, white); color: var(--text-primary, #333); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        /* 카테고리 관리 - 드래그앤드롭 */
+        .category-list { margin-top: 15px; }
+        .category-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-tertiary, #f8f9fa); border-radius: 8px; margin-bottom: 8px; cursor: grab; transition: all 0.2s; border: 2px solid transparent; }
+        .category-item:active { cursor: grabbing; }
+        .category-item.dragging { opacity: 0.5; border: 2px dashed #667eea; }
+        .category-item.drag-over { border: 2px solid #667eea; background: rgba(102, 126, 234, 0.1); }
+        .category-item .drag-handle { color: var(--text-muted, #adb5bd); font-size: 18px; }
+        .category-item .category-name { flex: 1; font-weight: 500; color: var(--text-primary, #333); }
+        .category-item .category-actions { display: flex; gap: 5px; }
+        .category-item button { width: 28px; height: 28px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .category-item .btn-move { background: #6c757d; color: white; font-size: 10px; }
+        .category-item .btn-move:hover:not(:disabled) { background: #5a6268; }
+        .category-item .btn-move:disabled { opacity: 0.3; cursor: not-allowed; }
+        .category-item .btn-edit { background: #ffc107; color: #212529; }
+        .category-item .btn-delete { background: #dc3545; color: white; }
+
+
+        /* 상담사 상세 모달 */
+        .consultant-detail-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color, #e9ecef); }
+        .consultant-avatar { width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 600; }
+        .consultant-info h4 { font-size: 18px; margin-bottom: 4px; color: var(--text-primary, #333); }
+        .consultant-info span { color: var(--text-muted, #6c757d); font-size: 14px; }
+        .score-history { margin-top: 15px; }
+        .score-history-item { display: flex; justify-content: space-between; padding: 10px 12px; background: var(--bg-tertiary, #f8f9fa); border-radius: 6px; margin-bottom: 8px; }
+        .score-history-item span:first-child { color: var(--text-primary, #333); }
+        .score-history-item span:last-child { font-weight: 600; color: #667eea; }
+
+        /* 다크모드 변수 */
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #1f3460;
+            --bg-hover: #254070;
+            --text-primary: #e8e8e8;
+            --text-secondary: #b0b0b0;
+            --text-muted: #707070;
+            --border-color: #2a3f5f;
+        }
+
+        /* 다크모드 모달 오버레이 */
+        [data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .modal {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        /* 토스트 */
+        .kpi-toast { position: fixed; bottom: 20px; right: 20px; padding: 15px 20px; background: #333; color: white; border-radius: 8px; z-index: 2000; animation: kpiSlideIn 0.3s; }
+        .kpi-toast.success { background: #28a745; }
+        .kpi-toast.error { background: #dc3545; }
+        @keyframes kpiSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .page-container { padding: 10px; }
+            .controls { flex-direction: column; align-items: stretch; padding: 12px; }
+            .control-group { justify-content: center; }
+            .form-row { grid-template-columns: 1fr; }
+            .modal { max-width: 100%; margin: 10px; }
+            .btn { padding: 8px 14px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- 컨트롤 영역 -->
+        <div class="controls">
+            <div class="control-group">
+                <div class="month-selector">
+                    <button onclick="changeMonth(-1)" title="이전 달">◀</button>
+                    <span class="month-display" id="monthDisplay">2026년 1월</span>
+                    <button onclick="changeMonth(1)" title="다음 달">▶</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <button class="btn btn-primary" onclick="openScoreModal()">✏️ 개별 입력</button>
+                <button class="btn btn-primary" onclick="openBulkScoreModal()">📋 일괄 입력</button>
+                <button class="btn btn-warning" onclick="openCategoryModal()">📁 카테고리 관리</button>
+                <button class="btn btn-success" onclick="exportExcel()">📥 Excel 내보내기</button>
+            </div>
+        </div>
+
+        <!-- 메인 테이블 -->
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table id="kpiTable">
+                    <thead>
+                        <tr id="tableHeader">
+                            <th class="name-col">이름</th>
+                            <th>합계</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 점수 입력 모달 (개별) -->
+    <div class="modal-overlay" id="scoreModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>점수 입력</h3>
+                <button class="modal-close" onclick="closeModal('scoreModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>상담사 *</label>
+                        <div class="searchable-select" id="userSelectWrapper">
+                            <input type="text" id="scoreUserSearch" class="searchable-input" placeholder="이름 검색..." autocomplete="off">
+                            <input type="hidden" id="scoreUserSelect">
+                            <div class="searchable-dropdown" id="userDropdown"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>날짜 *</label>
+                        <input type="date" id="scoreDate">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>카테고리 *</label>
+                        <div class="searchable-select" id="categorySelectWrapper">
+                            <input type="text" id="scoreCategorySearch" class="searchable-input" placeholder="카테고리 검색..." autocomplete="off">
+                            <input type="hidden" id="scoreCategorySelect">
+                            <div class="searchable-dropdown" id="categoryDropdown"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>점수 *</label>
+                        <input type="number" id="scoreValue" step="1" placeholder="예: -1, 0.5, 1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>내용</label>
+                    <input type="text" id="scoreNote" placeholder="예: 렌탈료 안내 누락">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('scoreModal')">취소</button>
+                <button class="btn btn-primary" onclick="saveScore()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로우데이터 모달 (셀 클릭 시) -->
+    <div class="modal-overlay" id="rawDataModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="rawDataTitle">점수 상세</h3>
+                <button class="modal-close" onclick="closeModal('rawDataModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <span id="rawDataSummary" style="font-size: 14px; color: var(--text-secondary, #666);"></span>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openAddScoreFromRaw()">+ 점수 추가</button>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: var(--bg-tertiary, #f8f9fa);">
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">날짜</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border-color, #ddd);">점수</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">내용</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">등록/수정</th>
+                                <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color, #ddd);">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rawDataBody"></tbody>
+                    </table>
+                </div>
+                <div id="rawDataEmpty" style="text-align: center; padding: 40px; color: var(--text-muted, #adb5bd); display: none;">
+                    등록된 점수가 없습니다.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('rawDataModal')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 일괄 입력 모달 -->
+    <div class="modal-overlay" id="bulkScoreModal">
+        <div class="modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>점수 일괄 입력</h3>
+                <button class="modal-close" onclick="closeModal('bulkScoreModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: var(--bg-tertiary, #f8f9fa); border-left: 4px solid #667eea; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <div style="font-weight: bold; margin-bottom: 10px;">입력 형식 안내</div>
+                    <div style="font-size: 13px; color: var(--text-secondary, #666); line-height: 1.6;">
+                        <strong>형식:</strong> 이름, 날짜, 카테고리, 점수, 내용 (각 줄에 하나씩)<br>
+                        <strong>예시:</strong><br>
+                        <code style="background: var(--bg-secondary, #fff); padding: 2px 6px; border-radius: 3px;">이지영, 2026-01-15, 콜검수, -1, 렌탈료 안내 누락</code><br>
+                        <code style="background: var(--bg-secondary, #fff); padding: 2px 6px; border-radius: 3px;">김상담, 2026-01-20, 고객만족도, 1, 우수 응대</code><br>
+                        <span style="color: #dc3545;">* 내용은 생략 가능합니다.</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>점수 데이터 입력</label>
+                    <textarea id="bulkScoreData" rows="10" placeholder="이지영, 2026-01-15, 콜검수, -1, 렌탈료 안내 누락
+김상담, 2026-01-20, 고객만족도, 1, 우수 응대
+박상담, 2026-01-22, 콜검수, -0.5" style="font-family: monospace; font-size: 13px;"></textarea>
+                </div>
+                <div id="bulkPreviewSection" style="display: none;">
+                    <div style="font-weight: bold; margin-bottom: 10px;">미리보기 (<span id="bulkPreviewCount">0</span>건)</div>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color, #ddd); border-radius: 6px;">
+                        <table style="width: 100%; font-size: 13px;">
+                            <thead>
+                                <tr style="background: var(--bg-tertiary, #f8f9fa);">
+                                    <th style="padding: 8px; text-align: left;">상태</th>
+                                    <th style="padding: 8px; text-align: left;">이름</th>
+                                    <th style="padding: 8px; text-align: left;">날짜</th>
+                                    <th style="padding: 8px; text-align: left;">카테고리</th>
+                                    <th style="padding: 8px; text-align: center;">점수</th>
+                                    <th style="padding: 8px; text-align: left;">내용</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulkPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('bulkScoreModal')">취소</button>
+                <button class="btn btn-warning" onclick="previewBulkScore()">미리보기</button>
+                <button class="btn btn-primary" onclick="saveBulkScore()" id="bulkSaveBtn" disabled>저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리 관리 모달 -->
+    <div class="modal-overlay" id="categoryModal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>카테고리 관리</h3>
+                <button class="modal-close" onclick="closeModal('categoryModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>새 카테고리 추가</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="newCategoryName" placeholder="카테고리 이름" style="flex: 1;">
+                        <button class="btn btn-primary" onclick="addCategory()">추가</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>카테고리 순서 (드래그하여 변경)</label>
+                    <div class="category-list" id="categoryList">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('categoryModal')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리 수정 모달 -->
+    <div class="modal-overlay" id="editCategoryModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>카테고리 수정</h3>
+                <button class="modal-close" onclick="closeModal('editCategoryModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editCategoryId">
+                <div class="form-group">
+                    <label>카테고리 이름 *</label>
+                    <input type="text" id="editCategoryName">
+                </div>
+                <div class="form-group">
+                    <label>설명</label>
+                    <textarea id="editCategoryDesc" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editCategoryModal')">취소</button>
+                <button class="btn btn-primary" onclick="updateCategory()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상담사 상세 모달 -->
+    <div class="modal-overlay" id="consultantModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>상담사 점수 상세</h3>
+                <button class="modal-close" onclick="closeModal('consultantModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="consultant-detail-header">
+                    <div class="consultant-avatar" id="consultantAvatar">김</div>
+                    <div class="consultant-info">
+                        <h4 id="consultantName">김상담</h4>
+                        <span id="consultantTeam">CRM파트 · 입사일: 2020-01-01</span>
+                    </div>
+                </div>
+                <div class="score-history" id="scoreHistory">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('consultantModal')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리별 점수 모달 -->
+    <div class="modal-overlay" id="categoryScoreModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="categoryScoreTitle">카테고리 점수</h3>
+                <button class="modal-close" onclick="closeModal('categoryScoreModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">이름</th>
+                            <th style="text-align: left;">팀</th>
+                            <th>점수</th>
+                            <th style="text-align: left;">비고</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoryScoreBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('categoryScoreModal')">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth() + 1;
+        let categories = [];
+        let consultants = [];
+        let draggedItem = null;
+
+        // CSRF 토큰
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.content : '';
+        }
+
+        // 세션/인증 오류 처리
+        function handleAuthError(response) {
+            if (response.status === 401 || response.status === 403) {
+                const errorMsg = response.status === 401
+                    ? '세션이 만료되었습니다. 페이지를 새로고침합니다.'
+                    : 'CSRF 토큰이 만료되었습니다. 페이지를 새로고침합니다.';
+                showKpiToast(errorMsg, 'error');
+                setTimeout(() => location.reload(), 1500);
+                return true;
+            }
+            return false;
+        }
+
+        // 인증 오류를 처리하는 fetch 래퍼
+        async function fetchWithAuth(url, options = {}) {
+            const response = await fetch(url, options);
+            if (handleAuthError(response)) {
+                throw new Error('AUTH_ERROR');
+            }
+            return response;
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            updateMonthDisplay();
+            loadCategories();
+            loadData();
+        });
+
+        // 월 변경
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+            else if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+            updateMonthDisplay();
+            loadData();
+        }
+
+        function updateMonthDisplay() {
+            document.getElementById('monthDisplay').textContent = `${currentYear}년 ${currentMonth}월`;
+        }
+
+        // 카테고리 로드
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/kpi/categories', {
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                categories = await response.json();
+                renderTableHeader();
+                renderCategoryList();
+                renderCategorySelect();
+            } catch (error) {
+                console.error('카테고리 로드 실패:', error);
+            }
+        }
+
+        // 데이터 로드
+        async function loadData() {
+            try {
+                const response = await fetch(`/api/kpi/consultants?year=${currentYear}&month=${currentMonth}`, {
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                consultants = await response.json();
+                renderTable();
+            } catch (error) {
+                console.error('데이터 로드 실패:', error);
+            }
+        }
+
+        // 테이블 헤더 렌더링
+        function renderTableHeader() {
+            const header = document.getElementById('tableHeader');
+            let html = '<th class="name-col">이름</th>';
+            categories.forEach(cat => {
+                html += `<th class="category-header" onclick="openCategoryScoreModal(${cat.id}, '${cat.name}')">${cat.name}</th>`;
+            });
+            html += '<th>합계</th>';
+            header.innerHTML = html;
+        }
+
+        // 테이블 렌더링
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            let html = '';
+            let currentTeam = '';
+
+            consultants.forEach(consultant => {
+                if (consultant.team !== currentTeam) {
+                    currentTeam = consultant.team;
+                    const colspan = categories.length + 2;
+                    html += `<tr class="team-header"><td colspan="${colspan}">${currentTeam || '미지정'}</td></tr>`;
+                }
+
+                const scoresMap = {};
+                let total = 0;
+                (consultant.scores || []).forEach(s => {
+                    scoresMap[s.category_id] = s;
+                    total += parseFloat(s.score) || 0;
+                });
+
+                html += `<tr>`;
+                html += `<td class="name-col" onclick="openConsultantModal(${consultant.id})" style="cursor: pointer;">${consultant.username}</td>`;
+
+                categories.forEach(cat => {
+                    const score = scoresMap[cat.id];
+                    const scoreValue = score ? score.score : '';
+                    const hasScore = scoreValue !== '' && scoreValue !== null;
+                    html += `<td class="score-cell ${hasScore ? 'has-score' : 'no-score'}"
+                                onclick="openCellScoreModal(${consultant.id}, ${cat.id}, '${consultant.username}', '${cat.name}')"
+                                title="${score?.note || '클릭하여 점수 입력'}">
+                                ${hasScore ? parseFloat(scoreValue).toFixed(1) : '-'}
+                            </td>`;
+                });
+
+                html += `<td class="total-cell">${total.toFixed(1)}</td>`;
+                html += `</tr>`;
+            });
+
+            tbody.innerHTML = html || '<tr><td colspan="100" style="text-align: center; padding: 40px; color: var(--text-muted);">데이터가 없습니다.</td></tr>';
+        }
+
+        // 카테고리 목록 렌더링 (드래그앤드롭 + 버튼)
+        function renderCategoryList() {
+            const list = document.getElementById('categoryList');
+            let html = '';
+            categories.forEach((cat, index) => {
+                const isFirst = index === 0;
+                const isLast = index === categories.length - 1;
+                html += `
+                    <div class="category-item" data-id="${cat.id}" data-order="${index}" draggable="true"
+                         ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)"
+                         ondrop="handleDrop(event)" ondragend="handleDragEnd(event)"
+                         ondragleave="handleDragLeave(event)">
+                        <span class="drag-handle">⋮⋮</span>
+                        <span class="category-name">${cat.name}</span>
+                        <div class="category-actions">
+                            <button class="btn-move" onclick="event.stopPropagation(); moveCategory(${cat.id}, -1)" ${isFirst ? 'disabled' : ''} title="위로">▲</button>
+                            <button class="btn-move" onclick="event.stopPropagation(); moveCategory(${cat.id}, 1)" ${isLast ? 'disabled' : ''} title="아래로">▼</button>
+                            <button class="btn-edit" onclick="event.stopPropagation(); openEditCategoryModal(${cat.id})">✏️</button>
+                            <button class="btn-delete" onclick="event.stopPropagation(); deleteCategory(${cat.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html || '<p style="color: var(--text-muted); text-align: center; padding: 20px;">등록된 카테고리가 없습니다.</p>';
+        }
+
+        // 카테고리 이동 (버튼 클릭)
+        function moveCategory(categoryId, direction) {
+            const index = categories.findIndex(c => c.id === categoryId);
+            if (index === -1) return;
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= categories.length) return;
+
+            // 배열에서 위치 교환
+            [categories[index], categories[newIndex]] = [categories[newIndex], categories[index]];
+
+            // UI 갱신
+            renderCategoryList();
+            renderTableHeader();
+
+            // 서버에 순서 저장
+            saveCategoryOrderFromArray();
+        }
+
+        // 배열 기반 순서 저장
+        async function saveCategoryOrderFromArray() {
+            const orders = categories.map((cat, index) => ({ id: cat.id, sort_order: index }));
+            try {
+                const response = await fetch('/api/kpi/categories/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ orders })
+                });
+                if (response.ok) {
+                    showKpiToast('순서가 저장되었습니다.', 'success');
+                }
+            } catch (error) {
+                showKpiToast('순서 저장 실패', 'error');
+            }
+        }
+
+        // 드래그앤드롭 핸들러
+        function handleDragStart(e) {
+            draggedItem = e.target.closest('.category-item');
+            draggedItem.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            const item = e.target.closest('.category-item');
+            if (item && item !== draggedItem) {
+                item.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            const item = e.target.closest('.category-item');
+            if (item) item.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const dropTarget = e.target.closest('.category-item');
+            if (dropTarget && draggedItem && dropTarget !== draggedItem) {
+                const list = document.getElementById('categoryList');
+                const items = [...list.querySelectorAll('.category-item')];
+                const draggedIndex = items.indexOf(draggedItem);
+                const dropIndex = items.indexOf(dropTarget);
+
+                if (draggedIndex < dropIndex) {
+                    dropTarget.after(draggedItem);
+                } else {
+                    dropTarget.before(draggedItem);
+                }
+
+                // 순서 저장
+                saveCategoryOrder();
+            }
+            dropTarget?.classList.remove('drag-over');
+        }
+
+        function handleDragEnd(e) {
+            draggedItem?.classList.remove('dragging');
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedItem = null;
+        }
+
+        // 카테고리 순서 저장
+        async function saveCategoryOrder() {
+            const items = document.querySelectorAll('#categoryList .category-item');
+            const orders = [];
+            items.forEach((item, index) => {
+                orders.push({ id: parseInt(item.dataset.id), sort_order: index });
+            });
+
+            try {
+                const response = await fetch('/api/kpi/categories/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ orders })
+                });
+                if (response.ok) {
+                    showKpiToast('순서가 저장되었습니다.', 'success');
+                    loadCategories(); // 테이블 헤더도 업데이트
+                }
+            } catch (error) {
+                showKpiToast('순서 저장 실패', 'error');
+            }
+        }
+
+        // 카테고리 선택 드롭다운 렌더링
+        function renderCategorySelect() {
+            // 카테고리 검색 드롭다운 초기화
+            initSearchableSelect('categoryDropdown', 'scoreCategorySearch', 'scoreCategorySelect',
+                categories.map(cat => ({ value: cat.id, label: cat.name })));
+        }
+
+        // 모달 제어
+        function openModal(id) { document.getElementById(id).classList.add('show'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+        // 상담사 셀렉트 옵션 생성
+        function populateUserSelect() {
+            // 상담사 검색 드롭다운 초기화
+            initSearchableSelect('userDropdown', 'scoreUserSearch', 'scoreUserSelect',
+                consultants.map(c => ({ value: c.id, label: `${c.username} (${c.team || '미지정'})` })));
+        }
+
+        // 검색 가능한 셀렉트 초기화
+        function initSearchableSelect(dropdownId, inputId, hiddenId, options) {
+            const dropdown = document.getElementById(dropdownId);
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+
+            // 드롭다운 옵션 렌더링
+            function renderOptions(filter = '') {
+                const filtered = options.filter(opt =>
+                    opt.label.toLowerCase().includes(filter.toLowerCase()));
+
+                if (filtered.length === 0) {
+                    dropdown.innerHTML = '<div class="searchable-no-result">검색 결과 없음</div>';
+                } else {
+                    dropdown.innerHTML = filtered.map(opt =>
+                        `<div class="searchable-option" data-value="${opt.value}">${opt.label}</div>`
+                    ).join('');
+                }
+
+                // 옵션 클릭 이벤트
+                dropdown.querySelectorAll('.searchable-option').forEach(el => {
+                    el.addEventListener('click', () => {
+                        hidden.value = el.dataset.value;
+                        input.value = el.textContent;
+                        dropdown.classList.remove('show');
+                    });
+                });
+            }
+
+            // 입력 이벤트
+            input.addEventListener('input', (e) => {
+                renderOptions(e.target.value);
+                dropdown.classList.add('show');
+            });
+
+            // 포커스 이벤트
+            input.addEventListener('focus', () => {
+                renderOptions(input.value);
+                dropdown.classList.add('show');
+            });
+
+            // 외부 클릭 시 닫기
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest(`#${dropdownId}`) && e.target.id !== inputId) {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            // 초기 렌더링
+            renderOptions();
+        }
+
+        // 검색 가능한 셀렉트 값 설정
+        function setSearchableSelectValue(inputId, hiddenId, dropdownId, value, options) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+
+            if (value) {
+                hidden.value = value;
+                const opt = options.find(o => o.value == value);
+                input.value = opt ? opt.label : '';
+            } else {
+                hidden.value = '';
+                input.value = '';
+            }
+        }
+
+        function getTodayDate() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        }
+
+        function openScoreModal() {
+            populateUserSelect();
+            renderCategorySelect();
+            // 검색 가능한 셀렉트 초기화
+            document.getElementById('scoreUserSearch').value = '';
+            document.getElementById('scoreUserSelect').value = '';
+            document.getElementById('scoreCategorySearch').value = '';
+            document.getElementById('scoreCategorySelect').value = '';
+            document.getElementById('scoreDate').value = getTodayDate();
+            document.getElementById('scoreValue').value = '';
+            document.getElementById('scoreNote').value = '';
+            openModal('scoreModal');
+        }
+
+        // 로우데이터 모달용 전역 변수
+        let currentRawDataUserId = null;
+        let currentRawDataCategoryId = null;
+
+        // 셀 클릭 시 로우데이터 모달 표시
+        async function openCellScoreModal(userId, categoryId, userName, categoryName) {
+            currentRawDataUserId = userId;
+            currentRawDataCategoryId = categoryId;
+
+            document.getElementById('rawDataTitle').textContent = `${userName} - ${categoryName}`;
+
+            try {
+                const response = await fetch(`/api/kpi/user/${userId}/category/${categoryId}/scores?year=${currentYear}&month=${currentMonth}`, {
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                const scores = await response.json();
+
+                const tbody = document.getElementById('rawDataBody');
+                const emptyDiv = document.getElementById('rawDataEmpty');
+
+                if (scores.length === 0) {
+                    tbody.innerHTML = '';
+                    emptyDiv.style.display = 'block';
+                    document.getElementById('rawDataSummary').textContent = '합계: 0';
+                } else {
+                    emptyDiv.style.display = 'none';
+                    let total = 0;
+                    let html = '';
+                    scores.forEach(s => {
+                        total += parseFloat(s.score) || 0;
+                        const noteEscaped = (s.note || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        // 등록/수정 정보 표시
+                        let auditInfo = '';
+                        if (s.updated_by && s.updated_at) {
+                            auditInfo = `<span style="color: var(--text-muted, #888); font-size: 12px;" title="수정: ${s.updated_by} (${s.updated_at})">${s.updated_by}<br><span style="font-size: 11px;">${s.updated_at}</span></span>`;
+                        } else if (s.created_by && s.created_at) {
+                            auditInfo = `<span style="color: var(--text-muted, #888); font-size: 12px;" title="등록: ${s.created_by} (${s.created_at})">${s.created_by}<br><span style="font-size: 11px;">${s.created_at}</span></span>`;
+                        } else {
+                            auditInfo = '<span style="color: var(--text-muted, #aaa); font-size: 12px;">-</span>';
+                        }
+                        html += `<tr data-score-id="${s.id}">
+                            <td style="padding: 10px; border-bottom: 1px solid var(--border-color, #eee);">
+                                <input type="date" class="edit-date" value="${s.score_date}" style="width: 130px; padding: 4px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                            </td>
+                            <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-color, #eee);">
+                                <input type="number" class="edit-score" value="${s.score}" step="1" style="width: 70px; padding: 4px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; text-align: right; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                            </td>
+                            <td style="padding: 10px; border-bottom: 1px solid var(--border-color, #eee);">
+                                <input type="text" class="edit-note" value="${noteEscaped}" placeholder="내용" style="width: 100%; padding: 4px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                            </td>
+                            <td style="padding: 10px; border-bottom: 1px solid var(--border-color, #eee);">
+                                ${auditInfo}
+                            </td>
+                            <td style="padding: 10px; text-align: center; border-bottom: 1px solid var(--border-color, #eee); white-space: nowrap;">
+                                <button class="btn btn-sm" style="background: #28a745; color: white; padding: 4px 8px; margin-right: 4px;" onclick="updateScore(${s.id})">저장</button>
+                                <button class="btn btn-sm" style="background: #dc3545; color: white; padding: 4px 8px;" onclick="deleteScore(${s.id})">삭제</button>
+                            </td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                    document.getElementById('rawDataSummary').textContent = `${scores.length}건, 합계: ${total.toFixed(1)}`;
+                }
+
+                openModal('rawDataModal');
+            } catch (error) {
+                showKpiToast('데이터 조회 실패', 'error');
+            }
+        }
+
+        // 로우데이터 모달에서 점수 추가
+        function openAddScoreFromRaw() {
+            closeModal('rawDataModal');
+            populateUserSelect();
+            renderCategorySelect();
+
+            // 상담사 선택 설정
+            const userOpts = consultants.map(c => ({ value: c.id, label: `${c.username} (${c.team || '미지정'})` }));
+            setSearchableSelectValue('scoreUserSearch', 'scoreUserSelect', 'userDropdown', currentRawDataUserId, userOpts);
+
+            // 카테고리 선택 설정
+            const catOpts = categories.map(cat => ({ value: cat.id, label: cat.name }));
+            setSearchableSelectValue('scoreCategorySearch', 'scoreCategorySelect', 'categoryDropdown', currentRawDataCategoryId, catOpts);
+
+            // 날짜 기본값: 현재 월이면 오늘, 과거/미래 월이면 해당 월 1일
+            document.getElementById('scoreDate').value = getDefaultDateForMonth();
+            document.getElementById('scoreValue').value = '';
+            document.getElementById('scoreNote').value = '';
+            openModal('scoreModal');
+        }
+
+        // 선택된 월에 따른 기본 날짜 반환
+        function getDefaultDateForMonth() {
+            const today = new Date();
+            const todayYear = today.getFullYear();
+            const todayMonth = today.getMonth() + 1; // 1-indexed로 변환
+
+            // currentMonth는 1-indexed (1=1월, 12=12월)
+            if (currentYear === todayYear && currentMonth === todayMonth) {
+                // 현재 월이면 오늘 날짜
+                return getTodayDate();
+            } else {
+                // 과거/미래 월이면 해당 월의 1일
+                const month = String(currentMonth).padStart(2, '0');
+                return `${currentYear}-${month}-01`;
+            }
+        }
+
+        // 개별 점수 삭제
+        async function deleteScore(scoreId) {
+            if (!confirm('이 점수를 삭제하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/kpi/scores/${scoreId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast('삭제되었습니다.', 'success');
+                    // 모달 새로고침
+                    openCellScoreModal(currentRawDataUserId, currentRawDataCategoryId,
+                        document.getElementById('rawDataTitle').textContent.split(' - ')[0],
+                        document.getElementById('rawDataTitle').textContent.split(' - ')[1]);
+                    loadData();
+                } else {
+                    showKpiToast('삭제 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('삭제 중 오류 발생', 'error');
+                }
+            }
+        }
+
+        // 점수 수정
+        async function updateScore(scoreId) {
+            const row = document.querySelector(`tr[data-score-id="${scoreId}"]`);
+            if (!row) return;
+
+            const scoreDate = row.querySelector('.edit-date').value;
+            const score = row.querySelector('.edit-score').value;
+            const note = row.querySelector('.edit-note').value;
+
+            if (!scoreDate) { showKpiToast('날짜를 입력하세요.', 'error'); return; }
+            if (score === '') { showKpiToast('점수를 입력하세요.', 'error'); return; }
+
+            try {
+                const response = await fetch(`/api/kpi/scores/${scoreId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ score_date: scoreDate, score: parseFloat(score), note: note })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast('수정되었습니다.', 'success');
+                    // 모달 새로고침
+                    openCellScoreModal(currentRawDataUserId, currentRawDataCategoryId,
+                        document.getElementById('rawDataTitle').textContent.split(' - ')[0],
+                        document.getElementById('rawDataTitle').textContent.split(' - ')[1]);
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '수정 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('수정 중 오류 발생', 'error');
+                }
+            }
+        }
+
+        async function saveScore() {
+            const userId = document.getElementById('scoreUserSelect').value;
+            const categoryId = document.getElementById('scoreCategorySelect').value;
+            const scoreValue = document.getElementById('scoreValue').value;
+            const scoreDate = document.getElementById('scoreDate').value;
+            const note = document.getElementById('scoreNote').value;
+
+            if (!userId) { showKpiToast('상담사를 선택하세요.', 'error'); return; }
+            if (!categoryId) { showKpiToast('카테고리를 선택하세요.', 'error'); return; }
+            if (scoreValue === '') { showKpiToast('점수를 입력하세요.', 'error'); return; }
+            if (!scoreDate) { showKpiToast('날짜를 선택하세요.', 'error'); return; }
+
+            const scores = [{
+                user_id: parseInt(userId), category_id: parseInt(categoryId), score: parseFloat(scoreValue),
+                score_date: scoreDate, note: note
+            }];
+
+            try {
+                const response = await fetch('/api/kpi/scores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ scores })
+                });
+                // 세션/CSRF 만료 체크
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast('점수가 저장되었습니다.', 'success');
+                    closeModal('scoreModal');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '저장 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('저장 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        }
+
+        // 일괄 입력 관련
+        let bulkScoreData = [];
+
+        function openBulkScoreModal() {
+            document.getElementById('bulkScoreData').value = '';
+            document.getElementById('bulkPreviewSection').style.display = 'none';
+            document.getElementById('bulkPreviewBody').innerHTML = '';
+            document.getElementById('bulkSaveBtn').disabled = true;
+            bulkScoreData = [];
+            openModal('bulkScoreModal');
+        }
+
+        function previewBulkScore() {
+            const text = document.getElementById('bulkScoreData').value.trim();
+            if (!text) { showKpiToast('데이터를 입력하세요.', 'error'); return; }
+
+            const lines = text.split('\n').filter(line => line.trim());
+            bulkScoreData = [];
+            let html = '';
+
+            lines.forEach((line, idx) => {
+                const parts = line.split(',').map(p => p.trim());
+                if (parts.length < 4) {
+                    html += `<tr style="background: #ffe6e6;"><td style="padding: 8px; color: #dc3545;">오류</td><td colspan="5" style="padding: 8px;">형식 오류: "${line}" (이름, 날짜, 카테고리, 점수, 내용)</td></tr>`;
+                    return;
+                }
+
+                const [name, dateStr, catName, scoreStr, ...noteParts] = parts;
+                const note = noteParts.join(',').trim();
+                const score = parseFloat(scoreStr);
+
+                // 날짜 형식 검증 (YYYY-MM-DD)
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                const isValidDate = dateRegex.test(dateStr) && !isNaN(new Date(dateStr).getTime());
+
+                // 이름으로 상담사 찾기
+                const consultant = consultants.find(c => c.username === name);
+                // 카테고리 이름으로 카테고리 찾기
+                const category = categories.find(c => c.name === catName);
+
+                let status = '';
+                let statusColor = '';
+
+                if (!consultant) {
+                    status = '상담사 없음';
+                    statusColor = '#dc3545';
+                } else if (!isValidDate) {
+                    status = '날짜 오류';
+                    statusColor = '#dc3545';
+                } else if (!category) {
+                    status = '카테고리 없음';
+                    statusColor = '#dc3545';
+                } else if (isNaN(score)) {
+                    status = '점수 오류';
+                    statusColor = '#dc3545';
+                } else {
+                    status = '확인';
+                    statusColor = '#28a745';
+                    bulkScoreData.push({
+                        user_id: consultant.id,
+                        category_id: category.id,
+                        score: score,
+                        score_date: dateStr,
+                        note: note
+                    });
+                }
+
+                html += `<tr>
+                    <td style="padding: 8px; color: ${statusColor}; font-weight: bold;">${status}</td>
+                    <td style="padding: 8px;">${name}</td>
+                    <td style="padding: 8px;">${dateStr}</td>
+                    <td style="padding: 8px;">${catName}</td>
+                    <td style="padding: 8px; text-align: center;">${isNaN(score) ? scoreStr : score}</td>
+                    <td style="padding: 8px;">${note || '-'}</td>
+                </tr>`;
+            });
+
+            document.getElementById('bulkPreviewBody').innerHTML = html;
+            document.getElementById('bulkPreviewCount').textContent = bulkScoreData.length;
+            document.getElementById('bulkPreviewSection').style.display = 'block';
+            document.getElementById('bulkSaveBtn').disabled = bulkScoreData.length === 0;
+        }
+
+        async function saveBulkScore() {
+            if (bulkScoreData.length === 0) { showKpiToast('저장할 데이터가 없습니다.', 'error'); return; }
+
+            try {
+                const response = await fetch('/api/kpi/scores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ scores: bulkScoreData })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast(`${bulkScoreData.length}건의 점수가 저장되었습니다.`, 'success');
+                    closeModal('bulkScoreModal');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '저장 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('저장 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        }
+
+        function openCategoryModal() {
+            document.getElementById('newCategoryName').value = '';
+            openModal('categoryModal');
+        }
+
+        async function addCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (!name) { showKpiToast('카테고리 이름을 입력하세요.', 'error'); return; }
+
+            try {
+                const response = await fetch('/api/kpi/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ name })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast('카테고리가 추가되었습니다.', 'success');
+                    document.getElementById('newCategoryName').value = '';
+                    loadCategories();
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '추가 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('추가 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        }
+
+        function openEditCategoryModal(id) {
+            const cat = categories.find(c => c.id === id);
+            if (!cat) return;
+            document.getElementById('editCategoryId').value = id;
+            document.getElementById('editCategoryName').value = cat.name;
+            document.getElementById('editCategoryDesc').value = cat.description || '';
+            openModal('editCategoryModal');
+        }
+
+        async function updateCategory() {
+            const id = document.getElementById('editCategoryId').value;
+            const name = document.getElementById('editCategoryName').value.trim();
+            const description = document.getElementById('editCategoryDesc').value.trim();
+            if (!name) { showKpiToast('카테고리 이름을 입력하세요.', 'error'); return; }
+
+            try {
+                const response = await fetch(`/api/kpi/categories/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ name, description })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast('카테고리가 수정되었습니다.', 'success');
+                    closeModal('editCategoryModal');
+                    loadCategories();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '수정 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('수정 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
+            try {
+                const response = await fetch(`/api/kpi/categories/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    showKpiToast('카테고리가 삭제되었습니다.', 'success');
+                    loadCategories();
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '삭제 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('삭제 중 오류가 발생했습니다.', 'error');
+                }
+            }
+        }
+
+        async function openConsultantModal(userId) {
+            const consultant = consultants.find(c => c.id === userId);
+            if (!consultant) return;
+            document.getElementById('consultantAvatar').textContent = consultant.username.charAt(0);
+            document.getElementById('consultantName').textContent = consultant.username;
+            document.getElementById('consultantTeam').textContent = `${consultant.team || '미지정'} · 입사일: ${consultant.join_date || '-'}`;
+
+            try {
+                const response = await fetch(`/api/kpi/user/${userId}/history?year=${currentYear}`, {
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                const history = await response.json();
+                let html = '';
+                if (history.length === 0) {
+                    html = '<p style="color: var(--text-muted); text-align: center;">점수 이력이 없습니다.</p>';
+                } else {
+                    // score_date 기반으로 월별 그룹핑
+                    const byMonth = {};
+                    history.forEach(h => {
+                        if (!h.score_date) return;
+                        const dateParts = h.score_date.split('-');
+                        const year = dateParts[0];
+                        const month = dateParts[1];
+                        const key = `${year}-${month}`;
+                        if (!byMonth[key]) byMonth[key] = [];
+                        byMonth[key].push(h);
+                    });
+                    Object.keys(byMonth).sort().reverse().forEach(key => {
+                        const [year, month] = key.split('-');
+                        html += `<h4 style="margin: 15px 0 10px; color: var(--text-secondary);">${year}년 ${parseInt(month)}월</h4>`;
+                        byMonth[key].forEach(h => {
+                            const dateOnly = h.score_date ? h.score_date.substring(5) : '';  // MM-DD
+                            const scoreSign = parseFloat(h.score) >= 0 ? '+' : '';
+                            const scoreColor = parseFloat(h.score) >= 0 ? '#28a745' : '#dc3545';
+                            html += `<div class="score-history-item">
+                                <span style="flex: 1;"><strong>${h.category_name}</strong></span>
+                                <span style="color: var(--text-muted); font-size: 12px; margin-right: 10px;">${dateOnly}</span>
+                                <span style="color: ${scoreColor}; font-weight: 500;">${scoreSign}${parseFloat(h.score).toFixed(1)}</span>
+                            </div>`;
+                        });
+                    });
+                }
+                document.getElementById('scoreHistory').innerHTML = html;
+            } catch (error) {
+                document.getElementById('scoreHistory').innerHTML = '<p style="color: #dc3545;">이력 로드 실패</p>';
+            }
+            openModal('consultantModal');
+        }
+
+        async function openCategoryScoreModal(categoryId, categoryName) {
+            document.getElementById('categoryScoreTitle').textContent = `${categoryName} - ${currentYear}년 ${currentMonth}월`;
+            try {
+                const response = await fetch(`/api/kpi/category/${categoryId}/scores?year=${currentYear}&month=${currentMonth}`, {
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
+                const scores = await response.json();
+                let html = '';
+                if (scores.length === 0) {
+                    html = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">점수가 없습니다.</td></tr>';
+                } else {
+                    scores.forEach(s => {
+                        html += `<tr><td style="text-align: left;">${s.username}</td><td style="text-align: left;">${s.team || '-'}</td><td>${parseFloat(s.score).toFixed(1)}</td><td style="text-align: left;">${s.note || '-'}</td></tr>`;
+                    });
+                }
+                document.getElementById('categoryScoreBody').innerHTML = html;
+            } catch (error) {
+                document.getElementById('categoryScoreBody').innerHTML = '<tr><td colspan="4" style="color: #dc3545;">로드 실패</td></tr>';
+            }
+            openModal('categoryScoreModal');
+        }
+
+        function exportExcel() {
+            window.location.href = `/api/kpi/export?year=${currentYear}&month=${currentMonth}`;
+        }
+
+        function showKpiToast(message, type = 'info') {
+            const existing = document.querySelector('.kpi-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = `kpi-toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

@@ -827,8 +827,24 @@
 }
 
 /* ========== 알림 모달 ========== */
+[data-theme="dark"] .alert-modal-overlay {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .alert-modal {
+    background: var(--modal-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
 [data-theme="dark"] .alert-modal-content {
     background: var(--modal-bg);
+}
+
+[data-theme="dark"] .alert-modal-body {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
 }
 
 [data-theme="dark"] .alert-modal-title {
@@ -837,6 +853,11 @@
 
 [data-theme="dark"] .alert-modal-message {
     color: var(--text-secondary);
+}
+
+[data-theme="dark"] .alert-modal-footer {
+    background: var(--bg-tertiary) !important;
+    border-top-color: var(--border-color) !important;
 }
 
 /* ========== 오늘의 예약 알림 ========== */
@@ -1941,9 +1962,75 @@
     }
 }
 
+/* ========== 프로모션 일괄등록 모달 다크모드 ========== */
+[data-theme="dark"] .bulk-upload-modal {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .bulk-upload-modal-content {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .bulk-modal-body {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .upload-area {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .upload-area:hover {
+    background: var(--bg-secondary) !important;
+    border-color: #667eea !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .upload-text {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .preview-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .preview-table td {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .preview-table tr:nth-child(even) td {
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .preview-table input,
+[data-theme="dark"] .bulk-upload-modal .preview-table textarea {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .bulk-upload-modal .preview-info {
+    background: rgba(102, 126, 234, 0.15) !important;
+    border-left-color: #667eea !important;
+    color: var(--text-primary) !important;
+}
+
 /* ========== 프로모션 일괄 수정 모달 다크모드 ========== */
+[data-theme="dark"] .bulk-edit-modal {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
+}
+
 [data-theme="dark"] .bulk-edit-modal-content {
     background: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
 }
 
 [data-theme="dark"] .bulk-edit-modal-header {

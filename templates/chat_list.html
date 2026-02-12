@@ -443,7 +443,7 @@
                     document.body.classList.add('has-banner');
                 }
             } catch (error) {
-                console.log('예약 체크 실패:', error);
+                console.debug('예약 체크 실패:', error);
             }
         }
 
@@ -804,7 +804,7 @@
 
         // 토스트 알림 표시
         function showToast(chatId, title, message, sender) {
-            console.log('토스트 알림 표시:', chatId, title, message);
+            console.debug('토스트 알림 표시:', chatId, title, message);
             const toastContainer = document.getElementById('toastContainer');
 
             const toast = document.createElement('div');
@@ -840,7 +840,7 @@
             });
 
             toastContainer.appendChild(toast);
-            console.log('토스트 추가됨:', toast);
+            console.debug('토스트 추가됨:', toast);
 
             // 5초 후 자동 제거
             setTimeout(() => {
@@ -860,7 +860,7 @@
 
         // 전역 새 메시지 알림 수신
         socket.on('global_new_message', (data) => {
-            console.log('전역 새 메시지 수신:', data);
+            console.debug('전역 새 메시지 수신:', data);
 
             // 1:1 채팅인 경우 상대방 이름, 그룹 채팅인 경우 채팅방 제목 표시
             let displayTitle = data.chat_title;
@@ -886,7 +886,7 @@
                     // 탭이 포커스되어 있지 않으면 제목 깜빡임
                     if (!document.hasFocus() && totalUnread > 0) {
                         unreadCount = totalUnread;
-                        console.log('전체 읽지 않은 메시지:', unreadCount);
+                        console.debug('전체 읽지 않은 메시지:', unreadCount);
                         startTitleBlink();
                     }
                 });
@@ -902,7 +902,7 @@
         function startTitleBlink() {
             if (titleBlinkInterval) return;
 
-            console.log('제목 깜빡임 시작:', unreadCount);
+            console.debug('제목 깜빡임 시작:', unreadCount);
             let isOriginal = true;
             titleBlinkInterval = setInterval(() => {
                 document.title = isOriginal ? `🔴 (${unreadCount}) 새 메시지` : originalTitle;

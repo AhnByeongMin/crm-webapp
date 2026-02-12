@@ -134,6 +134,33 @@
         .alert-banner.warning { background: #fff3cd; border-left: 4px solid #856404; color: #856404; }
         .alert-banner.danger { background: #f8d7da; border-left: 4px solid #721c24; color: #721c24; }
 
+        /* 다크모드 모달 */
+        [data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .modal-box {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            color: #e8e8e8;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .modal-title {
+            color: #fff;
+        }
+        [data-theme="dark"] .form-group label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .form-group input,
+        [data-theme="dark"] .form-group textarea,
+        [data-theme="dark"] .form-group select {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] #repeatSettings,
+        [data-theme="dark"] #dailySummarySettings {
+            background: rgba(30, 30, 56, 0.8);
+        }
+
         /* 도움말 섹션 (예약 페이지 전용) */
         .help-section {
             margin-bottom: 25px;
@@ -325,7 +352,7 @@
                         <input type="checkbox" id="showCompleted" onchange="loadReminders()">
                         <span>완료된 항목 보기</span>
                     </label>
-                    <input type="text" id="searchKeyword" placeholder="검색..." onkeyup="loadReminders()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px; margin-left: auto;">
+                    <input type="text" id="searchKeyword" placeholder="검색..." onkeyup="loadReminders()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px; margin-left: auto;" aria-label="예약 검색">
                 </div>
                 <div class="reminders-section">
                     <div id="alertBanners"></div>

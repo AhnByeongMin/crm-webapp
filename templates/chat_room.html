@@ -328,6 +328,108 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
+        /* 채팅 링크 스타일 */
+        .chat-link {
+            color: #1a73e8;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        .chat-link:hover {
+            color: #0d5bba;
+        }
+        .message.own .chat-link {
+            color: #90caf9;
+        }
+        .message.own .chat-link:hover {
+            color: #bbdefb;
+        }
+        [data-theme="dark"] .message.other .chat-link {
+            color: #64b5f6;
+        }
+        [data-theme="dark"] .message.other .chat-link:hover {
+            color: #90caf9;
+        }
+        /* URL 미리보기 카드 */
+        .link-preview {
+            margin-top: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fafafa;
+            cursor: pointer;
+            max-width: 320px;
+            transition: box-shadow 0.2s;
+        }
+        .link-preview:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+        .link-preview-image {
+            width: 100%;
+            max-height: 160px;
+            overflow: hidden;
+            background: #eee;
+        }
+        .link-preview-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+        }
+        .link-preview-content {
+            padding: 10px 12px;
+        }
+        .link-preview-site {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .link-preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.3;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .link-preview-desc {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        /* 내 메시지의 미리보기 */
+        .message.own .link-preview {
+            background: rgba(255,255,255,0.95);
+            border-color: rgba(255,255,255,0.3);
+        }
+        /* 다크모드 미리보기 */
+        [data-theme="dark"] .link-preview {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+        [data-theme="dark"] .link-preview-image {
+            background: #333;
+        }
+        [data-theme="dark"] .link-preview-title {
+            color: #eee;
+        }
+        [data-theme="dark"] .link-preview-desc {
+            color: #aaa;
+        }
+        [data-theme="dark"] .link-preview-site {
+            color: #888;
+        }
+        [data-theme="dark"] .message.own .link-preview {
+            background: #1e3a5f;
+            border-color: #345;
+        }
         .message-text.emoji-only {
             font-size: 48px;
             line-height: 1;
@@ -1522,10 +1624,8 @@
             };
         }
 
-        // 방 입장
-        socket.emit('join', { chat_id: chatId, username: username });
-
         // 연결 상태 UI 관리
+        // (방 입장은 socket.on('connect')에서 처리)
         const connectionStatus = document.getElementById('connectionStatus');
         let lastMessageTimestamp = null;  // 마지막 메시지 시간 (재연결 시 놓친 메시지 로드용)
 
@@ -1564,8 +1664,8 @@
         socket.on('connect', () => {
             console.log('[Socket.IO] 연결 성공');
 
-            // 채팅방 입장
-            socket.emit('join', { chat_id: chatId, username: username });
+            // 채팅방 입장 (재연결 여부 전달 - 재연결 시 입장 메시지 생략)
+            socket.emit('join', { chat_id: chatId, username: username, is_reconnect: wasConnected });
             socket.emit('mark_as_read', { chat_id: chatId, username: username });
 
             if (wasConnected) {
@@ -1923,7 +2023,7 @@
 
             messageDiv.innerHTML = `
                 ${!isOwn ? `<div class="message-header">${msg.username}</div>` : ''}
-                <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${escapeHtml(msg.message)}</div>
+                <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${linkifyText(escapeHtml(msg.message))}</div>
                 ${fileHtml}
                 <div class="message-time">${copyBtn}${unreadBadge}${time}</div>
             `;
@@ -1937,6 +2037,12 @@
                     img.src = img.dataset.src;
                 }
             });
+
+            // URL 미리보기 가져오기
+            const firstUrl = extractFirstUrl(msg.message);
+            if (firstUrl) {
+                fetchLinkPreview(firstUrl, messageDiv);
+            }
 
             return messageDiv;
         }
@@ -2040,20 +2146,6 @@
 
                 // 브라우저 푸시 알림 (HTTPS일 때만 작동)
                 showChatNotification(msg.username, msg.message);
-            }
-        });
-
-        // 사용자 입장
-        socket.on('user_joined', (data) => {
-            if (data.username !== username) {
-                addSystemMessage(`${data.username}님이 입장했습니다.`);
-            }
-        });
-
-        // 사용자 퇴장
-        socket.on('user_left', (data) => {
-            if (data.username !== username) {
-                addSystemMessage(`${data.username}님이 퇴장했습니다.`);
             }
         });
 
@@ -2173,7 +2265,7 @@
 
             messageDiv.innerHTML = `
                 ${!isOwn ? `<div class="message-header">${msg.username}</div>` : ''}
-                <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${escapeHtml(msg.message)}</div>
+                <div class="message-text ${isEmojiOnly ? 'emoji-only' : ''}">${linkifyText(escapeHtml(msg.message))}</div>
                 ${fileHtml}
                 <div class="message-time">${copyBtn}${unreadBadge}${time}</div>
             `;
@@ -2188,6 +2280,12 @@
                     img.src = img.dataset.src;
                 }
             });
+
+            // URL 미리보기 가져오기
+            const firstUrl = extractFirstUrl(msg.message);
+            if (firstUrl) {
+                fetchLinkPreview(firstUrl, messageDiv);
+            }
         }
 
         // 메시지 복사 함수
@@ -2290,6 +2388,97 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        // URL을 클릭 가능한 링크로 변환 (escapeHtml 적용 후 사용)
+        function linkifyText(escapedText) {
+            if (!escapedText) return '';
+            // URL 패턴 (http, https, ftp 또는 www로 시작)
+            const urlPattern = /(\b(?:https?:\/\/|ftp:\/\/|www\.)[^\s<>&"']+)/gi;
+            return escapedText.replace(urlPattern, (url) => {
+                // www로 시작하면 https:// 추가
+                const href = url.startsWith('www.') ? 'https://' + url : url;
+                // 링크 텍스트가 너무 길면 축약
+                const displayText = url.length > 50 ? url.substring(0, 47) + '...' : url;
+                return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="chat-link">${displayText}</a>`;
+            });
+        }
+
+        // 메시지에서 첫 번째 URL 추출
+        function extractFirstUrl(text) {
+            if (!text) return null;
+            const urlPattern = /\b(https?:\/\/[^\s<>&"']+|www\.[^\s<>&"']+)/i;
+            const match = text.match(urlPattern);
+            if (match) {
+                let url = match[1];
+                if (url.startsWith('www.')) url = 'https://' + url;
+                return url;
+            }
+            return null;
+        }
+
+        // URL 미리보기 캐시
+        const linkPreviewCache = new Map();
+
+        // URL 미리보기 가져오기
+        async function fetchLinkPreview(url, messageDiv) {
+            // 캐시 확인
+            if (linkPreviewCache.has(url)) {
+                const cached = linkPreviewCache.get(url);
+                if (cached === null) return; // 실패한 URL은 재시도 안함
+                renderLinkPreview(cached, messageDiv);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/link-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                if (!response.ok) {
+                    linkPreviewCache.set(url, null);
+                    return;
+                }
+
+                const data = await response.json();
+                linkPreviewCache.set(url, data);
+                renderLinkPreview(data, messageDiv);
+            } catch (e) {
+                linkPreviewCache.set(url, null);
+            }
+        }
+
+        // 미리보기 카드 렌더링
+        function renderLinkPreview(data, messageDiv) {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'link-preview';
+            previewDiv.onclick = () => window.open(data.url, '_blank', 'noopener,noreferrer');
+
+            let html = '';
+            if (data.image) {
+                html += `<div class="link-preview-image"><img src="${escapeHtml(data.image)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+            }
+            html += `<div class="link-preview-content">`;
+            if (data.site_name) {
+                html += `<div class="link-preview-site">${escapeHtml(data.site_name)}</div>`;
+            }
+            html += `<div class="link-preview-title">${escapeHtml(data.title)}</div>`;
+            if (data.description) {
+                html += `<div class="link-preview-desc">${escapeHtml(data.description)}</div>`;
+            }
+            html += `</div>`;
+
+            previewDiv.innerHTML = html;
+
+            // message-text 다음에 삽입
+            const msgText = messageDiv.querySelector('.message-text');
+            if (msgText && msgText.nextSibling) {
+                msgText.parentNode.insertBefore(previewDiv, msgText.nextSibling);
+            } else if (msgText) {
+                msgText.parentNode.appendChild(previewDiv);
+            }
         }
 
         // 파일 아이콘 가져오기

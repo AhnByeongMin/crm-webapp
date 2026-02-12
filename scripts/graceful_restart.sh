@@ -15,8 +15,8 @@ if [ ! -d "$SCRIPT_DIR" ]; then
     exit 1
 fi
 
-# 5001 워커 재시작 (정확한 경로 패턴으로 검색)
-PID_5001=$(pgrep -f "${SCRIPT_DIR}/gunicorn_config_5001.py" | head -1)
+# 5001 워커 재시작 (상대 경로 패턴으로 검색 - gunicorn이 상대경로로 실행됨)
+PID_5001=$(pgrep -f "gunicorn_config_5001.py" | head -1)
 if [ -n "$PID_5001" ]; then
     # 추가 검증: 해당 PID가 실제로 gunicorn인지 확인
     PROC_NAME=$(ps -p $PID_5001 -o comm= 2>/dev/null)
@@ -34,8 +34,8 @@ fi
 # 5초 대기 (한 번에 둘 다 재시작하지 않도록)
 sleep 5
 
-# 5002 워커 재시작 (정확한 경로 패턴으로 검색)
-PID_5002=$(pgrep -f "${SCRIPT_DIR}/gunicorn_config_5002.py" | head -1)
+# 5002 워커 재시작 (상대 경로 패턴으로 검색 - gunicorn이 상대경로로 실행됨)
+PID_5002=$(pgrep -f "gunicorn_config_5002.py" | head -1)
 if [ -n "$PID_5002" ]; then
     # 추가 검증: 해당 PID가 실제로 gunicorn인지 확인
     PROC_NAME=$(ps -p $PID_5002 -o comm= 2>/dev/null)

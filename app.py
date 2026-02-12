@@ -28,6 +28,8 @@ from rate_limiter import (
 )
 from csrf_protection import init_csrf, exempt_csrf, is_csrf_exempt
 from flasgger import Swagger
+import fortune  # 운세 모듈
+import tarot  # 타로 모듈
 from swagger_config import SWAGGER_CONFIG, SWAGGER_TEMPLATE
 
 # 로깅 설정
@@ -1281,41 +1283,53 @@ def create_chat():
     if 'username' not in session and not is_localhost():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    chats = load_chats()
-    new_chat = request.json
+    try:
+        chats = load_chats()
+        new_chat = request.json
 
-    # 다음 채팅방 ID 가져오기
-    chat_id = str(database.get_next_id('chats'))
+        if not new_chat:
+            return jsonify({'error': '요청 데이터가 없습니다'}), 400
 
-    creator = session.get('username', 'Admin')
+        # 다음 채팅방 ID 가져오기
+        chat_id = str(database.get_next_id('chats'))
 
-    # 참여자 목록에 생성자 포함
-    participants = new_chat.get('participants', [])
-    if creator not in participants:
-        participants.append(creator)
+        creator = session.get('username', 'Admin')
 
-    # 1:1 채팅인지 확인 (참여자가 2명인 경우)
-    is_one_to_one = len(participants) == 2
+        # 참여자 목록에 생성자 포함
+        participants = new_chat.get('participants', [])
 
-    # 1:1 채팅인 경우 상대방 이름을 제목으로 사용
-    if is_one_to_one:
-        other_user = [p for p in participants if p != creator][0]
-        title = other_user
-    else:
-        # 다중 채팅인 경우 제목 필요
-        title = new_chat.get('title', 'New Chat')
+        if not participants or not isinstance(participants, list):
+            return jsonify({'error': '참여자를 선택해주세요'}), 400
 
-    chats[chat_id] = {
-        'title': title,
-        'participants': participants,
-        'creator': creator,
-        'messages': [],
-        'is_one_to_one': is_one_to_one,
-        'created_at': datetime.now().isoformat()
-    }
+        if creator not in participants:
+            participants.append(creator)
 
-    save_chats(chats)
-    return jsonify({'chat_id': chat_id, 'chat': chats[chat_id]}), 201
+        # 1:1 채팅인지 확인 (참여자가 2명인 경우)
+        is_one_to_one = len(participants) == 2
+
+        # 1:1 채팅인 경우 상대방 이름을 제목으로 사용
+        if is_one_to_one:
+            other_user = [p for p in participants if p != creator][0]
+            title = other_user
+        else:
+            # 다중 채팅인 경우 제목 필요
+            title = new_chat.get('title', 'New Chat')
+
+        chats[chat_id] = {
+            'title': title,
+            'participants': participants,
+            'creator': creator,
+            'messages': [],
+            'is_one_to_one': is_one_to_one,
+            'created_at': datetime.now().isoformat()
+        }
+
+        save_chats(chats)
+        return jsonify({'chat_id': chat_id, 'chat': chats[chat_id]}), 201
+
+    except Exception as e:
+        logger.error(f"채팅방 생성 오류: {str(e)}")
+        return jsonify({'error': f'채팅방 생성 중 오류가 발생했습니다: {str(e)}'}), 500
 
 @app.route('/api/chats/<chat_id>', methods=['DELETE'])
 def delete_chat(chat_id):
@@ -1714,6 +1728,106 @@ def set_chat_admin_api(chat_id, target_username):
     return jsonify({'success': success, 'message': message})
 
 
+@app.route('/api/link-preview', methods=['POST'])
+@limiter.limit(get_limit_string('api'))
+def get_link_preview():
+    """URL의 Open Graph 메타데이터를 가져와 미리보기 생성"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    url = data.get('url', '').strip()
+
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+
+    # URL 유효성 검사
+    if not re.match(r'^https?://', url, re.IGNORECASE):
+        if url.startswith('www.'):
+            url = 'https://' + url
+        else:
+            return jsonify({'error': 'Invalid URL'}), 400
+
+    try:
+        import urllib.request
+        import ssl
+        from html.parser import HTMLParser
+
+        # SSL 인증서 검증 무시 (내부용)
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        # User-Agent 설정
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; LinkPreviewBot/1.0)',
+            'Accept': 'text/html,application/xhtml+xml'
+        })
+
+        # 타임아웃 3초
+        with urllib.request.urlopen(req, timeout=3, context=ctx) as response:
+            # 최대 100KB만 읽기
+            html = response.read(102400).decode('utf-8', errors='ignore')
+
+        # Open Graph 메타 태그 파싱
+        og_data = {'url': url}
+
+        # og:title
+        match = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        if not match:
+            match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:title["\']', html, re.IGNORECASE)
+        if match:
+            og_data['title'] = match.group(1)
+        else:
+            # fallback: <title> 태그
+            title_match = re.search(r'<title[^>]*>([^<]+)</title>', html, re.IGNORECASE)
+            if title_match:
+                og_data['title'] = title_match.group(1).strip()
+
+        # og:description
+        match = re.search(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        if not match:
+            match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:description["\']', html, re.IGNORECASE)
+        if not match:
+            # fallback: meta description
+            match = re.search(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        if match:
+            og_data['description'] = match.group(1)[:200]  # 최대 200자
+
+        # og:image
+        match = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        if not match:
+            match = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html, re.IGNORECASE)
+        if match:
+            image_url = match.group(1)
+            # 상대 URL 처리
+            if image_url.startswith('//'):
+                image_url = 'https:' + image_url
+            elif image_url.startswith('/'):
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                image_url = f"{parsed.scheme}://{parsed.netloc}{image_url}"
+            og_data['image'] = image_url
+
+        # og:site_name
+        match = re.search(r'<meta[^>]+property=["\']og:site_name["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+        if match:
+            og_data['site_name'] = match.group(1)
+
+        # 최소한 title이 있어야 유효한 미리보기
+        if 'title' not in og_data:
+            return jsonify({'error': 'No preview available'}), 404
+
+        return jsonify(og_data)
+
+    except urllib.error.URLError as e:
+        logger.debug(f"[LinkPreview] URL fetch error: {url} - {e}")
+        return jsonify({'error': 'Failed to fetch URL'}), 502
+    except Exception as e:
+        logger.debug(f"[LinkPreview] Error: {url} - {e}")
+        return jsonify({'error': 'Failed to generate preview'}), 500
+
+
 @app.route('/api/search_users', methods=['GET'])
 @limiter.limit(get_limit_string('search'))
 def search_users():
@@ -1749,9 +1863,7 @@ def search_users():
 @socketio.on('join')
 def on_join(data):
     chat_id = data['chat_id']
-    username = data['username']
     join_room(chat_id)
-    emit('user_joined', {'username': username}, room=chat_id)
 
 @socketio.on('join_user_room')
 def on_join_user_room(data):
@@ -1762,9 +1874,7 @@ def on_join_user_room(data):
 @socketio.on('leave')
 def on_leave(data):
     chat_id = data['chat_id']
-    username = data['username']
     leave_room(chat_id)
-    emit('user_left', {'username': username}, room=chat_id)
 
 @socketio.on('send_message')
 def handle_message(data):
@@ -2977,6 +3087,559 @@ def get_holidays():
     return jsonify(holidays_dict)
 
 
+# ==================== KPI 점수 관리 API ====================
+
+@app.route('/kpi')
+def kpi_page():
+    """KPI 점수 관리 페이지 (관리자 전용)"""
+    auth_check = require_admin()
+    if auth_check:
+        return auth_check
+
+    username = session.get('username', 'Admin')
+    return render_template('kpi.html',
+                         username=username,
+                         is_admin=True,
+                         page_title='KPI 점수 관리',
+                         current_page='kpi')
+
+
+@app.route('/api/kpi/categories', methods=['GET'])
+def get_kpi_categories():
+    """KPI 카테고리 목록 조회"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    categories = database.get_kpi_categories()
+    return jsonify(categories)
+
+
+@app.route('/api/kpi/categories', methods=['POST'])
+def create_kpi_category():
+    """KPI 카테고리 생성"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+
+    if not name:
+        return jsonify({'error': '카테고리 이름은 필수입니다.'}), 400
+
+    category_id = database.create_kpi_category(name, description)
+    return jsonify({'id': category_id, 'success': True}), 201
+
+
+@app.route('/api/kpi/categories/<int:category_id>', methods=['PUT'])
+def update_kpi_category(category_id):
+    """KPI 카테고리 수정"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+
+    if not name:
+        return jsonify({'error': '카테고리 이름은 필수입니다.'}), 400
+
+    success = database.update_kpi_category(category_id, name, description)
+    if not success:
+        return jsonify({'error': 'Category not found'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/kpi/categories/<int:category_id>', methods=['DELETE'])
+def delete_kpi_category(category_id):
+    """KPI 카테고리 삭제"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    success = database.delete_kpi_category(category_id)
+    if not success:
+        return jsonify({'error': 'Category not found'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/kpi/categories/reorder', methods=['POST'])
+def reorder_kpi_categories():
+    """KPI 카테고리 순서 변경"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    category_orders = data.get('orders', [])  # [{id: 1, sort_order: 0}, ...]
+
+    database.reorder_kpi_categories(category_orders)
+    return jsonify({'success': True})
+
+
+@app.route('/api/kpi/consultants', methods=['GET'])
+def get_kpi_consultants():
+    """KPI 점수 조회용 상담사 목록 (팀별, 입사일순)"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    if not year or not month:
+        from datetime import datetime
+        now = datetime.now()
+        year = year or now.year
+        month = month or now.month
+
+    consultants = database.get_kpi_consultants_with_scores(year, month)
+    return jsonify(consultants)
+
+
+@app.route('/api/kpi/scores', methods=['GET'])
+def get_kpi_scores():
+    """특정 월의 KPI 점수 조회"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    user_id = request.args.get('user_id', type=int)
+    category_id = request.args.get('category_id', type=int)
+
+    if not year or not month:
+        from datetime import datetime
+        now = datetime.now()
+        year = year or now.year
+        month = month or now.month
+
+    scores = database.get_kpi_scores(year, month, user_id, category_id)
+    return jsonify(scores)
+
+
+@app.route('/api/kpi/scores', methods=['POST'])
+def save_kpi_score():
+    """KPI 점수 저장 (단일/다중)"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    scores = data.get('scores', [])  # [{user_id, category_id, score, score_date, note}, ...]
+
+    if not scores:
+        return jsonify({'error': '저장할 점수가 없습니다.'}), 400
+
+    created_by = session.get('username')
+    database.save_kpi_scores(scores, created_by=created_by)
+    return jsonify({'success': True})
+
+
+@app.route('/api/kpi/scores/<int:score_id>', methods=['DELETE'])
+def delete_kpi_score(score_id):
+    """KPI 점수 삭제"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    success = database.delete_kpi_score(score_id)
+    if not success:
+        return jsonify({'error': 'Score not found'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/kpi/scores/<int:score_id>', methods=['PUT'])
+def update_kpi_score(score_id):
+    """KPI 점수 수정"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    score_date = data.get('score_date')
+    score = data.get('score')
+    note = data.get('note', '')
+
+    if not score_date or score is None:
+        return jsonify({'error': 'score_date and score are required'}), 400
+
+    updated_by = session.get('username')
+    success = database.update_kpi_score(score_id, score_date, score, note, updated_by=updated_by)
+    if not success:
+        return jsonify({'error': 'Score not found'}), 404
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/kpi/user/<int:user_id>/history', methods=['GET'])
+def get_kpi_user_history(user_id):
+    """특정 사용자의 KPI 점수 이력"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    history = database.get_kpi_user_history(user_id, year, month)
+    return jsonify(history)
+
+
+@app.route('/api/kpi/user/<int:user_id>/category/<int:category_id>/scores', methods=['GET'])
+def get_kpi_user_category_scores(user_id, category_id):
+    """특정 사용자의 특정 카테고리 로우데이터 조회"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    if not year or not month:
+        from datetime import datetime
+        now = datetime.now()
+        year = year or now.year
+        month = month or now.month
+
+    scores = database.get_kpi_user_category_scores(user_id, category_id, year, month)
+    return jsonify(scores)
+
+
+@app.route('/api/kpi/category/<int:category_id>/scores', methods=['GET'])
+def get_kpi_category_scores(category_id):
+    """특정 카테고리의 모든 점수 (월별 조회)"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    if not year or not month:
+        from datetime import datetime
+        now = datetime.now()
+        year = year or now.year
+        month = month or now.month
+
+    scores = database.get_kpi_category_scores(category_id, year, month)
+    return jsonify(scores)
+
+
+@app.route('/api/kpi/export', methods=['GET'])
+def export_kpi_excel():
+    """KPI 점수 Excel 내보내기"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+
+    if not year or not month:
+        from datetime import datetime
+        now = datetime.now()
+        year = year or now.year
+        month = month or now.month
+
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+
+    # 데이터 조회 (null 방어)
+    consultants = database.get_kpi_consultants_with_scores(year, month) or []
+    categories = database.get_kpi_categories() or []
+
+    wb = Workbook()
+
+    # === 요약 시트 (팀, 이름, 카테고리별 합계, 총합계) ===
+    ws_summary = wb.active
+    ws_summary.title = "요약"
+
+    # 헤더 스타일
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color="DAEEF3", end_color="DAEEF3", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # 요약 시트 헤더 (입사일 제거)
+    headers = ['팀', '이름']
+    for cat in categories:
+        headers.append(cat.get('name') or '미지정')
+    headers.append('합계')
+
+    for col, header in enumerate(headers, 1):
+        cell = ws_summary.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+
+    # 데이터 행
+    row = 2
+    for consultant in consultants:
+        ws_summary.cell(row=row, column=1, value=consultant.get('team', '')).border = thin_border
+        ws_summary.cell(row=row, column=2, value=consultant.get('username', '')).border = thin_border
+
+        total = 0
+        col = 3
+        scores_dict = {s.get('category_id'): s.get('score', 0) for s in consultant.get('scores', []) if s}
+        for cat in categories:
+            cat_id = cat.get('id') if cat else None
+            raw_score = scores_dict.get(cat_id, 0) or 0
+            try:
+                score = float(raw_score)
+            except (ValueError, TypeError):
+                score = 0
+            cell = ws_summary.cell(row=row, column=col, value=score)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='right')
+            total += score
+            col += 1
+
+        cell = ws_summary.cell(row=row, column=col, value=total)
+        cell.border = thin_border
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal='right')
+        row += 1
+
+    # 열 너비 조정
+    ws_summary.column_dimensions['A'].width = 12
+    ws_summary.column_dimensions['B'].width = 12
+
+    # === 카테고리별 로우데이터 시트 (팀, 이름, 날짜, 점수, 내용) ===
+    # Excel 시트명 불허 문자: \ / * ? : [ ]
+    import re
+    def sanitize_sheet_name(name):
+        if not name:
+            return '미지정'
+        return re.sub(r'[\\/*?:\[\]]', '_', str(name))[:31]
+
+    for cat in categories:
+        if not cat or not cat.get('id'):
+            continue
+        # 해당 카테고리의 로우데이터 조회
+        raw_data = database.get_kpi_category_scores(cat['id'], year, month) or []
+
+        ws = wb.create_sheet(title=sanitize_sheet_name(cat.get('name')))
+
+        # 헤더
+        detail_headers = ['팀', '이름', '날짜', '점수', '내용']
+        for col, header in enumerate(detail_headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center')
+
+        # 데이터
+        row = 2
+        for data in raw_data:
+            if not data:
+                continue
+            ws.cell(row=row, column=1, value=data.get('team') or '').border = thin_border
+            ws.cell(row=row, column=2, value=data.get('username') or '').border = thin_border
+            ws.cell(row=row, column=3, value=data.get('score_date') or '').border = thin_border
+
+            try:
+                score_val = float(data.get('score') or 0)
+            except (ValueError, TypeError):
+                score_val = 0
+            cell = ws.cell(row=row, column=4, value=score_val)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='right')
+
+            cell = ws.cell(row=row, column=5, value=data.get('note') or '')
+            cell.border = thin_border
+
+            row += 1
+
+        # 열 너비
+        ws.column_dimensions['A'].width = 12
+        ws.column_dimensions['B'].width = 12
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 10
+        ws.column_dimensions['E'].width = 40
+
+    # 파일 저장
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f'KPI_{year}년_{month}월.xlsx'
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+# ==================== 운세 API ====================
+
+@app.route('/fortune')
+def fortune_page():
+    """운세 페이지"""
+    if 'username' not in session and not is_localhost():
+        return redirect(url_for('login'))
+
+    username = session.get('username', 'Admin')
+    return render_template('fortune.html',
+                         username=username,
+                         is_admin=is_admin(),
+                         page_title='오늘의 운세',
+                         current_page='fortune')
+
+
+@app.route('/api/fortune', methods=['GET'])
+def get_fortune():
+    """운세 조회 API"""
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    name = request.args.get('name', '')
+    birth_date = request.args.get('birth_date', '')
+    target_date_str = request.args.get('target_date', '')
+
+    if not name or not birth_date:
+        return jsonify({'error': '이름과 생년월일을 입력해주세요.'}), 400
+
+    # 생년월일 형식 검증 (YYYY-MM-DD)
+    try:
+        datetime.strptime(birth_date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': '생년월일 형식이 올바르지 않습니다. (YYYY-MM-DD)'}), 400
+
+    # 목표 날짜 파싱 (선택)
+    target_date = None
+    if target_date_str:
+        try:
+            target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': '운세 날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)'}), 400
+
+    try:
+        result = fortune.get_fortune(name, birth_date, target_date)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Fortune API error: {e}")
+        return jsonify({'error': '운세 조회 중 오류가 발생했습니다.'}), 500
+
+
+@app.route('/api/tarot', methods=['GET'])
+def get_tarot_reading():
+    """타로카드 리딩 API
+    ---
+    tags:
+      - Fortune
+    parameters:
+      - name: spread_type
+        in: query
+        type: string
+        required: false
+        default: one_card
+        enum: [one_card, three_card, love_spread, yes_no]
+        description: 스프레드 종류
+      - name: question
+        in: query
+        type: string
+        required: false
+        description: 질문 (선택)
+      - name: target_date
+        in: query
+        type: string
+        required: false
+        description: 리딩 날짜 (YYYY-MM-DD, 기본값 오늘)
+      - name: selected_cards
+        in: query
+        type: string
+        required: false
+        description: 사용자가 선택한 카드 인덱스 (콤마 구분, 예: 0,5,21)
+    responses:
+      200:
+        description: 타로 리딩 결과
+      401:
+        description: Unauthorized
+    """
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    spread_type = request.args.get('spread_type', 'one_card')
+    question = request.args.get('question', '')
+    target_date_str = request.args.get('target_date', '')
+    selected_cards_str = request.args.get('selected_cards', '')
+
+    # 스프레드 타입 검증
+    valid_spreads = ['one_card', 'three_card', 'love_spread', 'yes_no']
+    if spread_type not in valid_spreads:
+        return jsonify({'error': f'유효하지 않은 스프레드 타입입니다. ({", ".join(valid_spreads)})'}), 400
+
+    # 목표 날짜 파싱 (선택)
+    target_date = None
+    if target_date_str:
+        try:
+            target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': '날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)'}), 400
+
+    # 선택된 카드 파싱 (선택)
+    selected_cards = None
+    if selected_cards_str:
+        try:
+            selected_cards = [int(x.strip()) for x in selected_cards_str.split(',') if x.strip()]
+        except ValueError:
+            return jsonify({'error': '카드 인덱스 형식이 올바르지 않습니다.'}), 400
+
+    try:
+        result = tarot.get_tarot_reading(spread_type, question, target_date, selected_cards)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Tarot API error: {e}")
+        return jsonify({'error': '타로 리딩 중 오류가 발생했습니다.'}), 500
+
+
+@app.route('/api/tarot/cards', methods=['GET'])
+def get_tarot_cards():
+    """타로카드 목록 조회 API
+    ---
+    tags:
+      - Fortune
+    responses:
+      200:
+        description: 메이저 아르카나 22장 정보
+      401:
+        description: Unauthorized
+    """
+    if 'username' not in session and not is_localhost():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        cards = []
+        for num, card in tarot.MAJOR_ARCANA.items():
+            cards.append({
+                'number': num,
+                'name': card['name'],
+                'name_kr': card['name_kr'],
+                'symbol': card['symbol'],
+                'keywords': card['keywords'],
+                'element': card['element']
+            })
+        return jsonify({'cards': cards, 'total': len(cards)})
+    except Exception as e:
+        logger.error(f"Tarot cards API error: {e}")
+        return jsonify({'error': '카드 목록 조회 중 오류가 발생했습니다.'}), 500
+
+
 # ==================== 개인 메모 API ====================
 
 @app.route('/memos')
@@ -3373,6 +4036,7 @@ def create_user_account():
     role = data.get('role', '상담사')
     status = data.get('status', 'active')
     team = data.get('team', '').strip() or None
+    join_date = data.get('join_date') or None
 
     if not username or not role:
         return jsonify({'error': 'Username and role are required'}), 400
@@ -3380,7 +4044,7 @@ def create_user_account():
     # 초기 비밀번호 설정
     password = 'admin1234' if role == '관리자' else 'body123!'
 
-    success = database.create_user(username, password, role, status, team)
+    success = database.create_user(username, password, role, status, team, join_date)
 
     if success:
         return jsonify({'success': True, 'message': 'User created successfully'})
@@ -3389,16 +4053,16 @@ def create_user_account():
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 def delete_user_account(user_id):
-    """사용자 삭제 (관리자 전용)"""
+    """사용자 삭제 (관리자 전용) - 비활성 상태인 경우에만 삭제 가능"""
     if not is_admin():
         return jsonify({'error': 'Unauthorized'}), 401
 
-    success = database.delete_user(user_id)
+    success, message = database.delete_user(user_id)
 
     if success:
-        return jsonify({'success': True, 'message': 'User deleted successfully'})
+        return jsonify({'success': True, 'message': message})
     else:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': message}), 400
 
 @app.route('/api/users/<int:user_id>/status', methods=['PATCH'])
 def update_user_status_api(user_id):
@@ -3455,6 +4119,22 @@ def update_user_role_api(user_id):
 
     if success:
         return jsonify({'success': True, 'message': 'Role updated successfully'})
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@app.route('/api/users/<int:user_id>/join-date', methods=['PATCH'])
+def update_user_join_date_api(user_id):
+    """사용자 입사일 변경 (관리자 전용)"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.json
+    join_date = data.get('join_date') or None
+
+    success = database.update_user_join_date(user_id, join_date)
+
+    if success:
+        return jsonify({'success': True, 'message': 'Join date updated successfully'})
     else:
         return jsonify({'error': 'User not found'}), 404
 

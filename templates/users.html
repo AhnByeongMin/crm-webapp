@@ -46,6 +46,7 @@
         .btn-success:hover { background: #218838; }
         .btn-danger { padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-danger:hover { background: #c82333; }
+        .btn-danger:disabled { background: #e9a0a8; cursor: not-allowed; opacity: 0.6; }
         .btn-warning { padding: 6px 12px; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-warning:hover { background: #e0a800; }
         .btn-secondary { padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
@@ -172,6 +173,37 @@
             .modal-title { font-size: 18px; }
         }
 
+        /* 다크모드 모달 */
+        [data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .modal-box {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            color: #e8e8e8;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .modal-title {
+            color: #fff;
+        }
+        [data-theme="dark"] .form-group label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .form-group input,
+        [data-theme="dark"] .form-group select {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .team-list {
+            background: #1a1a2e;
+        }
+        [data-theme="dark"] .team-item {
+            background: #252550;
+        }
+        [data-theme="dark"] .team-item:hover {
+            background: #2a3f5f;
+        }
+
         /* 도움말 섹션 (사용자관리 페이지 전용) */
         .help-section {
             margin-bottom: 25px;
@@ -243,6 +275,7 @@
                         <th>권한</th>
                         <th>상태</th>
                         <th>팀</th>
+                        <th>입사일</th>
                         <th>생성일</th>
                         <th>작업</th>
                     </tr>
@@ -309,6 +342,10 @@
                     <option value="">선택 안 함</option>
                 </select>
             </div>
+            <div class="form-group" id="joinDateGroup">
+                <label for="newJoinDate">입사일 (선택)</label>
+                <input type="date" id="newJoinDate">
+            </div>
             <p style="color: #666; font-size: 13px; margin-top: 10px;">
                 초기 비밀번호: <strong>상담사는 body123!</strong>, <strong>관리자는 admin1234</strong>
             </p>
@@ -350,6 +387,21 @@
             <div class="modal-buttons">
                 <button class="btn-secondary" onclick="closeEditRoleModal()">취소</button>
                 <button class="btn-primary" onclick="saveRoleChange()">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 입사일 수정 모달 -->
+    <div class="modal-overlay" id="editJoinDateModal">
+        <div class="modal-box">
+            <h2 class="modal-title">입사일 수정</h2>
+            <div class="form-group">
+                <label for="editJoinDate">입사일</label>
+                <input type="date" id="editJoinDate">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeEditJoinDateModal()">취소</button>
+                <button class="btn-primary" onclick="saveJoinDateChange()">변경</button>
             </div>
         </div>
     </div>
@@ -539,6 +591,7 @@
                     <td data-label="권한"><span class="badge ${user.role === '관리자' ? 'badge-admin' : 'badge-user'}">${user.role}</span></td>
                     <td data-label="상태"><span class="badge ${user.status === 'active' ? 'badge-active' : 'badge-inactive'}">${user.status === 'active' ? '활성' : '비활성'}</span></td>
                     <td data-label="팀">${user.team || '-'}</td>
+                    <td data-label="입사일">${formatDate(user.join_date) || '-'}</td>
                     <td data-label="생성일">${formatDate(user.created_at)}</td>
                     <td class="actions">
                         <button class="btn-secondary" onclick="toggleStatus(${user.id}, '${user.status}')">
@@ -546,8 +599,10 @@
                         </button>
                         <button class="btn-success" onclick="openEditTeamModal(${user.id}, '${user.team || ''}')">팀 변경</button>
                         <button class="btn-success" onclick="openEditRoleModal(${user.id}, '${user.role}')">권한 변경</button>
+                        <button class="btn-success" onclick="openEditJoinDateModal(${user.id}, '${user.join_date || ''}')">입사일</button>
                         <button class="btn-warning" onclick="resetPassword(${user.id}, '${user.role}')">비밀번호 초기화</button>
-                        <button class="btn-danger" onclick="deleteUser(${user.id}, '${user.username}')">삭제</button>
+                        <button class="btn-danger" onclick="deleteUser(${user.id}, '${user.username}', '${user.status}')"
+                            ${user.status === 'active' ? 'disabled title="삭제하려면 먼저 비활성화하세요"' : ''}>삭제</button>
                     </td>
                 </tr>
             `).join('');
@@ -564,6 +619,7 @@
             document.getElementById('newRole').value = '상담사';
             document.getElementById('newStatus').value = 'active';
             document.getElementById('newTeam').value = '';
+            document.getElementById('newJoinDate').value = '';
             // 팀 선택 필드 다시 표시
             document.getElementById('teamSelectGroup').style.display = 'block';
         }
@@ -572,6 +628,7 @@
             const username = document.getElementById('newUsername').value.trim();
             const role = document.getElementById('newRole').value;
             const status = document.getElementById('newStatus').value;
+            const joinDate = document.getElementById('newJoinDate').value || null;
 
             // 관리자는 자동으로 "관리자" 팀, 상담사는 선택한 팀
             let team;
@@ -591,7 +648,7 @@
                 const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, role, status, team })
+                    body: JSON.stringify({ username, role, status, team, join_date: joinDate })
                 });
 
                 const result = await response.json();
@@ -679,6 +736,41 @@
             } catch (error) {
                 console.error('권한 변경 실패:', error);
                 showToast('권한 변경에 실패했습니다.');
+            }
+        }
+
+        // 입사일 수정 모달
+        function openEditJoinDateModal(userId, currentJoinDate) {
+            currentEditingUserId = userId;
+            document.getElementById('editJoinDate').value = currentJoinDate || '';
+            document.getElementById('editJoinDateModal').classList.add('active');
+        }
+
+        function closeEditJoinDateModal() {
+            document.getElementById('editJoinDateModal').classList.remove('active');
+            currentEditingUserId = null;
+        }
+
+        async function saveJoinDateChange() {
+            const newJoinDate = document.getElementById('editJoinDate').value || null;
+
+            try {
+                const response = await fetch(`/api/users/${currentEditingUserId}/join-date`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ join_date: newJoinDate })
+                });
+
+                if (response.ok) {
+                    showToast('입사일이 변경되었습니다.');
+                    closeEditJoinDateModal();
+                    loadUsers();
+                } else {
+                    showToast('입사일 변경에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('입사일 변경 실패:', error);
+                showToast('입사일 변경에 실패했습니다.');
             }
         }
 
@@ -823,10 +915,17 @@
         }
 
         // 삭제 확인 모달
-        function deleteUser(userId, username) {
+        function deleteUser(userId, username, status) {
+            // 활성 상태에서는 삭제 불가
+            if (status === 'active') {
+                showToast('활성 상태의 사용자는 삭제할 수 없습니다. 먼저 비활성화하세요.');
+                return;
+            }
+
             const message = `"${username}" 사용자를 삭제하시겠습니까?`;
 
-            document.getElementById('deleteUserMessage').textContent = message;
+            document.getElementById('deleteUserMessage').innerHTML = message +
+                '<br><small style="color: #6c757d; font-weight: normal;">KPI 점수 기록도 함께 삭제됩니다.</small>';
             document.getElementById('deleteUserModal').classList.add('active');
 
             document.getElementById('confirmDeleteUser').onclick = async () => {
@@ -835,12 +934,14 @@
                         method: 'DELETE'
                     });
 
+                    const result = await response.json();
+
                     if (response.ok) {
                         showToast('사용자가 삭제되었습니다.');
                         loadUsers();
                         closeDeleteUserModal();
                     } else {
-                        showToast('사용자 삭제에 실패했습니다.');
+                        showToast(result.error || '사용자 삭제에 실패했습니다.');
                     }
                 } catch (error) {
                     console.error('사용자 삭제 실패:', error);

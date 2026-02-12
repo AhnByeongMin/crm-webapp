@@ -315,6 +315,126 @@
         color: white;
     }
 
+    /* 만나이 계산기 버튼 */
+    .header-age-btn {
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 6px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 14px;
+        transition: all 0.3s;
+        min-height: 36px;
+        color: #666;
+    }
+    .header-age-btn:hover {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+    .header-age-btn .icon {
+        font-size: 14px;
+    }
+    .header-age-btn .label {
+        font-size: 12px;
+    }
+    [data-theme="dark"] .header-age-btn {
+        background: #374151;
+        border-color: #4b5563;
+        color: #d1d5db;
+    }
+    [data-theme="dark"] .header-age-btn:hover {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+
+    /* 만나이 계산기 모달 */
+    .age-calc-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+    }
+    .age-calc-overlay.active {
+        display: flex;
+    }
+    .age-calc-modal {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 320px;
+        width: 90%;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+    .age-calc-modal h3 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        color: #333;
+    }
+    .age-calc-input {
+        width: 100%;
+        padding: 12px;
+        font-size: 20px;
+        text-align: center;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+    }
+    .age-calc-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+    .age-calc-result {
+        font-size: 32px;
+        font-weight: bold;
+        color: #28a745;
+        margin: 16px 0;
+        min-height: 48px;
+    }
+    .age-calc-detail {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 16px;
+    }
+    .age-calc-close {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .age-calc-close:hover {
+        background: #5a6268;
+    }
+    [data-theme="dark"] .age-calc-modal {
+        background: #1e1e1e;
+    }
+    [data-theme="dark"] .age-calc-modal h3 {
+        color: #e5e5e5;
+    }
+    [data-theme="dark"] .age-calc-input {
+        background: #2d2d2d;
+        border-color: #444;
+        color: #e5e5e5;
+    }
+    [data-theme="dark"] .age-calc-detail {
+        color: #aaa;
+    }
+
     /* 모바일 반응형 (768px 이하) */
     @media (max-width: 768px) {
         .header {
@@ -332,19 +452,22 @@
         }
         .header-dark-toggle .label,
         .header-theme-btn .label,
-        .header-tutorial-btn .label {
+        .header-tutorial-btn .label,
+        .header-age-btn .label {
             display: none;
         }
         .header-dark-toggle,
         .header-theme-btn,
-        .header-tutorial-btn {
+        .header-tutorial-btn,
+        .header-age-btn {
             padding: 6px 8px;
             min-height: 40px;
             min-width: 40px;
         }
         .header-dark-toggle .icon,
         .header-theme-btn .icon,
-        .header-tutorial-btn .icon {
+        .header-tutorial-btn .icon,
+        .header-age-btn .icon {
             font-size: 18px;
         }
         /* 폰트 크기 조절 - 모바일에서 더 컴팩트 */
@@ -418,7 +541,8 @@
         }
         .header-dark-toggle,
         .header-theme-btn,
-        .header-font-btn {
+        .header-font-btn,
+        .header-age-btn {
             min-height: 36px;
             min-width: 36px;
         }
@@ -459,27 +583,33 @@
     <!-- 헤더 설정 버튼 (다크모드, 폰트 크기) -->
     <div class="header-settings">
         <!-- 다크모드 토글 -->
-        <button class="header-dark-toggle" id="headerDarkToggle" onclick="headerToggleDarkMode()" title="다크모드 전환">
-            <span class="icon" id="darkModeIcon">☀️</span>
+        <button class="header-dark-toggle" id="headerDarkToggle" onclick="headerToggleDarkMode()" title="다크모드 전환" aria-label="다크모드 전환" aria-pressed="false">
+            <span class="icon" id="darkModeIcon" aria-hidden="true">☀️</span>
             <span class="label" id="darkModeLabel">라이트</span>
         </button>
 
         <!-- 폰트 크기 조절 -->
-        <div class="header-font-controls" title="글자 크기 조절">
-            <button class="header-font-btn" data-size="small" onclick="headerSetFontSize('small')">가</button>
-            <button class="header-font-btn active" data-size="medium" onclick="headerSetFontSize('medium')">가</button>
-            <button class="header-font-btn" data-size="large" onclick="headerSetFontSize('large')">가</button>
+        <div class="header-font-controls" title="글자 크기 조절" role="group" aria-label="글자 크기 조절">
+            <button class="header-font-btn" data-size="small" onclick="headerSetFontSize('small')" aria-label="작은 글자">가</button>
+            <button class="header-font-btn active" data-size="medium" onclick="headerSetFontSize('medium')" aria-label="보통 글자">가</button>
+            <button class="header-font-btn" data-size="large" onclick="headerSetFontSize('large')" aria-label="큰 글자">가</button>
         </div>
 
         <!-- 테마 설정 버튼 -->
-        <button class="header-theme-btn" id="headerThemeBtn" onclick="ThemeCustomizer.show()" title="테마 색상 변경">
-            <span class="icon">🎨</span>
+        <button class="header-theme-btn" id="headerThemeBtn" onclick="ThemeCustomizer.show()" title="테마 색상 변경" aria-label="테마 색상 변경">
+            <span class="icon" aria-hidden="true">🎨</span>
             <span class="label">테마</span>
         </button>
 
+        <!-- 만나이 계산기 버튼 -->
+        <button class="header-age-btn" id="headerAgeBtn" onclick="openAgeCalculator()" title="만나이 계산기" aria-label="만나이 계산기">
+            <span class="icon" aria-hidden="true">🎂</span>
+            <span class="label">나이</span>
+        </button>
+
         <!-- 튜토리얼 버튼 -->
-        <button class="header-tutorial-btn" id="headerTutorialBtn" onclick="restartTutorial()" title="사용법 튜토리얼 다시 보기">
-            <span class="icon">📖</span>
+        <button class="header-tutorial-btn" id="headerTutorialBtn" onclick="restartTutorial()" title="사용법 튜토리얼 다시 보기" aria-label="사용법 가이드">
+            <span class="icon" aria-hidden="true">📖</span>
             <span class="label">가이드</span>
         </button>
     </div>
@@ -489,6 +619,7 @@
         {% if is_admin %}
         <a href="/admin" {% if current_page == 'admin' %}class="active"{% endif %}>할일관리</a>
         <a href="/users" {% if current_page == 'users' %}class="active"{% endif %}>사용자관리</a>
+        <a href="/kpi" {% if current_page == 'kpi' %}class="active"{% endif %}>KPI관리</a>
         {% else %}
         <a href="/" id="navTasks" {% if current_page == 'tasks' %}class="active"{% endif %}>
             할일
@@ -505,8 +636,20 @@
             <span id="navRemindersBadge" class="nav-badge" style="display: none;"></span>
         </a>
         <a href="/memos" {% if current_page == 'memos' %}class="active"{% endif %}>내 메모</a>
+        <a href="/fortune" {% if current_page == 'fortune' %}class="active"{% endif %}>오늘운세</a>
         <a href="/mypage" {% if current_page == 'mypage' %}class="active"{% endif %}>마이페이지</a>
         <a href="/logout" class="secondary">로그아웃</a>
+    </div>
+</div>
+
+<!-- 만나이 계산기 모달 -->
+<div class="age-calc-overlay" id="ageCalcOverlay" onclick="if(event.target===this)closeAgeCalculator()">
+    <div class="age-calc-modal">
+        <h3>🎂 만나이 계산기</h3>
+        <input type="text" class="age-calc-input" id="ageCalcInput" placeholder="19910617" maxlength="8" inputmode="numeric" pattern="[0-9]*">
+        <div class="age-calc-result" id="ageCalcResult">-</div>
+        <div class="age-calc-detail" id="ageCalcDetail">생년월일 8자리를 입력하세요</div>
+        <button class="age-calc-close" onclick="closeAgeCalculator()">닫기</button>
     </div>
 </div>
 
@@ -572,9 +715,13 @@ function headerToggleDarkMode() {
 // 헤더 다크모드 UI 업데이트
 function updateHeaderDarkModeUI() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const toggle = document.getElementById('headerDarkToggle');
     const icon = document.getElementById('darkModeIcon');
     const label = document.getElementById('darkModeLabel');
 
+    if (toggle) {
+        toggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+    }
     if (icon) {
         icon.textContent = isDark ? '🌙' : '☀️';
     }
@@ -649,6 +796,130 @@ document.addEventListener('DOMContentLoaded', () => {
     // 폰트 크기 UI 초기화
     const savedSize = localStorage.getItem('crm_font_size') || 'medium';
     updateHeaderFontSizeUI(savedSize);
+});
+
+// 만나이 계산기
+function openAgeCalculator() {
+    document.getElementById('ageCalcOverlay').classList.add('active');
+    const input = document.getElementById('ageCalcInput');
+    input.value = '';
+    input.focus();
+    document.getElementById('ageCalcResult').textContent = '-';
+    document.getElementById('ageCalcDetail').textContent = '생년월일 8자리를 입력하세요';
+}
+
+function closeAgeCalculator() {
+    document.getElementById('ageCalcOverlay').classList.remove('active');
+}
+
+// 윤년 판별
+function isLeapYear(year) {
+    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
+
+// 해당 월의 일수 반환
+function getDaysInMonth(year, month) {
+    const days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (month === 2 && isLeapYear(year)) return 29;
+    return days[month - 1];
+}
+
+// 유효한 날짜인지 검증
+function isValidDate(year, month, day) {
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > getDaysInMonth(year, month)) return false;
+    return true;
+}
+
+// 만나이 계산 (윤년 완벽 고려)
+function calculateAge(birthStr) {
+    if (!/^\d{8}$/.test(birthStr)) return null;
+
+    const year = parseInt(birthStr.substring(0, 4), 10);
+    const month = parseInt(birthStr.substring(4, 6), 10);
+    const day = parseInt(birthStr.substring(6, 8), 10);
+
+    // 날짜 유효성 검사
+    if (!isValidDate(year, month, day)) return null;
+
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1;
+    const todayDay = today.getDate();
+
+    // 미래 날짜 체크
+    if (year > todayYear || (year === todayYear && month > todayMonth) ||
+        (year === todayYear && month === todayMonth && day > todayDay)) {
+        return null;
+    }
+
+    let age = todayYear - year;
+
+    // 생일이 아직 안 지났으면 1살 빼기
+    if (todayMonth < month || (todayMonth === month && todayDay < day)) {
+        age--;
+    }
+
+    // 상세 정보 계산
+    const birthDate = new Date(year, month - 1, day);
+    const nextBirthday = new Date(todayYear, month - 1, day);
+    if (nextBirthday < today) {
+        nextBirthday.setFullYear(todayYear + 1);
+    }
+
+    const daysUntilBirthday = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
+    const isBirthdayToday = todayMonth === month && todayDay === day;
+
+    return {
+        age: age,
+        birthYear: year,
+        birthMonth: month,
+        birthDay: day,
+        daysUntilBirthday: daysUntilBirthday,
+        isBirthdayToday: isBirthdayToday
+    };
+}
+
+// 입력 이벤트 처리
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('ageCalcInput');
+    if (input) {
+        input.addEventListener('input', function(e) {
+            // 숫자만 허용
+            this.value = this.value.replace(/[^0-9]/g, '');
+
+            const result = document.getElementById('ageCalcResult');
+            const detail = document.getElementById('ageCalcDetail');
+
+            if (this.value.length === 8) {
+                const ageInfo = calculateAge(this.value);
+                if (ageInfo) {
+                    result.textContent = `만 ${ageInfo.age}세`;
+                    if (ageInfo.isBirthdayToday) {
+                        detail.textContent = `🎉 오늘이 생일입니다! (${ageInfo.birthYear}.${String(ageInfo.birthMonth).padStart(2,'0')}.${String(ageInfo.birthDay).padStart(2,'0')})`;
+                    } else {
+                        detail.textContent = `${ageInfo.birthYear}.${String(ageInfo.birthMonth).padStart(2,'0')}.${String(ageInfo.birthDay).padStart(2,'0')} | 생일까지 ${ageInfo.daysUntilBirthday}일`;
+                    }
+                } else {
+                    result.textContent = '❌';
+                    detail.textContent = '유효하지 않은 날짜입니다';
+                }
+            } else if (this.value.length > 0) {
+                result.textContent = '-';
+                detail.textContent = `${this.value.length}/8자리 입력됨`;
+            } else {
+                result.textContent = '-';
+                detail.textContent = '생년월일 8자리를 입력하세요';
+            }
+        });
+
+        // ESC 키로 닫기
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAgeCalculator();
+            }
+        });
+    }
 });
 
 // 튜토리얼 재시작 함수

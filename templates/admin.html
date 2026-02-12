@@ -277,6 +277,13 @@
         .modal-btn-danger { background: #dc3545; color: white; }
         .modal-btn-danger:hover { background: #c82333; }
 
+        /* 다크모드 모달 */
+        [data-theme="dark"] .modal-overlay { background: rgba(0, 0, 0, 0.85); }
+        [data-theme="dark"] .modal-box { background: linear-gradient(145deg, #1e1e38 0%, #252550 100%); color: #e8e8e8; border: 1px solid rgba(96, 165, 250, 0.2); }
+        [data-theme="dark"] .modal-title { color: #fff; }
+        [data-theme="dark"] .modal-message { color: #b0b0b0; }
+        [data-theme="dark"] .modal-input { background: #1e1e38; border-color: rgba(96, 165, 250, 0.3); color: #e8e8e8; }
+
         /* 페이지네이션 버튼 스타일 */
         #paginationButtons button { padding: 6px 12px; border: 1px solid #ddd; background: white; color: #333; cursor: pointer; border-radius: 4px; font-size: 14px; min-width: 36px; }
         #paginationButtons button:hover:not(:disabled) { background: #007bff; color: white; border-color: #007bff; }
@@ -602,6 +609,14 @@
 
         let currentLayout = null;
 
+        // XSS 방지용 HTML 이스케이프 함수
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Excel 스타일 컬럼 필터 상태 (다중 조건 지원)
         // { columnKey: { logic: 'AND', conditions: [{ operator: 'equals', value: 'somevalue' }, ...] } }
         let columnFilters = {};
@@ -682,7 +697,7 @@
             completed_at: 'date'
         };
 
-        // 모달 함수
+        // 모달 함수 (XSS 방지를 위해 이벤트 핸들러 직접 바인딩)
         function showModal(title, message, buttons) {
             const overlay = document.getElementById('modalOverlay');
             const modalTitle = document.getElementById('modalTitle');
@@ -691,16 +706,27 @@
             const modalButtons = document.getElementById('modalButtons');
 
             modalTitle.textContent = title;
-            modalMessage.innerHTML = message;  // textContent → innerHTML로 변경
+            modalMessage.innerHTML = message;  // 의도적으로 HTML 허용 (내부 정적 마크업만 사용)
             modalInput.style.display = 'none';
             modalInput.value = '';
 
-            modalButtons.innerHTML = buttons.map(btn => {
+            // 기존 버튼 제거 후 새로 생성 (이벤트 핸들러 직접 바인딩으로 XSS 방지)
+            modalButtons.innerHTML = '';
+            buttons.forEach(btn => {
+                const button = document.createElement('button');
                 const className = btn.type === 'primary' ? 'modal-btn-primary' :
                                  btn.type === 'danger' ? 'modal-btn-danger' :
                                  'modal-btn-secondary';
-                return `<button class="modal-btn ${className}" onclick="${btn.onclick}">${btn.text}</button>`;
-            }).join('');
+                button.className = `modal-btn ${className}`;
+                button.textContent = btn.text;
+                // onclick이 문자열이면 eval, 함수면 직접 실행
+                if (typeof btn.onclick === 'function') {
+                    button.addEventListener('click', btn.onclick);
+                } else if (typeof btn.onclick === 'string') {
+                    button.addEventListener('click', function() { eval(btn.onclick); });
+                }
+                modalButtons.appendChild(button);
+            });
 
             overlay.classList.add('active');
         }

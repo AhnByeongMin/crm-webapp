@@ -26,6 +26,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #f5f5f5; min-height: 100vh; }
         .container { max-width: 1400px; margin: 0 auto; }
+        /* 접근성 - 시각적으로 숨김 (스크린 리더용) */
+        .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
         /* 헤더 */
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
@@ -374,7 +376,8 @@
                     </div>
                 </div>
                 <div class="search-box">
-                    <input type="text" class="search-input" id="searchInput" placeholder="메모 검색..." oninput="searchMemos(this.value)">
+                    <label for="searchInput" class="visually-hidden">메모 검색</label>
+                    <input type="text" class="search-input" id="searchInput" placeholder="메모 검색..." oninput="searchMemos(this.value)" aria-label="메모 검색">
                 </div>
                 <div class="folder-list" id="folderList">
                     <!-- 동적으로 로드 -->
@@ -547,7 +550,7 @@
 
         // 초기화
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOMContentLoaded - 메모 페이지 초기화');
+            console.debug('DOMContentLoaded - 메모 페이지 초기화');
 
             // 새 폴더 버튼 이벤트 연결
             const newFolderBtn = document.getElementById('newFolderBtn');
@@ -555,10 +558,10 @@
                 newFolderBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('새 폴더 버튼 클릭됨');
+                    console.debug('새 폴더 버튼 클릭됨');
                     showNewFolderModal();
                 });
-                console.log('새 폴더 버튼 이벤트 연결 완료');
+                console.debug('새 폴더 버튼 이벤트 연결 완료');
             } else {
                 console.error('새 폴더 버튼을 찾을 수 없음');
             }
@@ -601,7 +604,7 @@
                 if (mobileBtn) mobileBtn.style.display = 'inline-flex';
             }
 
-            console.log('메모 페이지 초기화 완료');
+            console.debug('메모 페이지 초기화 완료');
         });
 
         // 폴더 로드
@@ -1131,7 +1134,7 @@
 
         // 새 폴더 모달
         function showNewFolderModal(parentId = null) {
-            console.log('showNewFolderModal called, parentId:', parentId);
+            console.debug('showNewFolderModal called, parentId:', parentId);
             try {
                 editingFolderId = null;
                 newFolderParentId = parentId;
@@ -1150,7 +1153,7 @@
 
                 document.getElementById('folderModal').classList.add('show');
                 document.getElementById('folderNameInput').focus();
-                console.log('Modal should be visible now');
+                console.debug('Modal should be visible now');
             } catch (e) {
                 console.error('showNewFolderModal error:', e);
                 alert('폴더 모달 오류: ' + e.message);
@@ -1335,7 +1338,7 @@
         }
 
         function selectMoveFolder(folderId) {
-            console.log('폴더 선택:', folderId);
+            console.debug('폴더 선택:', folderId);
             selectedMoveFolder = folderId;
             renderFolderSelectList(contextType);
         }
@@ -1345,7 +1348,7 @@
         }
 
         async function confirmMove() {
-            console.log('이동 확인 - 선택된 폴더:', selectedMoveFolder, 'contextType:', contextType);
+            console.debug('이동 확인 - 선택된 폴더:', selectedMoveFolder, 'contextType:', contextType);
 
             // 'root'를 null로 변환 (API에서는 null이 루트)
             const targetFolder = selectedMoveFolder === 'root' ? null : selectedMoveFolder;
@@ -1353,14 +1356,14 @@
             try {
                 let response;
                 if (contextType === 'folder') {
-                    console.log('폴더 이동 API 호출:', contextTarget, '->', targetFolder);
+                    console.debug('폴더 이동 API 호출:', contextTarget, '->', targetFolder);
                     response = await fetch(`/api/memos/folders/${contextTarget}/move`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ parent_id: targetFolder })
                     });
                 } else {
-                    console.log('메모 이동 API 호출:', currentMemoId, '->', targetFolder);
+                    console.debug('메모 이동 API 호출:', currentMemoId, '->', targetFolder);
                     response = await fetch(`/api/memos/${currentMemoId}/move`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
