@@ -3041,3 +3041,1118 @@
 [data-theme="dark"] textarea::placeholder {
     color: var(--text-muted) !important;
 }
+
+/* ========== 토스트 메시지 다크모드 (모든 페이지) ========== */
+/*
+ * 토스트 스타일 통일 (MyPage 스타일 기준):
+ * - 기본: 다크 그라데이션 배경 + 좌측 보라색 테두리
+ * - success: 좌측 녹색 테두리
+ * - error: 좌측 빨간색 테두리
+ */
+
+/* 기본 토스트 */
+[data-theme="dark"] .toast {
+    background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #60a5fa !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 토스트 내부 텍스트 */
+[data-theme="dark"] .toast-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .toast-message {
+    color: var(--text-secondary) !important;
+}
+
+/* 성공 토스트 */
+[data-theme="dark"] .toast.success {
+    background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #10b981 !important;
+}
+
+/* 에러 토스트 */
+[data-theme="dark"] .toast.error {
+    background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #ef4444 !important;
+}
+
+/* 정보 토스트 */
+[data-theme="dark"] .toast.info {
+    background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #0ea5e9 !important;
+}
+
+/* 경고 토스트 */
+[data-theme="dark"] .toast.warning {
+    background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #f59e0b !important;
+}
+
+/* KPI 페이지 토스트 - 원래 스타일 유지 (색상 배경) */
+[data-theme="dark"] .kpi-toast {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .kpi-toast.success {
+    background: #059669 !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .kpi-toast.error {
+    background: #dc2626 !important;
+    color: white !important;
+}
+
+/* ========== 메모 페이지 다크모드 ========== */
+/* 사이드바 */
+[data-theme="dark"] .sidebar {
+    background: var(--card-bg) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+[data-theme="dark"] .sidebar-header {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .sidebar-header h3 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .icon-btn.secondary {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .icon-btn.secondary:hover {
+    background: var(--bg-hover) !important;
+}
+
+/* 검색 박스 */
+[data-theme="dark"] .search-box {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .search-input {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .search-input:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+/* 폴더 리스트 */
+[data-theme="dark"] .folder-list {
+    background: transparent !important;
+}
+
+[data-theme="dark"] .folder-item {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .folder-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .folder-item.active {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .folder-count {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .folder-item.active .folder-count {
+    background: rgba(255,255,255,0.3) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .folder-toggle {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .folder-toggle:hover {
+    background: var(--bg-hover) !important;
+    color: var(--accent-primary) !important;
+}
+
+/* 폴더 드래그 앤 드롭 */
+[data-theme="dark"] .folder-item.drag-over {
+    background: rgba(102, 126, 234, 0.2) !important;
+    border: 2px dashed var(--accent-primary) !important;
+}
+
+/* 메인 콘텐츠 */
+[data-theme="dark"] .main-content {
+    background: var(--card-bg) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+[data-theme="dark"] .content-header {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .content-header h2 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .breadcrumb {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .breadcrumb span:hover {
+    color: var(--accent-primary) !important;
+}
+
+/* 메모 리스트 */
+[data-theme="dark"] .memo-item {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .memo-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .memo-item.active {
+    background: rgba(102, 126, 234, 0.15) !important;
+    border-left-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .memo-item.dragging {
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .memo-title {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .memo-preview {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .memo-meta {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .memo-favorite.inactive {
+    color: var(--text-muted) !important;
+}
+
+/* 메모 에디터 */
+[data-theme="dark"] .memo-editor {
+    background: var(--card-bg) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+[data-theme="dark"] .editor-header {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .editor-title {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .editor-title:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .editor-content {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .editor-content:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .editor-footer {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .editor-meta {
+    color: var(--text-muted) !important;
+}
+
+/* 빈 상태 */
+[data-theme="dark"] .empty-state {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .empty-state h3 {
+    color: var(--text-secondary) !important;
+}
+
+/* 모달 */
+[data-theme="dark"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .modal {
+    background: var(--modal-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] .modal h3 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-input {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-input:focus {
+    border-color: var(--accent-primary) !important;
+}
+
+/* 컨텍스트 메뉴 */
+[data-theme="dark"] .context-menu {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .context-menu-item {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .context-menu-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .context-menu-item.danger {
+    color: #ef4444 !important;
+}
+
+[data-theme="dark"] .context-menu-divider {
+    background: var(--border-color) !important;
+}
+
+/* 폴더 선택 모달 */
+[data-theme="dark"] .folder-select {
+    border-color: var(--border-color) !important;
+    background: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .folder-select-item {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .folder-select-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .folder-select-item.selected {
+    background: rgba(102, 126, 234, 0.15) !important;
+    border-left-color: var(--accent-primary) !important;
+}
+
+/* ========== Fortune (운세) 페이지 다크모드 ========== */
+[data-theme="dark"] .fortune-container,
+[data-theme="dark"] .fortune-card {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .fortune-section {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .zodiac-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .zodiac-card:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .zodiac-card.selected {
+    background: rgba(102, 126, 234, 0.2) !important;
+    border-color: var(--accent-primary) !important;
+}
+
+/* ========== 로그인 페이지 다크모드 ========== */
+[data-theme="dark"] .login-container {
+    background: var(--card-bg) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+[data-theme="dark"] .login-form input {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .capslock-warning {
+    background: #44403c !important;
+    border-color: #fbbf24 !important;
+    color: #fbbf24 !important;
+}
+
+/* ========== 채팅 목록 다크모드 추가 ========== */
+[data-theme="dark"] .chat-list-container {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] .chat-item {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .chat-item:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .chat-item.pinned {
+    background: #2d2a1f !important;
+    border-left-color: #ffc107 !important;
+}
+
+/* ========== Admin 페이지 인라인 background:white 오버라이드 ========== */
+[data-theme="dark"] div[style*="background: white"],
+[data-theme="dark"] div[style*="background:white"],
+[data-theme="dark"] div[style*="background: #fff"],
+[data-theme="dark"] div[style*="background:#fff"] {
+    background: var(--card-bg) !important;
+}
+
+/* Admin 페이지 토스트 */
+[data-theme="dark"] .toast-container .toast {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-left: 4px solid var(--accent-primary) !important;
+}
+
+/* Admin 페이지 모달 */
+[data-theme="dark"] .modal-box {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-btn-danger {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+/* ========== Reminders 페이지 추가 ========== */
+[data-theme="dark"] .reminders-container {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .reminder-modal .modal-box {
+    background: var(--modal-bg) !important;
+}
+
+[data-theme="dark"] #notificationSettingsModal div[style*="background: #fff8e1"] {
+    background: #44403c !important;
+    color: #fbbf24 !important;
+}
+
+/* ========== 기타 투명 배경 요소들 ========== */
+/* 버튼 기본 스타일 유지 (인라인 오버라이드) */
+[data-theme="dark"] button[style*="background: #28a745"],
+[data-theme="dark"] button[style*="background:#28a745"] {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+}
+
+[data-theme="dark"] button[style*="background: #dc3545"],
+[data-theme="dark"] button[style*="background:#dc3545"] {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+}
+
+/* 페이지네이션 버튼 */
+[data-theme="dark"] #paginationButtons button[style*="background: white"] {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 테이블 sticky 열 */
+[data-theme="dark"] td[style*="background: white"],
+[data-theme="dark"] td[style*="background:white"] {
+    background: var(--card-bg) !important;
+}
+
+/* 배너 링크 */
+[data-theme="dark"] .banner-link[style*="background: white"] {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+/* 사용자 목록 컨테이너 */
+[data-theme="dark"] #userListContainer[style*="background: white"] {
+    background: var(--card-bg) !important;
+}
+
+/* 컬럼 아이템 */
+[data-theme="dark"] .column-item[style*="background: white"] {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 필터 조건 영역 */
+[data-theme="dark"] div[style*="background: white"][style*="border-radius: 4px"] {
+    background: var(--card-bg) !important;
+}
+
+/* 프로모션 모달 안내 영역 */
+[data-theme="dark"] div[style*="background: #fff3cd"] {
+    background: #44403c !important;
+    color: #fbbf24 !important;
+    border-color: #fbbf24 !important;
+}
+
+/* 프로모션 안내 영역 */
+[data-theme="dark"] div[style*="background: #fff5f5"] {
+    background: #3d2a2a !important;
+    color: #f87171 !important;
+}
+
+/* ========== KPI 페이지 다크모드 보완 ========== */
+[data-theme="dark"] .kpi-container {
+    background: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .kpi-header {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .kpi-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .kpi-table th {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .kpi-table td {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* 환산 공식 모달 */
+[data-theme="dark"] #conversionModal .modal-content,
+[data-theme="dark"] #conversionModal .modal-box {
+    background: var(--modal-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] #conversionModal input,
+[data-theme="dark"] #conversionModal select {
+    background: var(--input-bg) !important;
+    border-color: var(--input-border) !important;
+    color: var(--text-primary) !important;
+}
+
+/* KPI 환산 범위 행 */
+[data-theme="dark"] .conversion-range-row {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* ========== 프라이버시 안내 ========== */
+[data-theme="dark"] .privacy-notice {
+    background: rgba(102, 126, 234, 0.15) !important;
+    border-color: var(--accent-primary) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 인라인 스타일 색상 오버라이드 ========== */
+/* 회색 텍스트 (#999, #888, #666, #555, #333, #ccc) -> 다크모드 적합 색상 */
+[data-theme="dark"] [style*="color: #999"],
+[data-theme="dark"] [style*="color:#999"],
+[data-theme="dark"] [style*="color: #888"],
+[data-theme="dark"] [style*="color:#888"],
+[data-theme="dark"] [style*="color: #ccc"],
+[data-theme="dark"] [style*="color:#ccc"] {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] [style*="color: #666"],
+[data-theme="dark"] [style*="color:#666"],
+[data-theme="dark"] [style*="color: #555"],
+[data-theme="dark"] [style*="color:#555"] {
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] [style*="color: #333"],
+[data-theme="dark"] [style*="color:#333"] {
+    color: var(--text-primary) !important;
+}
+
+/* 녹색 텍스트 (#28a745) -> 밝은 녹색 */
+[data-theme="dark"] [style*="color: #28a745"],
+[data-theme="dark"] [style*="color:#28a745"] {
+    color: #4ade80 !important;
+}
+
+/* 빨간색 텍스트 (#dc3545) -> 밝은 빨간색 */
+[data-theme="dark"] [style*="color: #dc3545"],
+[data-theme="dark"] [style*="color:#dc3545"],
+[data-theme="dark"] [style*="color: #721c24"],
+[data-theme="dark"] [style*="color:#721c24"] {
+    color: #f87171 !important;
+}
+
+/* 파란색/보라색 텍스트 (#667eea) -> 밝은 파란색 */
+[data-theme="dark"] [style*="color: #667eea"],
+[data-theme="dark"] [style*="color:#667eea"] {
+    color: #93c5fd !important;
+}
+
+/* 노란색/경고 텍스트 (#856404) -> 밝은 노란색 */
+[data-theme="dark"] [style*="color: #856404"],
+[data-theme="dark"] [style*="color:#856404"],
+[data-theme="dark"] [style*="color: #ffc107"],
+[data-theme="dark"] [style*="color:#ffc107"] {
+    color: #fbbf24 !important;
+}
+
+/* 청록색 텍스트 (#6c757d) -> 밝은 회색 */
+[data-theme="dark"] [style*="color: #6c757d"],
+[data-theme="dark"] [style*="color:#6c757d"] {
+    color: #9ca3af !important;
+}
+
+/* 핑크 에러 배경 오버라이드 */
+[data-theme="dark"] [style*="background: #ffe6e6"],
+[data-theme="dark"] [style*="background:#ffe6e6"] {
+    background: #3d2a2a !important;
+}
+
+[data-theme="dark"] [style*="background: #f8d7da"],
+[data-theme="dark"] [style*="background:#f8d7da"] {
+    background: #3d2a2a !important;
+    border-color: #7f1d1d !important;
+}
+
+/* 노란색 경고 배경 오버라이드 */
+[data-theme="dark"] [style*="background: #fff8e1"],
+[data-theme="dark"] [style*="background:#fff8e1"],
+[data-theme="dark"] [style*="background: #fff3cd"],
+[data-theme="dark"] [style*="background:#fff3cd"] {
+    background: #44403c !important;
+    color: #fbbf24 !important;
+}
+
+/* 흰색 배경 오버라이드 */
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background:white"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background:#fff"],
+[data-theme="dark"] [style*="background: #ffffff"],
+[data-theme="dark"] [style*="background:#ffffff"] {
+    background: var(--card-bg) !important;
+}
+
+/* 밝은 회색 배경 오버라이드 */
+[data-theme="dark"] [style*="background: #f8f9fa"],
+[data-theme="dark"] [style*="background:#f8f9fa"],
+[data-theme="dark"] [style*="background: #f5f5f5"],
+[data-theme="dark"] [style*="background:#f5f5f5"],
+[data-theme="dark"] [style*="background: #f0f0f0"],
+[data-theme="dark"] [style*="background:#f0f0f0"] {
+    background: var(--bg-tertiary) !important;
+}
+
+/* ========== KPI 페이지 추가 ========== */
+/* 합계/평균 행 색상 */
+[data-theme="dark"] .total-cell[style*="color: #28a745"] {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .total-cell[style*="color: #6c757d"] {
+    color: #9ca3af !important;
+}
+
+/* KPI 테이블 셀 내 색상 */
+[data-theme="dark"] td[style*="color: #667eea"] {
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] td[style*="color: #28a745"] {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] td[style*="color: #6c757d"] {
+    color: #9ca3af !important;
+}
+
+/* ========== 메모 페이지 추가 ========== */
+/* 제목 색상 */
+[data-theme="dark"] h2[style*="color: #333"] {
+    color: var(--text-primary) !important;
+}
+
+/* 개인정보 보호 경고 */
+[data-theme="dark"] #sensitiveWarning {
+    background: #3d2a2a !important;
+    border-color: #7f1d1d !important;
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] #sensitiveWarning strong {
+    color: #fca5a5 !important;
+}
+
+/* ========== Admin 페이지 추가 ========== */
+/* 모달 제목 색상 */
+[data-theme="dark"] h3[style*="color: #667eea"] {
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] h3[style*="color: #28a745"] {
+    color: #4ade80 !important;
+}
+
+/* 필터 팝업 내 텍스트 */
+[data-theme="dark"] .filter-popup [style*="color: #333"],
+[data-theme="dark"] .filter-popup [style*="color: #555"],
+[data-theme="dark"] .filter-popup [style*="color: #666"] {
+    color: var(--text-primary) !important;
+}
+
+/* 레이아웃 관리 모달 */
+[data-theme="dark"] [style*="font-size: 12px; color: #999"] {
+    color: var(--text-muted) !important;
+}
+
+/* 버튼 내 색상 - 버튼은 white 유지 */
+[data-theme="dark"] button[style*="background: #28a745"] {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] button[style*="background: #dc3545"] {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] button[style*="background: #667eea"] {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] button[style*="background: #6c757d"] {
+    background: #6b7280 !important;
+    color: white !important;
+}
+
+[data-theme="dark"] button[style*="background: #ff9800"] {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+    color: white !important;
+}
+
+/* ========== Reminders 페이지 추가 ========== */
+/* 캘린더 내 텍스트 */
+[data-theme="dark"] .calendar-day[style*="color: #dc3545"] {
+    color: #f87171 !important;
+}
+
+/* ========== Chat 페이지 추가 ========== */
+[data-theme="dark"] #chatCount[style*="color: #666"] {
+    color: var(--text-muted) !important;
+}
+
+/* ========== Fortune 페이지 추가 ========== */
+[data-theme="dark"] .fortune-section [style*="color: #888"] {
+    color: var(--text-muted) !important;
+}
+
+/* ========== MyPage 추가 ========== */
+[data-theme="dark"] h2[style*="color: #333"] {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] span[style*="color: #28a745"] {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] span[style*="color: #dc3545"] {
+    color: #f87171 !important;
+}
+
+/* ========== 모달 내 폼 그룹 ========== */
+[data-theme="dark"] .modal-box label[style*="color"] {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-box p[style*="color"] {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== 검색 결과 없음 메시지 ========== */
+[data-theme="dark"] td[style*="color: #999"][style*="text-align: center"] {
+    color: var(--text-muted) !important;
+}
+
+/* ========== 도움말 내용 ========== */
+[data-theme="dark"] li strong[style*="color: #dc3545"] {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] li strong[style*="color: #ffc107"] {
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] li strong[style*="color: #28a745"] {
+    color: #4ade80 !important;
+}
+
+/* ========== Promotions 페이지 추가 ========== */
+/* 컨트롤 영역 */
+[data-theme="dark"] .controls {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+/* 검색박스 */
+[data-theme="dark"] .search-box {
+    background: #1e1e38 !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .search-box::placeholder {
+    color: #888 !important;
+}
+
+/* 최근 검색어 드롭다운 */
+[data-theme="dark"] .recent-searches {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border-color: #667eea !important;
+}
+
+[data-theme="dark"] .recent-search-header {
+    background: rgba(30, 30, 56, 0.8) !important;
+    color: #b0b0b0 !important;
+}
+
+[data-theme="dark"] .recent-search-item {
+    border-bottom-color: rgba(96, 165, 250, 0.1) !important;
+}
+
+[data-theme="dark"] .recent-search-item:hover {
+    background: rgba(96, 165, 250, 0.1) !important;
+}
+
+[data-theme="dark"] .recent-search-text {
+    color: #e8e8e8 !important;
+}
+
+/* Select 드롭다운 */
+[data-theme="dark"] select {
+    background: #1e1e38 !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+    color: #e8e8e8 !important;
+}
+
+/* 채널 필터 */
+[data-theme="dark"] .channel-filter {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .channel-filter-label {
+    color: #b0b0b0 !important;
+}
+
+[data-theme="dark"] .channel-filter-btn {
+    background: rgba(30, 30, 56, 0.8) !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .channel-filter-btn:hover {
+    background: rgba(96, 165, 250, 0.2) !important;
+    border-color: #667eea !important;
+}
+
+/* 프로모션 카드 */
+[data-theme="dark"] .promo-card {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .promo-card:hover {
+    border-color: rgba(96, 165, 250, 0.4) !important;
+}
+
+[data-theme="dark"] .promo-title {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .promo-content {
+    color: #b0b0b0 !important;
+}
+
+[data-theme="dark"] .promo-meta {
+    color: #888 !important;
+}
+
+/* 페이지네이션 */
+[data-theme="dark"] .pagination {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .page-btn {
+    background: rgba(30, 30, 56, 0.8) !important;
+    color: #e8e8e8 !important;
+    border-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .page-btn:hover {
+    background: rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .page-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+/* 행사 등록 모달 - 중복 확인 */
+[data-theme="dark"] #lockInfo {
+    background: #3d3200 !important;
+    border-color: #856404 !important;
+    color: #ffc107 !important;
+}
+
+/* 알림 배너 */
+[data-theme="dark"] #reminderBanner .banner-link {
+    background: rgba(30, 30, 56, 0.8) !important;
+    color: #f87171 !important;
+}
+
+/* 상세 모달 그룹 제목 */
+[data-theme="dark"] h3[style*="color: #333"] {
+    color: #e8e8e8 !important;
+}
+
+/* ========== Reminders 페이지 추가 ========== */
+/* 캘린더 */
+[data-theme="dark"] .calendar {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .calendar-header {
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .calendar-day {
+    background: rgba(30, 30, 56, 0.6) !important;
+    border-color: rgba(96, 165, 250, 0.1) !important;
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .calendar-day:hover {
+    background: rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .calendar-day.today {
+    border-color: #667eea !important;
+}
+
+[data-theme="dark"] .calendar-day.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+/* 예약 리스트 */
+[data-theme="dark"] .reminder-list {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .reminder-item {
+    background: rgba(30, 30, 56, 0.6) !important;
+    border-color: rgba(96, 165, 250, 0.1) !important;
+}
+
+[data-theme="dark"] .reminder-item:hover {
+    background: rgba(96, 165, 250, 0.1) !important;
+}
+
+[data-theme="dark"] .reminder-title {
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .reminder-time,
+[data-theme="dark"] .reminder-content {
+    color: #b0b0b0 !important;
+}
+
+/* ========== Users 페이지 추가 ========== */
+/* 사용자 테이블 */
+[data-theme="dark"] .user-table {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .user-table th {
+    background: rgba(30, 30, 56, 0.8) !important;
+    color: #e8e8e8 !important;
+    border-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .user-table td {
+    background: transparent !important;
+    color: #e8e8e8 !important;
+    border-color: rgba(96, 165, 250, 0.1) !important;
+}
+
+[data-theme="dark"] .user-table tr:hover td {
+    background: rgba(96, 165, 250, 0.1) !important;
+}
+
+/* ========== Chat 페이지 추가 ========== */
+/* 채팅 리스트 */
+[data-theme="dark"] .chat-list {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+}
+
+[data-theme="dark"] .chat-item {
+    background: rgba(30, 30, 56, 0.6) !important;
+    border-color: rgba(96, 165, 250, 0.1) !important;
+}
+
+[data-theme="dark"] .chat-item:hover {
+    background: rgba(96, 165, 250, 0.15) !important;
+}
+
+[data-theme="dark"] .chat-name {
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .chat-preview {
+    color: #b0b0b0 !important;
+}
+
+[data-theme="dark"] .chat-time {
+    color: #888 !important;
+}
+
+/* 채팅 메시지 영역 */
+[data-theme="dark"] .chat-messages {
+    background: #121212 !important;
+}
+
+[data-theme="dark"] .message-bubble {
+    background: rgba(30, 30, 56, 0.8) !important;
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .message-bubble.mine {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .message-sender {
+    color: #a8b4ff !important;
+}
+
+[data-theme="dark"] .message-time {
+    color: #888 !important;
+}
+
+/* 메시지 입력 영역 */
+[data-theme="dark"] .chat-input-area {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border-top: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .chat-input {
+    background: rgba(30, 30, 56, 0.8) !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+    color: #e8e8e8 !important;
+}
+
+/* ========== Admin 페이지 추가 ========== */
+/* 관리자 컨트롤 영역 */
+[data-theme="dark"] .admin-controls {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+/* 필터 팝업 */
+[data-theme="dark"] .filter-popup {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.3) !important;
+}
+
+[data-theme="dark"] .filter-popup input[type="text"],
+[data-theme="dark"] .filter-popup select {
+    background: rgba(30, 30, 56, 0.8) !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+    color: #e8e8e8 !important;
+}
+
+/* ========== Memos 페이지 추가 ========== */
+/* 폴더 사이드바 */
+[data-theme="dark"] .folder-sidebar {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border-color: rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .folder-item {
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .folder-item:hover {
+    background: rgba(96, 165, 250, 0.15) !important;
+}
+
+[data-theme="dark"] .folder-item.active {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%) !important;
+    border-left-color: #667eea !important;
+}
+
+/* 메모 카드 */
+[data-theme="dark"] .memo-card {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+[data-theme="dark"] .memo-card:hover {
+    border-color: rgba(96, 165, 250, 0.4) !important;
+}
+
+[data-theme="dark"] .memo-title {
+    color: #e8e8e8 !important;
+}
+
+[data-theme="dark"] .memo-content {
+    color: #b0b0b0 !important;
+}
+
+[data-theme="dark"] .memo-date {
+    color: #888 !important;
+}

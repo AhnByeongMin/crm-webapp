@@ -203,6 +203,33 @@
         [data-theme="dark"] .team-item:hover {
             background: #2a3f5f;
         }
+        /* 다크모드 페이지 전체 */
+        [data-theme="dark"] h1 {
+            color: #e8e8e8;
+        }
+        /* 다크모드 테이블 */
+        [data-theme="dark"] table {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] th {
+            background: rgba(30, 30, 56, 0.8) !important;
+            color: #e8e8e8 !important;
+            border-color: rgba(96, 165, 250, 0.2) !important;
+        }
+        [data-theme="dark"] td {
+            color: #e8e8e8;
+            border-color: rgba(96, 165, 250, 0.1);
+        }
+        [data-theme="dark"] tr:hover td {
+            background: rgba(96, 165, 250, 0.1);
+        }
+        /* 다크모드 토스트 */
+        [data-theme="dark"] .toast {
+            background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%);
+            color: #e8e8e8;
+            border-left-color: #667eea;
+        }
 
         /* 도움말 섹션 (사용자관리 페이지 전용) */
         .help-section {

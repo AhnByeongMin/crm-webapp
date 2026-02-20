@@ -323,6 +323,114 @@
             align-items: center;
             gap: 8px;
         }
+
+        /* 다크모드 채팅 목록 */
+        [data-theme="dark"] .chat-item {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-left: 4px solid #667eea;
+        }
+        [data-theme="dark"] .chat-item:hover {
+            background: linear-gradient(145deg, #252550 0%, #2d2d60 100%);
+        }
+        [data-theme="dark"] .chat-item.pinned {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+        }
+        [data-theme="dark"] .chat-title {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .chat-preview {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .chat-time,
+        [data-theme="dark"] .chat-participants {
+            color: #888;
+        }
+        [data-theme="dark"] .pin-btn {
+            background: rgba(30, 30, 56, 0.8);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .pin-btn:hover {
+            background: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .pin-btn.pinned {
+            background: rgba(255, 193, 7, 0.2);
+        }
+        /* 다크모드 탭 */
+        [data-theme="dark"] .tabs {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .tab {
+            background: transparent;
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .tab:hover {
+            background: rgba(96, 165, 250, 0.1);
+        }
+        [data-theme="dark"] .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        /* 다크모드 검색/필터 영역 */
+        [data-theme="dark"] .search-filter {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .search-box,
+        [data-theme="dark"] #chatFilter {
+            background: rgba(30, 30, 56, 0.8);
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        /* 다크모드 모달 */
+        [data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .modal-box {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            color: #e8e8e8;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .modal-title {
+            color: #fff;
+        }
+        [data-theme="dark"] .form-group label {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .form-group input {
+            background: #1e1e38;
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #e8e8e8;
+        }
+        /* 다크모드 유저 리스트 */
+        [data-theme="dark"] .user-list {
+            background: rgba(30, 30, 56, 0.8);
+            border-color: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .user-item {
+            color: #e8e8e8;
+            border-color: rgba(96, 165, 250, 0.1);
+        }
+        [data-theme="dark"] .user-item:hover {
+            background: rgba(96, 165, 250, 0.1);
+        }
+        [data-theme="dark"] .user-item.selected {
+            background: rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+        }
+        /* 다크모드 알림 배너 */
+        [data-theme="dark"] #reminderBanner .banner-link {
+            background: rgba(30, 30, 56, 0.8);
+            color: #f87171;
+        }
+        /* 다크모드 토스트 */
+        [data-theme="dark"] .toast {
+            background: linear-gradient(145deg, #1e1e38 0%, #2d2d50 100%);
+            color: #e8e8e8;
+            border-left-color: #667eea;
+        }
     </style>
     <script src="/static/js/banner.js" defer></script>
     <script src="/static/js/keyboard-shortcuts.js" defer></script>

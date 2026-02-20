@@ -192,6 +192,7 @@
                 <button class="btn btn-primary" onclick="openScoreModal()">✏️ 개별 입력</button>
                 <button class="btn btn-primary" onclick="openBulkScoreModal()">📋 일괄 입력</button>
                 <button class="btn btn-warning" onclick="openCategoryModal()">📁 카테고리 관리</button>
+                <button class="btn btn-secondary" onclick="openConversionModal()">⚙️ 환산 공식</button>
                 <button class="btn btn-success" onclick="exportExcel()">📥 Excel 내보내기</button>
             </div>
         </div>
@@ -408,6 +409,66 @@
         </div>
     </div>
 
+    <!-- 환산 공식 관리 모달 -->
+    <div class="modal-overlay" id="conversionModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>환산 공식 관리 (<span id="conversionMonthDisplay">2026년 2월</span>)</h3>
+                <button class="modal-close" onclick="closeModal('conversionModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="conversionCategorySelect" onchange="loadConversionFormula()" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border-color, #ddd); background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                            <option value="">-- 카테고리 선택 --</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" onclick="copyFromPrevMonth()">이전 달에서 복사</button>
+                </div>
+
+                <div id="conversionFormArea" style="display: none;">
+                    <div style="background: var(--bg-tertiary, #f8f9fa); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <p style="margin: 0; color: var(--text-secondary, #666); font-size: 13px;">
+                                <strong>사용법:</strong> 원점수 범위와 환산점수를 설정합니다. 예: 90~100점 → 5점
+                            </p>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;" title="체크하면 이 카테고리에 환산 공식이 적용됩니다">
+                                <input type="checkbox" id="conversionActiveToggle" onchange="toggleConversionActive()" style="width: 18px; height: 18px; cursor: pointer;">
+                                <span id="conversionActiveLabel" style="font-weight: 500; color: var(--text-muted, #999);">미적용</span>
+                            </label>
+                        </div>
+                        <p id="conversionActiveHint" style="margin: 8px 0 0 0; font-size: 12px; color: var(--text-muted, #888);">
+                            * 체크하면 환산 공식이 적용되어 점수가 변환됩니다. 해제하면 원점수 그대로 표시됩니다.
+                        </p>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse;" id="conversionRangesTable">
+                        <thead>
+                            <tr style="background: var(--bg-tertiary, #f8f9fa);">
+                                <th style="padding: 10px; text-align: center; border: 1px solid var(--border-color, #ddd);">최소</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid var(--border-color, #ddd);">최대</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid var(--border-color, #ddd);">환산점수</th>
+                                <th style="padding: 10px; text-align: center; border: 1px solid var(--border-color, #ddd); width: 60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="conversionRangesBody">
+                        </tbody>
+                    </table>
+
+                    <button class="btn btn-sm btn-secondary" onclick="addConversionRange()" style="margin-top: 10px;">+ 범위 추가</button>
+                </div>
+
+                <div id="noConversionCategory" style="text-align: center; color: var(--text-muted, #999); padding: 40px;">
+                    카테고리를 선택하세요
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('conversionModal')">닫기</button>
+                <button class="btn btn-primary" onclick="saveConversionFormula()" id="saveConversionBtn" style="display: none;">저장</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 상담사 상세 모달 -->
     <div class="modal-overlay" id="consultantModal">
         <div class="modal" style="max-width: 700px;">
@@ -545,6 +606,22 @@
         // 데이터 로드
         async function loadData() {
             try {
+                // 환산 공식 먼저 로드
+                try {
+                    const formulaResponse = await fetch(`/api/kpi/conversion-formulas?year=${currentYear}&month=${currentMonth}`);
+                    if (formulaResponse.ok) {
+                        const formulas = await formulaResponse.json();
+                        conversionFormulas = {};
+                        formulas.forEach(f => {
+                            let ranges = f.ranges;
+                            if (typeof ranges === 'string') ranges = JSON.parse(ranges);
+                            conversionFormulas[f.category_id] = { id: f.id, ranges: ranges || [], is_active: f.is_active || false };
+                        });
+                    }
+                } catch (e) {
+                    console.log('환산 공식 로드 실패 (무시)', e);
+                }
+
                 const response = await fetch(`/api/kpi/consultants?year=${currentYear}&month=${currentMonth}`, {
                     headers: { 'X-CSRF-Token': getCsrfToken() }
                 });
@@ -572,14 +649,16 @@
             let html = '';
             let currentTeam = '';
 
-            // 합계/평균 계산을 위한 변수
-            const categorySums = {};  // 카테고리별 합계
+            // 합계/평균 계산을 위한 변수 (환산 점수 기준)
+            const categorySums = {};  // 카테고리별 합계 (환산 점수 기준)
+            const categoryOriginalSums = {};  // 카테고리별 원점수 합계
             const categoryCounts = {}; // 카테고리별 건수 (평균 계산용)
             let grandTotal = 0;
             let consultantCount = 0;
 
             categories.forEach(cat => {
                 categorySums[cat.id] = 0;
+                categoryOriginalSums[cat.id] = 0;
                 categoryCounts[cat.id] = 0;
             });
 
@@ -594,9 +673,12 @@
                 let total = 0;
                 (consultant.scores || []).forEach(s => {
                     scoresMap[s.category_id] = s;
-                    total += parseFloat(s.score) || 0;
-                    // 카테고리별 합계/건수 누적
-                    categorySums[s.category_id] = (categorySums[s.category_id] || 0) + (parseFloat(s.score) || 0);
+                    const original = parseFloat(s.score) || 0;
+                    const conv = applyConversion(original, s.category_id);
+                    total += conv.converted;
+                    // 카테고리별 합계/건수 누적 (환산 점수 기준)
+                    categorySums[s.category_id] = (categorySums[s.category_id] || 0) + conv.converted;
+                    categoryOriginalSums[s.category_id] = (categoryOriginalSums[s.category_id] || 0) + original;
                     categoryCounts[s.category_id] = (categoryCounts[s.category_id] || 0) + 1;
                 });
 
@@ -610,10 +692,19 @@
                     const score = scoresMap[cat.id];
                     const scoreValue = score ? score.score : '';
                     const hasScore = scoreValue !== '' && scoreValue !== null;
+                    let displayValue = '-';
+                    if (hasScore) {
+                        const conv = applyConversion(parseFloat(scoreValue), cat.id);
+                        if (conv.hasFormula && conv.converted !== conv.original) {
+                            displayValue = `${conv.converted}(${conv.original.toFixed(0)})`;
+                        } else {
+                            displayValue = parseFloat(scoreValue).toFixed(1);
+                        }
+                    }
                     html += `<td class="score-cell ${hasScore ? 'has-score' : 'no-score'}"
                                 onclick="openCellScoreModal(${consultant.id}, ${cat.id}, '${consultant.username}', '${cat.name}')"
                                 title="${score?.note || '클릭하여 점수 입력'}">
-                                ${hasScore ? parseFloat(scoreValue).toFixed(1) : '-'}
+                                ${displayValue}
                             </td>`;
                 });
 
@@ -621,7 +712,7 @@
                 html += `</tr>`;
             });
 
-            // 합계/평균 행 추가
+            // 합계/평균 행 추가 (환산 점수 기준)
             if (consultantCount > 0) {
                 const colspan = categories.length + 2;
                 // 구분선
@@ -631,7 +722,11 @@
                 html += `<tr class="summary-row" style="background: var(--bg-tertiary, #f0f0f0); font-weight: 600;">`;
                 html += `<td class="name-col" style="background: var(--bg-tertiary, #f0f0f0);">합계</td>`;
                 categories.forEach(cat => {
-                    html += `<td style="text-align: center; color: #667eea;">${categorySums[cat.id].toFixed(1)}</td>`;
+                    const hasFormula = conversionFormulas[cat.id] && conversionFormulas[cat.id].ranges && conversionFormulas[cat.id].ranges.length > 0;
+                    const sumDisplay = hasFormula && categorySums[cat.id] !== categoryOriginalSums[cat.id]
+                        ? `${categorySums[cat.id].toFixed(1)}(${categoryOriginalSums[cat.id].toFixed(0)})`
+                        : categorySums[cat.id].toFixed(1);
+                    html += `<td style="text-align: center; color: #667eea;">${sumDisplay}</td>`;
                 });
                 html += `<td class="total-cell" style="color: #28a745;">${grandTotal.toFixed(1)}</td>`;
                 html += `</tr>`;
@@ -1535,6 +1630,270 @@
             toast.textContent = message;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ==================== 환산 공식 관리 ====================
+        let conversionFormulas = {};  // { categoryId: { ranges: [...] } }
+
+        async function openConversionModal() {
+            document.getElementById('conversionMonthDisplay').textContent = `${currentYear}년 ${currentMonth}월`;
+            // 카테고리 목록 로드
+            const select = document.getElementById('conversionCategorySelect');
+            select.innerHTML = '<option value="">-- 카테고리 선택 --</option>';
+            categories.forEach(cat => {
+                select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+            });
+
+            // 해당 월의 모든 환산 공식 미리 로드
+            try {
+                const response = await fetch(`/api/kpi/conversion-formulas?year=${currentYear}&month=${currentMonth}`);
+                if (response.ok) {
+                    const formulas = await response.json();
+                    conversionFormulas = {};
+                    formulas.forEach(f => {
+                        let ranges = f.ranges;
+                        if (typeof ranges === 'string') ranges = JSON.parse(ranges);
+                        conversionFormulas[f.category_id] = { id: f.id, ranges: ranges || [], is_active: f.is_active || false };
+                    });
+                }
+            } catch (e) {
+                console.error('환산 공식 로드 실패', e);
+            }
+
+            document.getElementById('conversionFormArea').style.display = 'none';
+            document.getElementById('noConversionCategory').style.display = 'block';
+            document.getElementById('saveConversionBtn').style.display = 'none';
+
+            openModal('conversionModal');
+        }
+
+        function loadConversionFormula() {
+            const categoryId = document.getElementById('conversionCategorySelect').value;
+            if (!categoryId) {
+                document.getElementById('conversionFormArea').style.display = 'none';
+                document.getElementById('noConversionCategory').style.display = 'block';
+                document.getElementById('saveConversionBtn').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('conversionFormArea').style.display = 'block';
+            document.getElementById('noConversionCategory').style.display = 'none';
+            document.getElementById('saveConversionBtn').style.display = 'inline-flex';
+
+            // 해당 카테고리의 범위 로드
+            const formula = conversionFormulas[categoryId];
+            const tbody = document.getElementById('conversionRangesBody');
+            tbody.innerHTML = '';
+
+            // 활성화 토글 상태 설정
+            const toggle = document.getElementById('conversionActiveToggle');
+            const label = document.getElementById('conversionActiveLabel');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (formula && formula.id) {
+                toggle.checked = formula.is_active || false;
+                label.textContent = toggle.checked ? '적용중' : '미적용';
+                label.style.color = toggle.checked ? (isDark ? '#4ade80' : '#28a745') : 'var(--text-muted, #999)';
+            } else {
+                toggle.checked = false;
+                label.textContent = '미적용';
+                label.style.color = 'var(--text-muted, #999)';
+            }
+
+            if (formula && formula.ranges && formula.ranges.length > 0) {
+                formula.ranges.forEach((r, idx) => addConversionRangeRow(r.min, r.max, r.converted, idx));
+            } else {
+                // 기본 범위 추가
+                addConversionRangeRow(90, 100, 5, 0);
+                addConversionRangeRow(80, 89, 4, 1);
+                addConversionRangeRow(70, 79, 3, 2);
+                addConversionRangeRow(60, 69, 2, 3);
+                addConversionRangeRow(0, 59, 1, 4);
+            }
+        }
+
+        // 환산 공식 활성화/비활성화 토글
+        async function toggleConversionActive() {
+            const categoryId = document.getElementById('conversionCategorySelect').value;
+            if (!categoryId) return;
+
+            const formula = conversionFormulas[categoryId];
+            if (!formula || !formula.id) {
+                showKpiToast('먼저 공식을 저장하세요', 'error');
+                document.getElementById('conversionActiveToggle').checked = false;
+                return;
+            }
+
+            const isActive = document.getElementById('conversionActiveToggle').checked;
+            const label = document.getElementById('conversionActiveLabel');
+
+            try {
+                const response = await fetch(`/api/kpi/conversion-formulas/${formula.id}/toggle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ is_active: isActive })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    formula.is_active = isActive;
+                    label.textContent = isActive ? '적용중' : '미적용';
+                    // 다크모드 감지하여 적절한 색상 적용
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    label.style.color = isActive ? (isDark ? '#4ade80' : '#28a745') : 'var(--text-muted, #999)';
+                    showKpiToast(isActive ? '환산 공식 적용됨' : '환산 공식 해제됨', 'success');
+                    loadData();  // 테이블 새로고침
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '변경 실패', 'error');
+                    document.getElementById('conversionActiveToggle').checked = !isActive;
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('변경 중 오류 발생', 'error');
+                    document.getElementById('conversionActiveToggle').checked = !isActive;
+                }
+            }
+        }
+
+        function addConversionRangeRow(min = '', max = '', converted = '', idx = null) {
+            const tbody = document.getElementById('conversionRangesBody');
+            if (idx === null) idx = tbody.children.length;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 8px; border: 1px solid var(--border-color, #ddd);">
+                    <input type="number" class="conv-min" value="${min}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                </td>
+                <td style="padding: 8px; border: 1px solid var(--border-color, #ddd);">
+                    <input type="number" class="conv-max" value="${max}" style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                </td>
+                <td style="padding: 8px; border: 1px solid var(--border-color, #ddd);">
+                    <input type="number" class="conv-converted" value="${converted}" step="0.1" style="width: 100%; padding: 6px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
+                </td>
+                <td style="padding: 8px; border: 1px solid var(--border-color, #ddd); text-align: center;">
+                    <button onclick="removeConversionRange(this)" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">×</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function addConversionRange() {
+            addConversionRangeRow();
+        }
+
+        function removeConversionRange(btn) {
+            btn.closest('tr').remove();
+        }
+
+        async function saveConversionFormula() {
+            const categoryId = document.getElementById('conversionCategorySelect').value;
+            if (!categoryId) {
+                showKpiToast('카테고리를 선택하세요', 'error');
+                return;
+            }
+
+            // 범위 수집
+            const rows = document.querySelectorAll('#conversionRangesBody tr');
+            const ranges = [];
+            rows.forEach(row => {
+                const min = parseFloat(row.querySelector('.conv-min').value);
+                const max = parseFloat(row.querySelector('.conv-max').value);
+                const converted = parseFloat(row.querySelector('.conv-converted').value);
+                if (!isNaN(min) && !isNaN(max) && !isNaN(converted)) {
+                    ranges.push({ min, max, converted });
+                }
+            });
+
+            if (ranges.length === 0) {
+                showKpiToast('최소 1개의 범위가 필요합니다', 'error');
+                return;
+            }
+
+            const isActive = document.getElementById('conversionActiveToggle').checked;
+
+            try {
+                const response = await fetch('/api/kpi/conversion-formulas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({
+                        category_id: parseInt(categoryId),
+                        year: currentYear,
+                        month: currentMonth,
+                        formula_type: 'range',
+                        ranges: ranges,
+                        is_active: isActive
+                    })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    const result = await response.json();
+                    conversionFormulas[categoryId] = { id: result.id, ranges, is_active: isActive };
+                    showKpiToast('환산 공식이 저장되었습니다', 'success');
+                    loadData();  // 테이블 새로고침 (환산 적용)
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '저장 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('저장 중 오류 발생', 'error');
+                }
+            }
+        }
+
+        async function copyFromPrevMonth() {
+            let prevYear = currentYear;
+            let prevMonth = currentMonth - 1;
+            if (prevMonth < 1) {
+                prevMonth = 12;
+                prevYear--;
+            }
+
+            if (!confirm(`${prevYear}년 ${prevMonth}월의 환산 공식을 복사하시겠습니까?`)) return;
+
+            try {
+                const response = await fetch('/api/kpi/conversion-formulas/copy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({
+                        source_year: prevYear,
+                        source_month: prevMonth,
+                        target_year: currentYear,
+                        target_month: currentMonth
+                    })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showKpiToast(`${result.copied}개의 공식이 복사되었습니다`, 'success');
+                    // 모달 새로고침
+                    openConversionModal();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '복사 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('복사 중 오류 발생', 'error');
+                }
+            }
+        }
+
+        // 환산 점수 적용 함수 (is_active가 true인 경우만 적용)
+        function applyConversion(score, categoryId) {
+            const formula = conversionFormulas[categoryId];
+            // is_active가 false면 환산 안 함
+            if (!formula || !formula.is_active || !formula.ranges || formula.ranges.length === 0) {
+                return { original: score, converted: score, hasFormula: false };
+            }
+
+            for (const r of formula.ranges) {
+                if (score >= r.min && score <= r.max) {
+                    return { original: score, converted: r.converted, hasFormula: true };
+                }
+            }
+            return { original: score, converted: score, hasFormula: true };
         }
     </script>
 </body>

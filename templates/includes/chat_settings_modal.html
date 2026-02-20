@@ -297,39 +297,55 @@ input:checked + .toggle-slider:before {
 }
 
 /* 다크모드 */
+[data-theme="dark"] .chat-settings-modal {
+    background: rgba(0, 0, 0, 0.85);
+}
 [data-theme="dark"] .chat-settings-content {
-    background: #1e1e1e;
-    color: #e0e0e0;
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+    color: #e8e8e8;
+    border: 1px solid rgba(96, 165, 250, 0.2);
 }
 [data-theme="dark"] .setting-row,
 [data-theme="dark"] .participant-item {
-    background: #2a2a2a;
+    background: rgba(30, 30, 56, 0.8);
+    border: 1px solid rgba(96, 165, 250, 0.1);
 }
 [data-theme="dark"] .setting-label,
 [data-theme="dark"] .participant-name {
     color: #ffffff;
 }
 [data-theme="dark"] .setting-value {
-    color: #aaa;
+    color: #b0b0b0;
 }
 [data-theme="dark"] .setting-input,
 [data-theme="dark"] .add-member-section input {
-    background: #333;
-    color: #e0e0e0;
-    border-color: #555;
+    background: #1e1e38;
+    color: #e8e8e8;
+    border-color: rgba(96, 165, 250, 0.3);
+}
+[data-theme="dark"] .setting-input:focus,
+[data-theme="dark"] .add-member-section input:focus {
+    border-color: #667eea;
 }
 [data-theme="dark"] .danger-section {
-    background: #3d2020;
+    background: rgba(60, 30, 35, 0.8);
+    border-color: #dc3545;
+}
+[data-theme="dark"] .danger-section p {
+    color: #b0b0b0 !important;
 }
 [data-theme="dark"] .role-member {
-    background: #444;
-    color: #ccc;
+    background: rgba(96, 165, 250, 0.2);
+    color: #b0b0b0;
 }
 [data-theme="dark"] .setting-section-title {
     color: #a8b4ff;
 }
 [data-theme="dark"] .direct-chat-notice {
-    color: #aaa;
+    color: #b0b0b0;
+}
+[data-theme="dark"] .toggle-slider {
+    background-color: #4a4a80;
 }
 
 /* 반응형 */

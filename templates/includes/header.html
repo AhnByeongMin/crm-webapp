@@ -420,19 +420,39 @@
     .age-calc-close:hover {
         background: #5a6268;
     }
+    [data-theme="dark"] .age-calc-overlay {
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(4px);
+    }
     [data-theme="dark"] .age-calc-modal {
-        background: #1e1e1e;
+        background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+        border: 1px solid rgba(167, 139, 250, 0.3);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
     }
     [data-theme="dark"] .age-calc-modal h3 {
-        color: #e5e5e5;
+        color: #f8fafc;
     }
     [data-theme="dark"] .age-calc-input {
-        background: #2d2d2d;
-        border-color: #444;
-        color: #e5e5e5;
+        background: #1e1e38;
+        border-color: #4a4a80;
+        color: #f8fafc;
+    }
+    [data-theme="dark"] .age-calc-input:focus {
+        border-color: #a78bfa;
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.3);
+    }
+    [data-theme="dark"] .age-calc-result {
+        color: #4ade80;
     }
     [data-theme="dark"] .age-calc-detail {
-        color: #aaa;
+        color: #a1a1aa;
+    }
+    [data-theme="dark"] .age-calc-close {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        box-shadow: 0 2px 10px rgba(139, 92, 246, 0.3);
+    }
+    [data-theme="dark"] .age-calc-close:hover {
+        background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
     }
 
     /* 모바일 반응형 (768px 이하) */
@@ -1055,5 +1075,45 @@ function restartTutorial() {
         if (document.visibilityState === 'visible' && !socketConnected) {
             fetchNavCounts();
         }
+    });
+
+    // 날짜 입력 필드 년도 4자리 제한 (모든 type="date" 입력에 적용)
+    document.addEventListener('DOMContentLoaded', () => {
+        // 날짜 입력 시 년도 4자리 초과 방지
+        function limitDateYear(e) {
+            const input = e.target;
+            if (input.type !== 'date') return;
+
+            const value = input.value;
+            if (!value) return;
+
+            // YYYY-MM-DD 형식에서 년도 추출
+            const parts = value.split('-');
+            if (parts[0] && parts[0].length > 4) {
+                // 년도가 4자리 초과면 4자리로 자름
+                parts[0] = parts[0].substring(0, 4);
+                input.value = parts.join('-');
+            }
+        }
+
+        // 모든 date 입력에 이벤트 추가
+        document.addEventListener('input', limitDateYear);
+        document.addEventListener('change', limitDateYear);
+
+        // 동적으로 생성되는 date 입력도 처리 (MutationObserver)
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) {
+                        const dateInputs = node.querySelectorAll ? node.querySelectorAll('input[type="date"]') : [];
+                        dateInputs.forEach(input => {
+                            input.addEventListener('input', limitDateYear);
+                            input.addEventListener('change', limitDateYear);
+                        });
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     });
 </script>
