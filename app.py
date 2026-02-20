@@ -3353,6 +3353,114 @@ def get_kpi_category_scores(category_id):
     return jsonify(scores)
 
 
+# ==================== KPI 환산 공식 API ====================
+
+@app.route('/api/kpi/conversion-formulas', methods=['GET'])
+def get_kpi_conversion_formulas():
+    """환산 공식 목록 조회"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    category_id = request.args.get('category_id', type=int)
+
+    formulas = database.get_kpi_conversion_formulas(year, month, category_id)
+    return jsonify(formulas)
+
+
+@app.route('/api/kpi/conversion-formulas', methods=['POST'])
+def save_kpi_conversion_formula():
+    """환산 공식 저장"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    category_id = data.get('category_id')
+    year = data.get('year')
+    month = data.get('month')
+    formula_type = data.get('formula_type', 'range')
+    ranges = data.get('ranges', [])
+
+    if not all([category_id, year, month]):
+        return jsonify({'error': 'category_id, year, month are required'}), 400
+
+    is_active = data.get('is_active', False)
+
+    formula_id = database.save_kpi_conversion_formula(
+        category_id, year, month, formula_type, ranges, is_active
+    )
+    return jsonify({'success': True, 'id': formula_id})
+
+
+@app.route('/api/kpi/conversion-formulas/<int:formula_id>', methods=['DELETE'])
+def delete_kpi_conversion_formula(formula_id):
+    """환산 공식 삭제"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    success = database.delete_kpi_conversion_formula(formula_id)
+    if success:
+        return jsonify({'success': True})
+    return jsonify({'error': 'Formula not found'}), 404
+
+
+@app.route('/api/kpi/conversion-formulas/<int:formula_id>/toggle', methods=['POST'])
+def toggle_kpi_conversion_formula(formula_id):
+    """환산 공식 활성화/비활성화 토글"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    is_active = data.get('is_active', False)
+
+    success = database.toggle_kpi_conversion_formula(formula_id, is_active)
+    if success:
+        return jsonify({'success': True, 'is_active': is_active})
+    return jsonify({'error': 'Formula not found'}), 404
+
+
+@app.route('/api/kpi/conversion-formulas/copy', methods=['POST'])
+def copy_kpi_conversion_formulas():
+    """환산 공식 다른 월로 복사"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    source_year = data.get('source_year')
+    source_month = data.get('source_month')
+    target_year = data.get('target_year')
+    target_month = data.get('target_month')
+
+    if not all([source_year, source_month, target_year, target_month]):
+        return jsonify({'error': 'source_year, source_month, target_year, target_month are required'}), 400
+
+    # 원본 월의 모든 공식 조회
+    source_formulas = database.get_kpi_conversion_formulas(source_year, source_month)
+
+    copied = 0
+    for formula in source_formulas:
+        import json
+        ranges = formula.get('ranges')
+        if isinstance(ranges, str):
+            ranges = json.loads(ranges)
+        database.save_kpi_conversion_formula(
+            formula['category_id'],
+            target_year,
+            target_month,
+            formula.get('formula_type', 'range'),
+            ranges
+        )
+        copied += 1
+
+    return jsonify({'success': True, 'copied': copied})
+
+
 @app.route('/api/kpi/export', methods=['GET'])
 def export_kpi_excel():
     """KPI 점수 Excel 내보내기"""
@@ -3376,6 +3484,31 @@ def export_kpi_excel():
     # 데이터 조회 (null 방어)
     consultants = database.get_kpi_consultants_with_scores(year, month) or []
     categories = database.get_kpi_categories() or []
+
+    # 환산 공식 로드 (활성화된 것만)
+    import json
+    conversion_formulas = {}
+    formulas = database.get_kpi_conversion_formulas(year, month)
+    for f in formulas:
+        # is_active가 True인 공식만 적용
+        if not f.get('is_active'):
+            continue
+        ranges = f.get('ranges')
+        if isinstance(ranges, str):
+            ranges = json.loads(ranges)
+        conversion_formulas[f['category_id']] = ranges or []
+
+    def apply_conversion(score, category_id):
+        """점수에 환산 공식 적용 (활성화된 공식만)"""
+        ranges = conversion_formulas.get(category_id, [])
+        if not ranges:
+            return {'original': score, 'converted': score, 'has_formula': False}
+        for r in ranges:
+            min_val = r.get('min', float('-inf'))
+            max_val = r.get('max', float('inf'))
+            if min_val <= score <= max_val:
+                return {'original': score, 'converted': r.get('converted', score), 'has_formula': True}
+        return {'original': score, 'converted': score, 'has_formula': True}
 
     wb = Workbook()
 
@@ -3422,10 +3555,19 @@ def export_kpi_excel():
                 score = float(raw_score)
             except (ValueError, TypeError):
                 score = 0
-            cell = ws_summary.cell(row=row, column=col, value=score)
+
+            # 환산 적용
+            conv = apply_conversion(score, cat_id)
+            if conv['has_formula'] and conv['converted'] != conv['original']:
+                # 환산점수(원점수) 형식으로 표시
+                display_value = f"{conv['converted']}({int(conv['original'])})"
+                cell = ws_summary.cell(row=row, column=col, value=display_value)
+            else:
+                cell = ws_summary.cell(row=row, column=col, value=score)
+
             cell.border = thin_border
             cell.alignment = Alignment(horizontal='right')
-            total += score
+            total += conv['converted']
             col += 1
 
         cell = ws_summary.cell(row=row, column=col, value=total)
@@ -3438,8 +3580,9 @@ def export_kpi_excel():
     if consultants:
         consultant_count = len(consultants)
 
-        # 카테고리별 합계 계산
+        # 카테고리별 합계 계산 (환산 점수 기준)
         category_sums = {cat.get('id'): 0 for cat in categories}
+        category_original_sums = {cat.get('id'): 0 for cat in categories}
         grand_total = 0
         for consultant in consultants:
             scores_dict = {s.get('category_id'): s.get('score', 0) for s in consultant.get('scores', []) if s}
@@ -3450,8 +3593,10 @@ def export_kpi_excel():
                     score = float(raw_score)
                 except (ValueError, TypeError):
                     score = 0
-                category_sums[cat_id] = category_sums.get(cat_id, 0) + score
-                grand_total += score
+                conv = apply_conversion(score, cat_id)
+                category_sums[cat_id] = category_sums.get(cat_id, 0) + conv['converted']
+                category_original_sums[cat_id] = category_original_sums.get(cat_id, 0) + score
+                grand_total += conv['converted']
 
         # 빈 행 (구분선)
         row += 1
@@ -3467,7 +3612,14 @@ def export_kpi_excel():
         col = 3
         for cat in categories:
             cat_id = cat.get('id') if cat else None
-            cell = ws_summary.cell(row=row, column=col, value=category_sums.get(cat_id, 0))
+            converted_sum = category_sums.get(cat_id, 0)
+            original_sum = category_original_sums.get(cat_id, 0)
+            # 환산점수와 원점수가 다르면 환산점수(원점수) 형식 표시
+            if converted_sum != original_sum:
+                display_value = f"{converted_sum:.1f}({int(original_sum)})"
+                cell = ws_summary.cell(row=row, column=col, value=display_value)
+            else:
+                cell = ws_summary.cell(row=row, column=col, value=converted_sum)
             cell.border = thin_border
             cell.font = Font(bold=True, color="0000FF")
             cell.fill = sum_fill

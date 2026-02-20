@@ -2399,3 +2399,164 @@ def get_kpi_user_category_scores(user_id: int, category_id: int, year: int, mont
                 r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M')
 
         return results
+
+
+# ==================== KPI 환산 공식 관리 ====================
+
+def get_kpi_conversion_formulas(year: int = None, month: int = None, category_id: int = None, active_only: bool = False) -> list[dict]:
+    """KPI 환산 공식 목록 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = '''
+            SELECT cf.id, cf.category_id, cf.year, cf.month, cf.formula_type,
+                   cf.ranges, cf.is_active, cf.created_at, cf.updated_at,
+                   kc.name as category_name
+            FROM kpi_conversion_formulas cf
+            JOIN kpi_categories kc ON cf.category_id = kc.id
+            WHERE 1=1
+        '''
+        params = []
+
+        if year is not None:
+            query += ' AND cf.year = %s'
+            params.append(year)
+        if month is not None:
+            query += ' AND cf.month = %s'
+            params.append(month)
+        if category_id is not None:
+            query += ' AND cf.category_id = %s'
+            params.append(category_id)
+        if active_only:
+            query += ' AND cf.is_active = true'
+
+        query += ' ORDER BY cf.year DESC, cf.month DESC, kc.sort_order'
+        cursor.execute(query, params)
+        results = [dict(row) for row in cursor.fetchall()]
+
+        for r in results:
+            if r.get('created_at'):
+                r['created_at'] = r['created_at'].strftime('%Y-%m-%d %H:%M')
+            if r.get('updated_at'):
+                r['updated_at'] = r['updated_at'].strftime('%Y-%m-%d %H:%M')
+
+        return results
+
+
+def get_kpi_conversion_formula(category_id: int, year: int, month: int, active_only: bool = False) -> dict | None:
+    """특정 카테고리/년월의 환산 공식 조회"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        query = '''
+            SELECT id, category_id, year, month, formula_type, ranges, is_active,
+                   created_at, updated_at
+            FROM kpi_conversion_formulas
+            WHERE category_id = %s AND year = %s AND month = %s
+        '''
+        if active_only:
+            query += ' AND is_active = true'
+        cursor.execute(query, (category_id, year, month))
+        row = cursor.fetchone()
+        if row:
+            result = dict(row)
+            if result.get('created_at'):
+                result['created_at'] = result['created_at'].strftime('%Y-%m-%d %H:%M')
+            if result.get('updated_at'):
+                result['updated_at'] = result['updated_at'].strftime('%Y-%m-%d %H:%M')
+            return result
+        return None
+
+
+def save_kpi_conversion_formula(category_id: int, year: int, month: int, formula_type: str, ranges: list, is_active: bool = False) -> int:
+    """KPI 환산 공식 저장 (있으면 업데이트, 없으면 생성)"""
+    import json
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        # 기존 공식 확인
+        cursor.execute('''
+            SELECT id FROM kpi_conversion_formulas
+            WHERE category_id = %s AND year = %s AND month = %s
+        ''', (category_id, year, month))
+        existing = cursor.fetchone()
+
+        ranges_json = json.dumps(ranges, ensure_ascii=False)
+
+        if existing:
+            cursor.execute('''
+                UPDATE kpi_conversion_formulas
+                SET formula_type = %s, ranges = %s, is_active = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                RETURNING id
+            ''', (formula_type, ranges_json, is_active, existing['id']))
+        else:
+            cursor.execute('''
+                INSERT INTO kpi_conversion_formulas (category_id, year, month, formula_type, ranges, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            ''', (category_id, year, month, formula_type, ranges_json, is_active))
+
+        formula_id = cursor.fetchone()['id']
+        conn.commit()
+        return formula_id
+
+
+def toggle_kpi_conversion_formula(formula_id: int, is_active: bool) -> bool:
+    """환산 공식 활성화/비활성화 토글"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE kpi_conversion_formulas
+            SET is_active = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''', (is_active, formula_id))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def delete_kpi_conversion_formula(formula_id: int) -> bool:
+    """KPI 환산 공식 삭제"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM kpi_conversion_formulas WHERE id = %s', (formula_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def apply_kpi_conversion(score: float, category_id: int, year: int, month: int) -> dict:
+    """점수에 환산 공식 적용 (활성화된 공식만)
+
+    Returns:
+        {
+            'original': float,     # 원점수
+            'converted': float,    # 환산점수 (공식 없으면 원점수와 동일)
+            'has_formula': bool    # 공식 적용 여부
+        }
+    """
+    import json
+    formula = get_kpi_conversion_formula(category_id, year, month, active_only=True)
+
+    if not formula or not formula.get('ranges') or not formula.get('is_active'):
+        return {
+            'original': score,
+            'converted': score,
+            'has_formula': False
+        }
+
+    ranges = formula['ranges']
+    if isinstance(ranges, str):
+        ranges = json.loads(ranges)
+
+    # 범위 기반 환산
+    converted = score  # 기본값은 원점수
+    for r in ranges:
+        min_score = r.get('min', float('-inf'))
+        max_score = r.get('max', float('inf'))
+        # 최솟값 <= 점수 <= 최댓값 조건 확인
+        if min_score <= score <= max_score:
+            converted = r.get('converted', score)
+            break
+
+    return {
+        'original': score,
+        'converted': converted,
+        'has_formula': True
+    }

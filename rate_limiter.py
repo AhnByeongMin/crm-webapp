@@ -160,7 +160,7 @@ RATE_LIMITS = {
 
     # 일반 API (보통)
     'api': "60 per minute",
-    'search': "30 per minute",
+    'search': "120 per minute",
 
     # 파일 업로드 (제한적)
     'upload': "10 per minute",
