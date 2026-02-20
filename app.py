@@ -3256,6 +3256,27 @@ def delete_kpi_score(score_id):
     return jsonify({'success': True})
 
 
+@app.route('/api/kpi/scores/bulk-delete', methods=['POST'])
+def bulk_delete_kpi_scores():
+    """KPI 점수 일괄 삭제"""
+    auth_check = require_admin()
+    if auth_check:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    ids = data.get('ids', [])
+
+    if not ids or not isinstance(ids, list):
+        return jsonify({'error': 'ids array is required'}), 400
+
+    deleted = 0
+    for score_id in ids:
+        if database.delete_kpi_score(score_id):
+            deleted += 1
+
+    return jsonify({'success': True, 'deleted': deleted})
+
+
 @app.route('/api/kpi/scores/<int:score_id>', methods=['PUT'])
 def update_kpi_score(score_id):
     """KPI 점수 수정"""
@@ -3412,6 +3433,81 @@ def export_kpi_excel():
         cell.font = Font(bold=True)
         cell.alignment = Alignment(horizontal='right')
         row += 1
+
+    # 합계/평균 행 추가
+    if consultants:
+        consultant_count = len(consultants)
+
+        # 카테고리별 합계 계산
+        category_sums = {cat.get('id'): 0 for cat in categories}
+        grand_total = 0
+        for consultant in consultants:
+            scores_dict = {s.get('category_id'): s.get('score', 0) for s in consultant.get('scores', []) if s}
+            for cat in categories:
+                cat_id = cat.get('id') if cat else None
+                raw_score = scores_dict.get(cat_id, 0) or 0
+                try:
+                    score = float(raw_score)
+                except (ValueError, TypeError):
+                    score = 0
+                category_sums[cat_id] = category_sums.get(cat_id, 0) + score
+                grand_total += score
+
+        # 빈 행 (구분선)
+        row += 1
+
+        # 합계 행
+        sum_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        ws_summary.cell(row=row, column=1, value='').border = thin_border
+        cell = ws_summary.cell(row=row, column=2, value='합계')
+        cell.border = thin_border
+        cell.font = Font(bold=True)
+        cell.fill = sum_fill
+
+        col = 3
+        for cat in categories:
+            cat_id = cat.get('id') if cat else None
+            cell = ws_summary.cell(row=row, column=col, value=category_sums.get(cat_id, 0))
+            cell.border = thin_border
+            cell.font = Font(bold=True, color="0000FF")
+            cell.fill = sum_fill
+            cell.alignment = Alignment(horizontal='right')
+            col += 1
+
+        cell = ws_summary.cell(row=row, column=col, value=grand_total)
+        cell.border = thin_border
+        cell.font = Font(bold=True, color="008000")
+        cell.fill = sum_fill
+        cell.alignment = Alignment(horizontal='right')
+        row += 1
+
+        # 평균 행
+        avg_fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
+        ws_summary.cell(row=row, column=1, value='').border = thin_border
+        cell = ws_summary.cell(row=row, column=2, value='평균')
+        cell.border = thin_border
+        cell.font = Font(bold=True)
+        cell.fill = avg_fill
+
+        col = 3
+        for cat in categories:
+            cat_id = cat.get('id') if cat else None
+            avg_val = category_sums.get(cat_id, 0) / consultant_count if consultant_count > 0 else 0
+            cell = ws_summary.cell(row=row, column=col, value=round(avg_val, 2))
+            cell.border = thin_border
+            cell.font = Font(bold=True, color="666666")
+            cell.fill = avg_fill
+            cell.alignment = Alignment(horizontal='right')
+            cell.number_format = '0.00'
+            col += 1
+
+        grand_avg = grand_total / consultant_count if consultant_count > 0 else 0
+        cell = ws_summary.cell(row=row, column=col, value=round(grand_avg, 2))
+        cell.border = thin_border
+        cell.font = Font(bold=True, color="666666")
+        cell.fill = avg_fill
+        cell.alignment = Alignment(horizontal='right')
+        cell.number_format = '0.00'
 
     # 열 너비 조정
     ws_summary.column_dimensions['A'].width = 12

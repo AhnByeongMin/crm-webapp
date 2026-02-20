@@ -279,11 +279,14 @@
                     <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
                         <thead>
                             <tr style="background: var(--bg-tertiary, #f8f9fa);">
+                                <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color, #ddd); width: 40px;">
+                                    <input type="checkbox" id="selectAllScores" onchange="toggleSelectAllScores(this)" title="전체 선택">
+                                </th>
                                 <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">날짜</th>
                                 <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border-color, #ddd);">점수</th>
                                 <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">내용</th>
                                 <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">등록/수정</th>
-                                <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color, #ddd);">삭제</th>
+                                <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color, #ddd);">작업</th>
                             </tr>
                         </thead>
                         <tbody id="rawDataBody"></tbody>
@@ -293,7 +296,10 @@
                     등록된 점수가 없습니다.
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-sm" style="background: #dc3545; color: white; display: none;" id="btnDeleteSelected" onclick="deleteSelectedScores()">
+                    선택 삭제 (<span id="selectedCount">0</span>건)
+                </button>
                 <button class="btn btn-secondary" onclick="closeModal('rawDataModal')">닫기</button>
             </div>
         </div>
@@ -428,26 +434,38 @@
 
     <!-- 카테고리별 점수 모달 -->
     <div class="modal-overlay" id="categoryScoreModal">
-        <div class="modal" style="max-width: 700px;">
+        <div class="modal" style="max-width: 800px;">
             <div class="modal-header">
                 <h3 id="categoryScoreTitle">카테고리 점수</h3>
                 <button class="modal-close" onclick="closeModal('categoryScoreModal')">×</button>
             </div>
             <div class="modal-body">
-                <table style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: left;">이름</th>
-                            <th style="text-align: left;">팀</th>
-                            <th>점수</th>
-                            <th style="text-align: left;">비고</th>
-                        </tr>
-                    </thead>
-                    <tbody id="categoryScoreBody">
-                    </tbody>
-                </table>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span id="categoryScoreSummary" style="font-size: 14px; color: var(--text-secondary, #666);"></span>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: var(--bg-tertiary, #f8f9fa);">
+                                <th style="padding: 10px; text-align: center; border-bottom: 2px solid var(--border-color, #ddd); width: 40px;">
+                                    <input type="checkbox" id="selectAllCategoryScores" onchange="toggleSelectAllCategoryScores(this)" title="전체 선택">
+                                </th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">이름</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">팀</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">날짜</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--border-color, #ddd);">점수</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--border-color, #ddd);">비고</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoryScoreBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button class="btn btn-sm" style="background: #dc3545; color: white; display: none;" id="btnDeleteCategorySelected" onclick="deleteCategorySelectedScores()">
+                    선택 삭제 (<span id="categorySelectedCount">0</span>건)
+                </button>
                 <button class="btn btn-secondary" onclick="closeModal('categoryScoreModal')">닫기</button>
             </div>
         </div>
@@ -554,6 +572,17 @@
             let html = '';
             let currentTeam = '';
 
+            // 합계/평균 계산을 위한 변수
+            const categorySums = {};  // 카테고리별 합계
+            const categoryCounts = {}; // 카테고리별 건수 (평균 계산용)
+            let grandTotal = 0;
+            let consultantCount = 0;
+
+            categories.forEach(cat => {
+                categorySums[cat.id] = 0;
+                categoryCounts[cat.id] = 0;
+            });
+
             consultants.forEach(consultant => {
                 if (consultant.team !== currentTeam) {
                     currentTeam = consultant.team;
@@ -566,7 +595,13 @@
                 (consultant.scores || []).forEach(s => {
                     scoresMap[s.category_id] = s;
                     total += parseFloat(s.score) || 0;
+                    // 카테고리별 합계/건수 누적
+                    categorySums[s.category_id] = (categorySums[s.category_id] || 0) + (parseFloat(s.score) || 0);
+                    categoryCounts[s.category_id] = (categoryCounts[s.category_id] || 0) + 1;
                 });
+
+                grandTotal += total;
+                consultantCount++;
 
                 html += `<tr>`;
                 html += `<td class="name-col" onclick="openConsultantModal(${consultant.id})" style="cursor: pointer;">${consultant.username}</td>`;
@@ -585,6 +620,33 @@
                 html += `<td class="total-cell">${total.toFixed(1)}</td>`;
                 html += `</tr>`;
             });
+
+            // 합계/평균 행 추가
+            if (consultantCount > 0) {
+                const colspan = categories.length + 2;
+                // 구분선
+                html += `<tr style="height: 3px; background: var(--border-color, #ddd);"><td colspan="${colspan}" style="padding: 0;"></td></tr>`;
+
+                // 합계 행
+                html += `<tr class="summary-row" style="background: var(--bg-tertiary, #f0f0f0); font-weight: 600;">`;
+                html += `<td class="name-col" style="background: var(--bg-tertiary, #f0f0f0);">합계</td>`;
+                categories.forEach(cat => {
+                    html += `<td style="text-align: center; color: #667eea;">${categorySums[cat.id].toFixed(1)}</td>`;
+                });
+                html += `<td class="total-cell" style="color: #28a745;">${grandTotal.toFixed(1)}</td>`;
+                html += `</tr>`;
+
+                // 평균 행
+                html += `<tr class="summary-row" style="background: var(--bg-tertiary, #e8e8e8); font-weight: 500;">`;
+                html += `<td class="name-col" style="background: var(--bg-tertiary, #e8e8e8);">평균</td>`;
+                categories.forEach(cat => {
+                    const avg = consultantCount > 0 ? categorySums[cat.id] / consultantCount : 0;
+                    html += `<td style="text-align: center; color: #6c757d;">${avg.toFixed(2)}</td>`;
+                });
+                const grandAvg = consultantCount > 0 ? grandTotal / consultantCount : 0;
+                html += `<td class="total-cell" style="color: #6c757d;">${grandAvg.toFixed(2)}</td>`;
+                html += `</tr>`;
+            }
 
             tbody.innerHTML = html || '<tr><td colspan="100" style="text-align: center; padding: 40px; color: var(--text-muted);">데이터가 없습니다.</td></tr>';
         }
@@ -867,6 +929,9 @@
                             auditInfo = '<span style="color: var(--text-muted, #aaa); font-size: 12px;">-</span>';
                         }
                         html += `<tr data-score-id="${s.id}">
+                            <td style="padding: 10px; text-align: center; border-bottom: 1px solid var(--border-color, #eee);">
+                                <input type="checkbox" class="score-checkbox" value="${s.id}" onchange="updateSelectedCount()">
+                            </td>
                             <td style="padding: 10px; border-bottom: 1px solid var(--border-color, #eee);">
                                 <input type="date" class="edit-date" value="${s.score_date}" style="width: 130px; padding: 4px; border: 1px solid var(--border-color, #ddd); border-radius: 4px; background: var(--bg-secondary, white); color: var(--text-primary, #333);">
                             </td>
@@ -887,6 +952,9 @@
                     });
                     tbody.innerHTML = html;
                     document.getElementById('rawDataSummary').textContent = `${scores.length}건, 합계: ${total.toFixed(1)}`;
+                    // 체크박스 초기화
+                    document.getElementById('selectAllScores').checked = false;
+                    updateSelectedCount();
                 }
 
                 openModal('rawDataModal');
@@ -953,6 +1021,66 @@
                     loadData();
                 } else {
                     showKpiToast('삭제 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('삭제 중 오류 발생', 'error');
+                }
+            }
+        }
+
+        // 전체 선택/해제
+        function toggleSelectAllScores(checkbox) {
+            const checkboxes = document.querySelectorAll('.score-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            updateSelectedCount();
+        }
+
+        // 선택 개수 업데이트
+        function updateSelectedCount() {
+            const checked = document.querySelectorAll('.score-checkbox:checked').length;
+            document.getElementById('selectedCount').textContent = checked;
+            const btn = document.getElementById('btnDeleteSelected');
+            btn.style.display = checked > 0 ? 'inline-flex' : 'none';
+
+            // 전체선택 체크박스 상태 동기화
+            const total = document.querySelectorAll('.score-checkbox').length;
+            const selectAll = document.getElementById('selectAllScores');
+            if (total > 0) {
+                selectAll.checked = (checked === total);
+                selectAll.indeterminate = (checked > 0 && checked < total);
+            }
+        }
+
+        // 선택 항목 일괄 삭제
+        async function deleteSelectedScores() {
+            const checked = document.querySelectorAll('.score-checkbox:checked');
+            const count = checked.length;
+            if (count === 0) return;
+
+            if (!confirm(`선택한 ${count}건의 점수를 삭제하시겠습니까?`)) return;
+
+            const ids = Array.from(checked).map(cb => parseInt(cb.value));
+
+            try {
+                const response = await fetch('/api/kpi/scores/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ ids })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showKpiToast(`${result.deleted}건이 삭제되었습니다.`, 'success');
+                    // 모달 새로고침
+                    openCellScoreModal(currentRawDataUserId, currentRawDataCategoryId,
+                        document.getElementById('rawDataTitle').textContent.split(' - ')[0],
+                        document.getElementById('rawDataTitle').textContent.split(' - ')[1]);
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '삭제 실패', 'error');
                 }
             } catch (error) {
                 if (error.message !== 'AUTH_ERROR') {
@@ -1293,7 +1421,13 @@
             openModal('consultantModal');
         }
 
+        // 카테고리 점수 모달용 전역 변수
+        let currentCategoryId = null;
+        let currentCategoryName = null;
+
         async function openCategoryScoreModal(categoryId, categoryName) {
+            currentCategoryId = categoryId;
+            currentCategoryName = categoryName;
             document.getElementById('categoryScoreTitle').textContent = `${categoryName} - ${currentYear}년 ${currentMonth}월`;
             try {
                 const response = await fetch(`/api/kpi/category/${categoryId}/scores?year=${currentYear}&month=${currentMonth}`, {
@@ -1302,17 +1436,91 @@
                 const scores = await response.json();
                 let html = '';
                 if (scores.length === 0) {
-                    html = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">점수가 없습니다.</td></tr>';
+                    html = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">점수가 없습니다.</td></tr>';
+                    document.getElementById('categoryScoreSummary').textContent = '';
                 } else {
+                    let total = 0;
                     scores.forEach(s => {
-                        html += `<tr><td style="text-align: left;">${s.username}</td><td style="text-align: left;">${s.team || '-'}</td><td>${parseFloat(s.score).toFixed(1)}</td><td style="text-align: left;">${s.note || '-'}</td></tr>`;
+                        total += parseFloat(s.score) || 0;
+                        html += `<tr data-score-id="${s.id}">
+                            <td style="padding: 10px; text-align: center; border-bottom: 1px solid var(--border-color, #eee);">
+                                <input type="checkbox" class="category-score-checkbox" value="${s.id}" onchange="updateCategorySelectedCount()">
+                            </td>
+                            <td style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color, #eee);">${s.username}</td>
+                            <td style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color, #eee);">${s.team || '-'}</td>
+                            <td style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color, #eee);">${s.score_date || '-'}</td>
+                            <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-color, #eee);">${parseFloat(s.score).toFixed(1)}</td>
+                            <td style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color, #eee);">${s.note || '-'}</td>
+                        </tr>`;
                     });
+                    document.getElementById('categoryScoreSummary').textContent = `${scores.length}건, 합계: ${total.toFixed(1)}`;
                 }
                 document.getElementById('categoryScoreBody').innerHTML = html;
+                // 체크박스 초기화
+                document.getElementById('selectAllCategoryScores').checked = false;
+                updateCategorySelectedCount();
             } catch (error) {
-                document.getElementById('categoryScoreBody').innerHTML = '<tr><td colspan="4" style="color: #dc3545;">로드 실패</td></tr>';
+                document.getElementById('categoryScoreBody').innerHTML = '<tr><td colspan="6" style="color: #dc3545;">로드 실패</td></tr>';
             }
             openModal('categoryScoreModal');
+        }
+
+        // 카테고리 모달 전체 선택/해제
+        function toggleSelectAllCategoryScores(checkbox) {
+            const checkboxes = document.querySelectorAll('.category-score-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            updateCategorySelectedCount();
+        }
+
+        // 카테고리 모달 선택 개수 업데이트
+        function updateCategorySelectedCount() {
+            const checked = document.querySelectorAll('.category-score-checkbox:checked').length;
+            document.getElementById('categorySelectedCount').textContent = checked;
+            const btn = document.getElementById('btnDeleteCategorySelected');
+            btn.style.display = checked > 0 ? 'inline-flex' : 'none';
+
+            // 전체선택 체크박스 상태 동기화
+            const total = document.querySelectorAll('.category-score-checkbox').length;
+            const selectAll = document.getElementById('selectAllCategoryScores');
+            if (total > 0) {
+                selectAll.checked = (checked === total);
+                selectAll.indeterminate = (checked > 0 && checked < total);
+            }
+        }
+
+        // 카테고리 모달 선택 항목 삭제
+        async function deleteCategorySelectedScores() {
+            const checked = document.querySelectorAll('.category-score-checkbox:checked');
+            const count = checked.length;
+            if (count === 0) return;
+
+            if (!confirm(`선택한 ${count}건의 점수를 삭제하시겠습니까?`)) return;
+
+            const ids = Array.from(checked).map(cb => parseInt(cb.value));
+
+            try {
+                const response = await fetch('/api/kpi/scores/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ ids })
+                });
+                if (handleAuthError(response)) return;
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showKpiToast(`${result.deleted}건이 삭제되었습니다.`, 'success');
+                    // 모달 새로고침
+                    openCategoryScoreModal(currentCategoryId, currentCategoryName);
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    showKpiToast(error.error || '삭제 실패', 'error');
+                }
+            } catch (error) {
+                if (error.message !== 'AUTH_ERROR') {
+                    showKpiToast('삭제 중 오류 발생', 'error');
+                }
+            }
         }
 
         function exportExcel() {
