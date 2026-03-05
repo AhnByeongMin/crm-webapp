@@ -816,6 +816,13 @@
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
+        /* 다크모드 메시지 파일 */
+        [data-theme="dark"] .message-file {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        [data-theme="dark"] .message.own .message-file {
+            background: rgba(255, 255, 255, 0.15);
+        }
         /* 다크모드 Lazy 이미지 */
         [data-theme="dark"] .message-file img.lazy-chat-img {
             background: linear-gradient(90deg, #3a3a3a 25%, #444 50%, #3a3a3a 75%);
@@ -1241,6 +1248,57 @@
         .calendar-day.no-messages {
             color: #ccc;
             cursor: not-allowed;
+        }
+
+        /* 다크모드 date-picker 모달 */
+        [data-theme="dark"] .date-picker-modal {
+            background: rgba(0, 0, 0, 0.85);
+        }
+        [data-theme="dark"] .date-picker-content {
+            background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .date-picker-title {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .date-picker-close {
+            color: #b0b0b0;
+        }
+        [data-theme="dark"] .calendar-nav button {
+            background: rgba(30, 30, 56, 0.8);
+            color: #e8e8e8;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+        }
+        [data-theme="dark"] .calendar-nav button:hover {
+            background: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .calendar-nav span {
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .calendar-day {
+            background: rgba(30, 30, 56, 0.6);
+            color: #e8e8e8;
+        }
+        [data-theme="dark"] .calendar-day:hover {
+            background: rgba(96, 165, 250, 0.2);
+        }
+        [data-theme="dark"] .calendar-day.has-messages {
+            background: rgba(102, 126, 234, 0.2);
+            color: #a8b4ff;
+        }
+        [data-theme="dark"] .calendar-day.today {
+            background: linear-gradient(135deg, #3d3200 0%, #4a3d00 100%);
+            color: #fbbf24;
+            border-color: #fbbf24;
+        }
+        [data-theme="dark"] .calendar-day.selected {
+            background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
+            color: white;
+        }
+        [data-theme="dark"] .calendar-day.other-month,
+        [data-theme="dark"] .calendar-day.no-messages {
+            color: #555;
         }
 
         /* ===== 모바일 반응형 (768px 이하) ===== */

@@ -35,6 +35,79 @@
 .btn-remove-row:hover { background: #c82333; }
 .preview-info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px 15px; margin-bottom: 15px; border-radius: 4px; }
 .preview-info strong { color: #0c5460; }
+
+/* 다크모드 */
+[data-theme="dark"] .bulk-upload-modal {
+    background: rgba(0, 0, 0, 0.85);
+}
+[data-theme="dark"] .bulk-upload-modal-content {
+    background: linear-gradient(145deg, #1e1e38 0%, #252550 100%);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    color: #e8e8e8;
+}
+[data-theme="dark"] .bulk-modal-body {
+    background: transparent;
+}
+[data-theme="dark"] .upload-section-title {
+    color: #e8e8e8;
+}
+[data-theme="dark"] .upload-area {
+    background: rgba(30, 30, 56, 0.8);
+    border-color: rgba(102, 126, 234, 0.5);
+    color: #e8e8e8;
+}
+[data-theme="dark"] .upload-area:hover {
+    background: rgba(96, 165, 250, 0.1);
+    border-color: #667eea;
+}
+[data-theme="dark"] .upload-text {
+    color: #b0b0b0;
+}
+[data-theme="dark"] .preview-table th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+[data-theme="dark"] .preview-table td {
+    background: rgba(30, 30, 56, 0.6);
+    border-color: rgba(96, 165, 250, 0.2);
+    color: #e8e8e8;
+}
+[data-theme="dark"] .preview-table tr:nth-child(even) td {
+    background: rgba(30, 30, 56, 0.8);
+}
+[data-theme="dark"] .preview-table tr:hover td {
+    background: rgba(96, 165, 250, 0.15);
+}
+[data-theme="dark"] .preview-table input,
+[data-theme="dark"] .preview-table textarea {
+    background: #1e1e38;
+    border-color: rgba(96, 165, 250, 0.3);
+    color: #e8e8e8;
+}
+[data-theme="dark"] .preview-info {
+    background: rgba(12, 84, 96, 0.3);
+    border-left-color: #17a2b8;
+}
+[data-theme="dark"] .preview-info strong {
+    color: #67e8f9;
+}
+[data-theme="dark"] div[style*="background: #f8f9fa"][style*="border-left: 4px solid #667eea"] {
+    background: rgba(30, 30, 56, 0.8) !important;
+    border-left-color: #667eea !important;
+}
+[data-theme="dark"] div[style*="background: #f0f8ff"] {
+    background: rgba(30, 30, 56, 0.8) !important;
+}
+[data-theme="dark"] div[style*="color: #333"] {
+    color: #e8e8e8 !important;
+}
+[data-theme="dark"] div[style*="color: #555"],
+[data-theme="dark"] ol[style*="color: #555"],
+[data-theme="dark"] ul[style*="color: #555"] {
+    color: #b0b0b0 !important;
+}
+[data-theme="dark"] span[style*="color: #666"] {
+    color: #b0b0b0 !important;
+}
 </style>
 
 <!-- 일괄등록 모달 -->
