@@ -335,11 +335,17 @@ def load_all_users_detail() -> list[dict[str, Any]]:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, username, role, status, team, created_at
+            SELECT id, username, role, status, team, join_date, created_at
             FROM users
             ORDER BY created_at DESC
         ''')
-        return [dict(row) for row in cursor.fetchall()]
+        rows = []
+        for row in cursor.fetchall():
+            d = dict(row)
+            if d.get('join_date'):
+                d['join_date'] = str(d['join_date'])
+            rows.append(d)
+        return rows
 
 def create_user(username: str, password: str, role: str, status: str = 'active', team: Optional[str] = None, join_date: Optional[str] = None) -> bool:
     """새 사용자 생성 (관리자용) - 비밀번호는 bcrypt로 해싱"""
@@ -414,15 +420,22 @@ def update_user_team(user_id: int, team: Optional[str]) -> bool:
             return cursor.rowcount > 0
 
 def update_user_role(user_id: int, role: str) -> bool:
-    """사용자 권한 변경"""
+    """사용자 권한 변경 - 관리자 승격 시 날짜 자동 기록"""
     with db_lock:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE users
-                SET role = %s
-                WHERE id = %s
-            ''', (role, user_id))
+            if role == '관리자':
+                cursor.execute('''
+                    UPDATE users
+                    SET role = %s, promoted_to_admin_date = CURRENT_DATE
+                    WHERE id = %s
+                ''', (role, user_id))
+            else:
+                cursor.execute('''
+                    UPDATE users
+                    SET role = %s, promoted_to_admin_date = NULL
+                    WHERE id = %s
+                ''', (role, user_id))
             conn.commit()
             return cursor.rowcount > 0
 
@@ -2174,39 +2187,51 @@ def reorder_kpi_categories(orders: list[dict]) -> None:
 def get_kpi_consultants_with_scores(year: int, month: int) -> list[dict]:
     """상담사 목록과 카테고리별 점수 합계 조회 (팀별, 입사일순)
 
-    비활성 사용자 표시 규칙:
-    - 활성 사용자: 항상 표시
-    - 비활성 사용자: 비활성화된 월까지만 표시 (이후 월부터 미표시)
+    노출 규칙:
+    - 활성 상담사: 항상 표시
+    - 비활성 상담사: 비활성화된 월까지만 표시
       예: 1월 15일 비활성화 → 1월까지 표시, 2월부터 미표시
+    - 관리자 승격된 상담사: 승격된 월까지만 표시
+      예: 3월 10일 관리자 승격 → 3월까지 표시, 4월부터 미표시
     """
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        # 상담사 목록 (관리자 제외)
-        # 비활성 사용자는 비활성화된 달까지만 표시
-        # 조회 조건: 조회년월 <= 비활성화년월 일 때 표시
-        # 예: 1월 29일 비활성화 → 1월 조회 시 표시, 2월 조회 시 미표시
         cursor.execute('''
             SELECT u.id, u.username, u.team, u.join_date, u.status, u.inactive_date,
-                   tso.sort_order as team_order
+                   u.promoted_to_admin_date, tso.sort_order as team_order
             FROM users u
             LEFT JOIN team_sort_order tso ON u.team = tso.team_name
-            WHERE u.role = '상담사'
-              AND (
-                  u.status = 'active'
-                  OR (
-                      u.status = 'inactive'
-                      AND u.inactive_date IS NOT NULL
-                      AND (
-                          %s < EXTRACT(YEAR FROM u.inactive_date)
-                          OR (
-                              %s = EXTRACT(YEAR FROM u.inactive_date)
-                              AND %s <= EXTRACT(MONTH FROM u.inactive_date)
-                          )
-                      )
-                  )
-              )
+            WHERE (
+                -- 활성 상담사
+                (u.role = '상담사' AND u.status = 'active')
+                OR (
+                    -- 비활성 상담사: 비활성화된 월까지
+                    u.role = '상담사'
+                    AND u.status = 'inactive'
+                    AND u.inactive_date IS NOT NULL
+                    AND (
+                        %s < EXTRACT(YEAR FROM u.inactive_date)
+                        OR (
+                            %s = EXTRACT(YEAR FROM u.inactive_date)
+                            AND %s <= EXTRACT(MONTH FROM u.inactive_date)
+                        )
+                    )
+                )
+                OR (
+                    -- 관리자 승격된 사용자: 승격된 월까지
+                    u.role = '관리자'
+                    AND u.promoted_to_admin_date IS NOT NULL
+                    AND (
+                        %s < EXTRACT(YEAR FROM u.promoted_to_admin_date)
+                        OR (
+                            %s = EXTRACT(YEAR FROM u.promoted_to_admin_date)
+                            AND %s <= EXTRACT(MONTH FROM u.promoted_to_admin_date)
+                        )
+                    )
+                )
+            )
             ORDER BY COALESCE(tso.sort_order, 999), u.join_date ASC NULLS LAST, u.id
-        ''', (year, year, month))
+        ''', (year, year, month, year, year, month))
         consultants = [dict(row) for row in cursor.fetchall()]
 
         # 각 상담사의 카테고리별 점수 합계 조회
