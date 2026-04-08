@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ sheet_title }} - 스프레드시트</title>
+
+    <!-- Luckysheet CSS -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/pluginsCss.css'/>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css'/>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css'/>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/assets/iconfont/iconfont.css'/>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f0f0; }
+
+        /* 상단 툴바 */
+        #topbar {
+            height: 52px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            gap: 12px;
+            z-index: 200;
+            position: relative;
+        }
+        #btnBack {
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 14px;
+            background: #f5f5f5; border: none; border-radius: 8px;
+            font-size: 13px; color: #555; cursor: pointer;
+            white-space: nowrap;
+        }
+        #btnBack:hover { background: #eee; }
+
+        #titleInput {
+            flex: 1;
+            max-width: 360px;
+            padding: 7px 12px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 15px; font-weight: 600; color: #222;
+            background: transparent;
+            outline: none;
+        }
+        #titleInput:hover { border-color: #ddd; background: #f9f9f9; }
+        #titleInput:focus { border-color: #667eea; background: #fff; }
+
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+        .save-status {
+            font-size: 12px; color: #aaa;
+        }
+        .save-status.saving { color: #667eea; }
+        .save-status.saved { color: #22c55e; }
+
+        #btnSave {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        #btnSave:hover { opacity: 0.88; }
+        #btnSave:disabled { opacity: 0.5; cursor: default; }
+
+        /* Luckysheet 컨테이너 */
+        #luckysheet {
+            position: absolute;
+            top: 52px;
+            left: 0; right: 0; bottom: 0;
+        }
+
+        /* 로딩 */
+        #loadingOverlay {
+            position: absolute; inset: 0; top: 52px;
+            background: #f5f5f5;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 100; gap: 16px;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loadingOverlay p { color: #888; font-size: 14px; }
+
+        /* 다크모드 - 툴바만 (Luckysheet 자체는 자체 테마 사용) */
+        [data-theme="dark"] #topbar {
+            background: #1e1e38;
+            border-bottom-color: rgba(96,165,250,0.2);
+        }
+        [data-theme="dark"] #btnBack { background: rgba(255,255,255,0.08); color: #ccc; }
+        [data-theme="dark"] #titleInput { color: #e8e8e8; }
+        [data-theme="dark"] #titleInput:hover { background: rgba(255,255,255,0.05); border-color: rgba(96,165,250,0.3); }
+        [data-theme="dark"] #titleInput:focus { background: rgba(255,255,255,0.08); border-color: #667eea; }
+        [data-theme="dark"] #loadingOverlay { background: #12121e; }
+    </style>
+</head>
+<body>
+
+<!-- 상단 툴바 -->
+<div id="topbar">
+    <button id="btnBack" onclick="goBack()">← 목록</button>
+    <input type="text" id="titleInput" value="{{ sheet_title }}" maxlength="100" onblur="onTitleChange()">
+    <div class="topbar-right">
+        <span class="save-status" id="saveStatus"></span>
+        <button id="btnSave" onclick="saveSheet()">저장</button>
+    </div>
+</div>
+
+<!-- 로딩 -->
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <p>스프레드시트 불러오는 중...</p>
+</div>
+
+<!-- Luckysheet -->
+<div id="luckysheet"></div>
+
+<!-- Luckysheet JS -->
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js"></script>
+
+<script>
+    const SHEET_ID = {{ sheet_id }};
+    let saveTimer = null;
+    let titleChanged = false;
+    let initialized = false;
+
+    // 다크모드 감지 (기존 앱과 동일 방식)
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    async function initSheet() {
+        const res = await fetch(`/api/sheets/${SHEET_ID}`);
+        if (!res.ok) { location.href = '/sheets'; return; }
+        const sheet = await res.json();
+
+        // 저장된 데이터가 있으면 사용, 없으면 기본 시트 1개 생성
+        let data = sheet.data;
+        if (!data || !data.length) {
+            data = [{
+                name: 'Sheet1',
+                index: 'sheet_0',
+                status: 1,
+                order: 0,
+                celldata: [],
+                config: {}
+            }];
+        }
+
+        luckysheet.create({
+            container: 'luckysheet',
+            title: sheet.title,
+            lang: 'zh',            // 영어 또는 중국어만 지원 (zh가 더 완성도 높음)
+            data: data,
+            showtoolbar: true,
+            showinfobar: false,
+            showstatisticBar: true,
+            sheetBottomConfig: true,
+            allowEdit: true,
+            enableAddRow: true,
+            enableAddBackTop: false,
+            userInfo: false,
+            showsheetbar: true,
+            devicePixelRatio: window.devicePixelRatio,
+            forceCalculation: true,
+            hook: {
+                workbookCreateAfter: function() {
+                    initialized = true;
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                },
+                updated: function() {
+                    if (!initialized) return;
+                    scheduleSave();
+                }
+            }
+        });
+    }
+
+    function scheduleSave() {
+        setSaveStatus('saving', '저장 대기 중...');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => saveSheet(true), 5000); // 5초 뒤 자동저장
+    }
+
+    async function saveSheet(isAuto = false) {
+        if (!initialized) return;
+        clearTimeout(saveTimer);
+        setSaveStatus('saving', '저장 중...');
+        document.getElementById('btnSave').disabled = true;
+
+        try {
+            const title = document.getElementById('titleInput').value.trim() || '새 스프레드시트';
+            const data = luckysheet.getAllSheets();
+
+            const res = await fetch(`/api/sheets/${SHEET_ID}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({title, data})
+            });
+
+            if (res.ok) {
+                setSaveStatus('saved', isAuto ? '자동 저장됨' : '저장 완료');
+                document.title = `${title} - 스프레드시트`;
+                setTimeout(() => setSaveStatus('', ''), 3000);
+            } else {
+                setSaveStatus('', '저장 실패');
+            }
+        } catch(e) {
+            setSaveStatus('', '저장 실패');
+        }
+        document.getElementById('btnSave').disabled = false;
+    }
+
+    function setSaveStatus(cls, msg) {
+        const el = document.getElementById('saveStatus');
+        el.className = 'save-status ' + cls;
+        el.textContent = msg;
+    }
+
+    function onTitleChange() {
+        const title = document.getElementById('titleInput').value.trim();
+        if (!title) document.getElementById('titleInput').value = '새 스프레드시트';
+        // 제목만 즉시 저장
+        if (initialized) {
+            fetch(`/api/sheets/${SHEET_ID}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({title: document.getElementById('titleInput').value})
+            });
+        }
+    }
+
+    function goBack() {
+        if (initialized) {
+            saveSheet(false).then(() => { location.href = '/sheets'; });
+        } else {
+            location.href = '/sheets';
+        }
+    }
+
+    // Ctrl+S 저장
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            saveSheet();
+        }
+    });
+
+    // 페이지 이탈 전 저장 시도
+    window.addEventListener('beforeunload', function(e) {
+        if (saveTimer) {
+            saveSheet(true);
+        }
+    });
+
+    initSheet();
+</script>
+</body>
+</html>

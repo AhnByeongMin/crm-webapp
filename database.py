@@ -2585,3 +2585,98 @@ def apply_kpi_conversion(score: float, category_id: int, year: int, month: int) 
         'converted': converted,
         'has_formula': True
     }
+
+
+# ===== 스프레드시트 =====
+
+def get_spreadsheets(username: str) -> list[dict]:
+    """사용자의 스프레드시트 목록 (내 것 + 공유된 것)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, title, owner, is_shared, created_at, updated_at
+            FROM spreadsheets
+            WHERE owner = %s OR is_shared = TRUE
+            ORDER BY updated_at DESC
+        ''', (username,))
+        rows = []
+        for row in cursor.fetchall():
+            d = dict(row)
+            d['created_at'] = str(d['created_at'])
+            d['updated_at'] = str(d['updated_at'])
+            rows.append(d)
+        return rows
+
+
+def create_spreadsheet(username: str, title: str, is_shared: bool = False) -> int:
+    """새 스프레드시트 생성, 생성된 id 반환"""
+    import json as _json
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO spreadsheets (title, owner, is_shared, data)
+                VALUES (%s, %s, %s, %s::jsonb)
+                RETURNING id
+            ''', (title, username, is_shared, _json.dumps([])))
+            conn.commit()
+            return cursor.fetchone()['id']
+
+
+def get_spreadsheet(sheet_id: int, username: str) -> Optional[dict]:
+    """스프레드시트 단건 조회 (본인 또는 공유된 것)"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, title, owner, is_shared, data, created_at, updated_at
+            FROM spreadsheets
+            WHERE id = %s AND (owner = %s OR is_shared = TRUE)
+        ''', (sheet_id, username))
+        row = cursor.fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d['created_at'] = str(d['created_at'])
+        d['updated_at'] = str(d['updated_at'])
+        return d
+
+
+def save_spreadsheet(sheet_id: int, username: str, title: Optional[str], data: Optional[list]) -> bool:
+    """스프레드시트 저장 (본인 또는 공유된 것 수정 가능)"""
+    import json as _json
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            if title is not None and data is not None:
+                cursor.execute('''
+                    UPDATE spreadsheets
+                    SET title = %s, data = %s::jsonb, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s AND (owner = %s OR is_shared = TRUE)
+                ''', (title, _json.dumps(data), sheet_id, username))
+            elif title is not None:
+                cursor.execute('''
+                    UPDATE spreadsheets
+                    SET title = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s AND (owner = %s OR is_shared = TRUE)
+                ''', (title, sheet_id, username))
+            elif data is not None:
+                cursor.execute('''
+                    UPDATE spreadsheets
+                    SET data = %s::jsonb, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s AND (owner = %s OR is_shared = TRUE)
+                ''', (_json.dumps(data), sheet_id, username))
+            conn.commit()
+            return cursor.rowcount > 0
+
+
+def delete_spreadsheet(sheet_id: int, username: str) -> bool:
+    """스프레드시트 삭제 (본인 것만)"""
+    with db_lock:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM spreadsheets
+                WHERE id = %s AND owner = %s
+            ''', (sheet_id, username))
+            conn.commit()
+            return cursor.rowcount > 0

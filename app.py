@@ -4919,3 +4919,76 @@ def ensure_scheduler_started():
     if not _scheduler_started:
         _scheduler_started = True
         start_reminder_scheduler()
+
+
+# ===== 스프레드시트 =====
+
+@app.route('/sheets')
+def sheet_list():
+    if not session.get('user'):
+        return redirect('/login')
+    return render_template('sheet_list.html',
+                           current_page='sheets',
+                           page_title='스프레드시트')
+
+
+@app.route('/sheets/<int:sheet_id>')
+def sheet_editor(sheet_id):
+    if not session.get('user'):
+        return redirect('/login')
+    sheet = database.get_spreadsheet(sheet_id, session['user'])
+    if not sheet:
+        return redirect('/sheets')
+    return render_template('sheet_editor.html', sheet_id=sheet_id, sheet_title=sheet['title'])
+
+
+@app.route('/api/sheets', methods=['GET'])
+def api_get_sheets():
+    if not session.get('user'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    sheets = database.get_spreadsheets(session['user'])
+    return jsonify(sheets)
+
+
+@app.route('/api/sheets', methods=['POST'])
+def api_create_sheet():
+    if not session.get('user'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    title = data.get('title', '새 스프레드시트').strip() or '새 스프레드시트'
+    is_shared = bool(data.get('is_shared', False))
+    sheet_id = database.create_spreadsheet(session['user'], title, is_shared)
+    return jsonify({'id': sheet_id, 'title': title})
+
+
+@app.route('/api/sheets/<int:sheet_id>', methods=['GET'])
+def api_get_sheet(sheet_id):
+    if not session.get('user'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    sheet = database.get_spreadsheet(sheet_id, session['user'])
+    if not sheet:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify(sheet)
+
+
+@app.route('/api/sheets/<int:sheet_id>', methods=['PUT'])
+def api_save_sheet(sheet_id):
+    if not session.get('user'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json or {}
+    title = data.get('title')
+    sheet_data = data.get('data')
+    success = database.save_spreadsheet(sheet_id, session['user'], title, sheet_data)
+    if success:
+        return jsonify({'success': True})
+    return jsonify({'error': 'Not found or unauthorized'}), 404
+
+
+@app.route('/api/sheets/<int:sheet_id>', methods=['DELETE'])
+def api_delete_sheet(sheet_id):
+    if not session.get('user'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    success = database.delete_spreadsheet(sheet_id, session['user'])
+    if success:
+        return jsonify({'success': True})
+    return jsonify({'error': 'Not found or unauthorized'}), 404
