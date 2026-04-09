@@ -2021,6 +2021,88 @@ def handle_mark_as_read(data):
 # 프로모션 편집 잠금 상태 (promotion_id: username)
 promotion_locks = {}
 
+# ===== 스프레드시트 실시간 협업 =====
+# {room: {username: {color, sid}}}
+_sheet_room_users = {}
+
+_COLLAB_COLORS = [
+    '#e74c3c','#3498db','#2ecc71','#f39c12',
+    '#9b59b6','#1abc9c','#e67e22','#e91e63',
+]
+
+def _get_user_color(username):
+    h = sum(ord(c) for c in username)
+    return _COLLAB_COLORS[h % len(_COLLAB_COLORS)]
+
+@socketio.on('sheet_join')
+def handle_sheet_join(data):
+    """시트 입장 - 룸 참가 및 다른 사용자에게 알림"""
+    from flask import request as req
+    sheet_id = data.get('sheet_id')
+    if not sheet_id:
+        return
+    username = session.get('username', 'Admin')
+    color = _get_user_color(username)
+    room = f'sheet_{sheet_id}'
+
+    join_room(room)
+
+    if room not in _sheet_room_users:
+        _sheet_room_users[room] = {}
+    _sheet_room_users[room][username] = {'color': color, 'sid': req.sid}
+
+    # 입장자에게 현재 접속자 목록 전달
+    emit('sheet_users_list', {
+        'users': [{'username': u, 'color': v['color']}
+                  for u, v in _sheet_room_users[room].items()]
+    })
+    # 다른 접속자들에게 새 입장자 알림
+    emit('sheet_user_joined', {'username': username, 'color': color},
+         to=room, skip_sid=req.sid)
+
+@socketio.on('sheet_leave')
+def handle_sheet_leave(data):
+    """시트 퇴장"""
+    from flask import request as req
+    sheet_id = data.get('sheet_id')
+    if not sheet_id:
+        return
+    username = session.get('username', 'Admin')
+    room = f'sheet_{sheet_id}'
+
+    leave_room(room)
+    if room in _sheet_room_users:
+        _sheet_room_users[room].pop(username, None)
+        if not _sheet_room_users[room]:
+            del _sheet_room_users[room]
+
+    emit('sheet_user_left', {'username': username}, to=room)
+
+@socketio.on('sheet_cell_update')
+def handle_sheet_cell_update(data):
+    """셀 값 변경 - 같은 시트 룸에 브로드캐스트"""
+    from flask import request as req
+    sheet_id = data.get('sheet_id')
+    if not sheet_id:
+        return
+    username = session.get('username', 'Admin')
+    room = f'sheet_{sheet_id}'
+    emit('sheet_cell_updated', {**data, 'username': username},
+         to=room, skip_sid=req.sid)
+
+@socketio.on('sheet_cursor_move')
+def handle_sheet_cursor_move(data):
+    """커서 위치 변경 - 같은 시트 룸에 브로드캐스트"""
+    from flask import request as req
+    sheet_id = data.get('sheet_id')
+    if not sheet_id:
+        return
+    username = session.get('username', 'Admin')
+    color = _get_user_color(username)
+    room = f'sheet_{sheet_id}'
+    emit('sheet_cursor_moved', {**data, 'username': username, 'color': color},
+         to=room, skip_sid=req.sid)
+
 @socketio.on('lock_promotion_edit')
 def handle_lock_promotion_edit(data):
     """프로모션 수정 잠금"""
@@ -4921,51 +5003,67 @@ def ensure_scheduler_started():
         start_reminder_scheduler()
 
 
-# ===== 스프레드시트 =====
+# ===== 스프레드시트 (관리자 전용) =====
 
 @app.route('/sheets')
 def sheet_list():
-    if not session.get('user'):
-        return redirect('/login')
+    auth_check = require_admin()
+    if auth_check:
+        return auth_check
+    username = session.get('username', 'Admin')
     return render_template('sheet_list.html',
+                           username=username,
+                           is_admin=is_admin(),
                            current_page='sheets',
                            page_title='스프레드시트')
 
 
 @app.route('/sheets/<int:sheet_id>')
 def sheet_editor(sheet_id):
-    if not session.get('user'):
-        return redirect('/login')
-    sheet = database.get_spreadsheet(sheet_id, session['user'])
+    auth_check = require_admin()
+    if auth_check:
+        return auth_check
+    username = session.get('username', 'Admin')
+    sheet = database.get_spreadsheet(sheet_id, username)
     if not sheet:
         return redirect('/sheets')
-    return render_template('sheet_editor.html', sheet_id=sheet_id, sheet_title=sheet['title'])
+    return render_template('sheet_editor.html',
+                           username=username,
+                           is_admin=is_admin(),
+                           sheet_id=sheet_id,
+                           sheet_title=sheet['title'])
 
 
 @app.route('/api/sheets', methods=['GET'])
 def api_get_sheets():
-    if not session.get('user'):
+    auth_check = require_admin()
+    if auth_check:
         return jsonify({'error': 'Unauthorized'}), 401
-    sheets = database.get_spreadsheets(session['user'])
+    username = session.get('username', 'Admin')
+    sheets = database.get_spreadsheets(username)
     return jsonify(sheets)
 
 
 @app.route('/api/sheets', methods=['POST'])
 def api_create_sheet():
-    if not session.get('user'):
+    auth_check = require_admin()
+    if auth_check:
         return jsonify({'error': 'Unauthorized'}), 401
+    username = session.get('username', 'Admin')
     data = request.json or {}
     title = data.get('title', '새 스프레드시트').strip() or '새 스프레드시트'
     is_shared = bool(data.get('is_shared', False))
-    sheet_id = database.create_spreadsheet(session['user'], title, is_shared)
+    sheet_id = database.create_spreadsheet(username, title, is_shared)
     return jsonify({'id': sheet_id, 'title': title})
 
 
 @app.route('/api/sheets/<int:sheet_id>', methods=['GET'])
 def api_get_sheet(sheet_id):
-    if not session.get('user'):
+    auth_check = require_admin()
+    if auth_check:
         return jsonify({'error': 'Unauthorized'}), 401
-    sheet = database.get_spreadsheet(sheet_id, session['user'])
+    username = session.get('username', 'Admin')
+    sheet = database.get_spreadsheet(sheet_id, username)
     if not sheet:
         return jsonify({'error': 'Not found'}), 404
     return jsonify(sheet)
@@ -4973,12 +5071,14 @@ def api_get_sheet(sheet_id):
 
 @app.route('/api/sheets/<int:sheet_id>', methods=['PUT'])
 def api_save_sheet(sheet_id):
-    if not session.get('user'):
+    auth_check = require_admin()
+    if auth_check:
         return jsonify({'error': 'Unauthorized'}), 401
+    username = session.get('username', 'Admin')
     data = request.json or {}
     title = data.get('title')
     sheet_data = data.get('data')
-    success = database.save_spreadsheet(sheet_id, session['user'], title, sheet_data)
+    success = database.save_spreadsheet(sheet_id, username, title, sheet_data)
     if success:
         return jsonify({'success': True})
     return jsonify({'error': 'Not found or unauthorized'}), 404
@@ -4986,9 +5086,11 @@ def api_save_sheet(sheet_id):
 
 @app.route('/api/sheets/<int:sheet_id>', methods=['DELETE'])
 def api_delete_sheet(sheet_id):
-    if not session.get('user'):
+    auth_check = require_admin()
+    if auth_check:
         return jsonify({'error': 'Unauthorized'}), 401
-    success = database.delete_spreadsheet(sheet_id, session['user'])
+    username = session.get('username', 'Admin')
+    success = database.delete_spreadsheet(sheet_id, username)
     if success:
         return jsonify({'success': True})
     return jsonify({'error': 'Not found or unauthorized'}), 404
