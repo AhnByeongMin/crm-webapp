@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ sheet_title }} - 스프레드시트</title>
 
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="/static/js/csrf-helper.js?v=20251214g"></script>
+    {% include 'includes/header.html' %}
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
     <!-- 한국어 웹폰트 -->
@@ -22,7 +21,11 @@
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f0f0; }
+        html { height: 100%; }
+        body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f0f0; display: flex; flex-direction: column; }
+
+        /* 공통 헤더가 차지하는 높이를 제외한 나머지를 채움 */
+        #editorRoot { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
 
         /* ── 상단 툴바 ── */
         #topbar {
@@ -78,7 +81,32 @@
         .avatar:hover .tooltip { opacity: 1; }
 
         /* ── Luckysheet 영역 ── */
-        #sheetWrap { position: absolute; top: 52px; left: 0; right: 0; bottom: 0; }
+        #sheetWrap { flex: 1; min-height: 0; position: relative; overflow: visible; }
+
+        /* 툴팁이 잘리지 않도록 툴바 영역 overflow 허용 */
+        #luckysheet-toolbar-container { overflow: visible !important; }
+        #luckysheet { overflow: visible !important; }
+
+        /* Luckysheet 실제 툴팁: #luckysheet-tooltip-up (.jfk-tooltip) */
+        #luckysheet-tooltip-up,
+        .jfk-tooltip {
+            background: rgba(28, 28, 48, 0.96) !important;
+            color: #f0f0f0 !important;
+            border: 1px solid rgba(120,120,180,0.3) !important;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.5) !important;
+            border-radius: 6px !important;
+            font-size: 12px !important;
+            z-index: 9999 !important;
+        }
+        .jfk-tooltip-contentId {
+            color: #f0f0f0 !important;
+        }
+        /* 화살표 색도 통일 */
+        .jfk-tooltip-arrow .jfk-tooltip-arrowimplbefore,
+        .jfk-tooltip-arrow .jfk-tooltip-arrowimplafter {
+            border-top-color: rgba(28, 28, 48, 0.96) !important;
+            border-bottom-color: rgba(28, 28, 48, 0.96) !important;
+        }
         #luckysheet { width: 100%; height: 100%; }
 
         /* ── 커서 오버레이 ── */
@@ -100,7 +128,7 @@
 
         /* ── 로딩 ── */
         #loadingOverlay {
-            position: absolute; inset: 0; top: 52px; background: #f5f5f5;
+            position: absolute; inset: 0; background: #f5f5f5;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 100; gap: 16px;
         }
@@ -118,10 +146,174 @@
         [data-theme="dark"] #titleInput { color: #e8e8e8; }
         [data-theme="dark"] #titleInput:hover { background: rgba(255,255,255,0.05); border-color: rgba(96,165,250,0.3); }
         [data-theme="dark"] #titleInput:focus { background: rgba(255,255,255,0.08); border-color: #667eea; }
-        [data-theme="dark"] #loadingOverlay { background: #12121e; }
+        [data-theme="dark"] #loadingOverlay { background: #1a1a2e; }
+
+        /* ── 다크모드: Luckysheet 내부 오버라이드 ── */
+        /* 전체 배경 */
+        [data-theme="dark"] #luckysheet { background: #1a1a2e; }
+        [data-theme="dark"] #luckysheet-grid-window-1,
+        [data-theme="dark"] .luckysheet-grid-container { background: #1a1a2e !important; }
+
+        /* 상단 리본 툴바 */
+        [data-theme="dark"] #luckysheet-toolbar-container,
+        [data-theme="dark"] .luckysheet-toolbar { background: #252545 !important; border-bottom-color: rgba(96,165,250,0.15) !important; }
+        [data-theme="dark"] .luckysheet-toolbar-button,
+        [data-theme="dark"] .luckysheet-toolbar-combo { color: #ccc !important; }
+        [data-theme="dark"] .luckysheet-toolbar-button:hover { background: rgba(255,255,255,0.08) !important; }
+        [data-theme="dark"] .luckysheet-toolbar-menu-button-arrow { border-top-color: #aaa !important; }
+
+        /* 수식 입력창 */
+        [data-theme="dark"] #luckysheet-formula-bar-container,
+        [data-theme="dark"] .luckysheet-formula-bar { background: #1e1e38 !important; border-bottom-color: rgba(96,165,250,0.15) !important; }
+        [data-theme="dark"] #luckysheet-formula-bar-input,
+        [data-theme="dark"] .luckysheet-formula-bar-input { background: #252545 !important; color: #e8e8e8 !important; border-color: rgba(96,165,250,0.2) !important; }
+        [data-theme="dark"] #luckysheet-input-box { background: #252545 !important; color: #e8e8e8 !important; }
+
+        /* 셀 이름상자 (A1 표시) */
+        [data-theme="dark"] #luckysheet-cell-input-box-index,
+        [data-theme="dark"] .luckysheet-input-box-index { background: #252545 !important; color: #ccc !important; border-color: rgba(96,165,250,0.2) !important; }
+
+        /* 행/열 헤더 */
+        [data-theme="dark"] .luckysheet-cols-h-cells canvas,
+        [data-theme="dark"] .luckysheet-rows-h canvas { filter: invert(0.85) hue-rotate(180deg) brightness(0.85); }
+
+        /* 셀 그리드 캔버스 - 약간 어두운 배경 */
+        [data-theme="dark"] #luckysheetTableContent,
+        [data-theme="dark"] .luckysheet-cell-main canvas { filter: brightness(0.92) contrast(0.95); }
+
+        /* 하단 시트탭 바 */
+        [data-theme="dark"] #luckysheet-sheet-area,
+        [data-theme="dark"] .luckysheet-sheet-area { background: #1e1e38 !important; border-top-color: rgba(96,165,250,0.15) !important; }
+        [data-theme="dark"] .luckysheet-sheets-item { background: #252545 !important; color: #bbb !important; border-color: rgba(96,165,250,0.15) !important; }
+        [data-theme="dark"] .luckysheet-sheets-item.luckysheet-sheets-item-active { background: #667eea !important; color: #fff !important; }
+        [data-theme="dark"] .luckysheet-sheets-item:hover { background: rgba(102,126,234,0.2) !important; }
+        [data-theme="dark"] .fa-plus-square-o,
+        [data-theme="dark"] .luckysheet-sheets-add { color: #999 !important; }
+
+        /* 우측 스크롤 영역 배경 */
+        [data-theme="dark"] #luckysheet-scrollbar-x,
+        [data-theme="dark"] #luckysheet-scrollbar-y { background: #1e1e38 !important; }
+
+        /* 드롭다운/컨텍스트 메뉴 */
+        [data-theme="dark"] .luckysheet-cols-menu,
+        [data-theme="dark"] .luckysheet-rightclick-menu,
+        [data-theme="dark"] .luckysheet-filter-menu { background: #252545 !important; border-color: rgba(96,165,250,0.2) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; }
+        [data-theme="dark"] .luckysheet-cols-menu li,
+        [data-theme="dark"] .luckysheet-rightclick-menu li,
+        [data-theme="dark"] .luckysheet-filter-menu li { color: #ccc !important; }
+        [data-theme="dark"] .luckysheet-cols-menu li:hover,
+        [data-theme="dark"] .luckysheet-rightclick-menu li:hover { background: rgba(102,126,234,0.25) !important; }
+
+        /* 셀 인라인 편집기 */
+        [data-theme="dark"] #luckysheet-rich-text-editor { color: #e8e8e8 !important; caret-color: #e8e8e8; }
+
+        /* ── 다크모드: 모달/다이얼로그 ── */
+        [data-theme="dark"] .luckysheet-modal-dialog,
+        [data-theme="dark"] .luckysheet-modal-dialog-content,
+        [data-theme="dark"] .luckysheetconditionformat_dialog,
+        [data-theme="dark"] .luckysheet-formula-search-c,
+        [data-theme="dark"] .luckysheet-formula-functionrange-c {
+            background: #1e1e38 !important;
+            border-color: rgba(96,165,250,0.2) !important;
+            color: #e0e0e0 !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+        }
+        /* 모달 제목바 */
+        [data-theme="dark"] .luckysheet-modal-dialog-title,
+        [data-theme="dark"] .luckysheet-modal-dialog-header {
+            background: #252545 !important;
+            border-bottom-color: rgba(96,165,250,0.2) !important;
+            color: #e0e0e0 !important;
+        }
+        /* 닫기 버튼 */
+        [data-theme="dark"] .luckysheet-modal-dialog-title-close,
+        [data-theme="dark"] .luckysheet-modal-dialog-close {
+            color: #aaa !important;
+        }
+        /* 레이블 텍스트 */
+        [data-theme="dark"] .luckysheet-modal-dialog label,
+        [data-theme="dark"] .luckysheet-modal-dialog span,
+        [data-theme="dark"] .luckysheet-modal-dialog p,
+        [data-theme="dark"] .luckysheet-formula-search-c label,
+        [data-theme="dark"] .luckysheet-formula-search-c span {
+            color: #bbb !important;
+        }
+        /* 입력창 */
+        [data-theme="dark"] .luckysheet-modal-dialog input[type="text"],
+        [data-theme="dark"] .luckysheet-modal-dialog input[type="number"],
+        [data-theme="dark"] .luckysheet-modal-dialog textarea,
+        [data-theme="dark"] .luckysheet-formula-search-c input {
+            background: #252545 !important;
+            border-color: rgba(96,165,250,0.25) !important;
+            color: #e8e8e8 !important;
+        }
+        [data-theme="dark"] .luckysheet-modal-dialog input:focus,
+        [data-theme="dark"] .luckysheet-formula-search-c input:focus {
+            border-color: #667eea !important;
+            outline: none;
+        }
+        /* 셀렉트박스 */
+        [data-theme="dark"] .luckysheet-modal-dialog select,
+        [data-theme="dark"] .luckysheet-formula-search-c select {
+            background: #252545 !important;
+            border-color: rgba(96,165,250,0.25) !important;
+            color: #e8e8e8 !important;
+        }
+        /* 함수 목록 리스트 */
+        [data-theme="dark"] .luckysheet-formula-search-func-list,
+        [data-theme="dark"] .luckysheet-formula-functionrange-func {
+            background: #1a1a2e !important;
+            border-color: rgba(96,165,250,0.15) !important;
+        }
+        [data-theme="dark"] .luckysheet-formula-search-func-list li,
+        [data-theme="dark"] .luckysheet-formula-functionrange-func li {
+            color: #ccc !important;
+            border-bottom-color: rgba(255,255,255,0.05) !important;
+        }
+        [data-theme="dark"] .luckysheet-formula-search-func-list li:hover,
+        [data-theme="dark"] .luckysheet-formula-functionrange-func li:hover {
+            background: rgba(102,126,234,0.2) !important;
+        }
+        [data-theme="dark"] .luckysheet-formula-search-func-list li.luckysheet-formula-search-func-list-active,
+        [data-theme="dark"] .luckysheet-formula-functionrange-func li.on {
+            background: rgba(102,126,234,0.45) !important;
+            color: #fff !important;
+        }
+        /* 함수 설명 영역 */
+        [data-theme="dark"] .luckysheet-formula-search-func-detail,
+        [data-theme="dark"] .luckysheet-formula-functionrange-func-detail {
+            background: #252545 !important;
+            border-top-color: rgba(96,165,250,0.15) !important;
+            color: #bbb !important;
+        }
+        /* 모달 하단 버튼 영역 */
+        [data-theme="dark"] .luckysheet-modal-dialog-footer,
+        [data-theme="dark"] .luckysheet-modal-dialog .btn-group {
+            background: #252545 !important;
+            border-top-color: rgba(96,165,250,0.15) !important;
+        }
+        /* 취소 버튼 */
+        [data-theme="dark"] .luckysheet-modal-dialog .btn-default,
+        [data-theme="dark"] .luckysheet-modal-dialog .luckysheet-model-close-btn {
+            background: rgba(255,255,255,0.08) !important;
+            border-color: rgba(255,255,255,0.15) !important;
+            color: #ccc !important;
+        }
+        /* 확인 버튼은 기존 보라 유지 */
+        [data-theme="dark"] .luckysheet-modal-dialog .btn-primary,
+        [data-theme="dark"] .luckysheet-modal-dialog .luckysheet-model-confirm-btn {
+            background: #667eea !important;
+            border-color: #667eea !important;
+            color: #fff !important;
+        }
+        /* 오버레이 배경 */
+        [data-theme="dark"] .luckysheet-modal-dialog-mask {
+            background: rgba(0,0,0,0.65) !important;
+        }
     </style>
 </head>
 <body>
+<div id="editorRoot">
 
 <!-- 상단 툴바 -->
 <div id="topbar">
@@ -143,6 +335,8 @@
     <div id="luckysheet"></div>
     <div id="cursorOverlay"></div>
 </div>
+
+</div><!-- /#editorRoot -->
 
 <!-- Luckysheet JS -->
 <script src="https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js"></script>
@@ -549,14 +743,29 @@ function applyKoreanLabels() {
     const map = {
         'Undo':'실행 취소','Redo':'다시 실행','Format Painter':'서식 복사','Clear Format':'서식 지우기',
         'Currency Format':'통화 형식','Percentage Format':'백분율 형식',
+        // Luckysheet 실제 data-tips 값
+        'Format as ¥':'통화 형식 (¥)','Format as $':'통화 형식 ($)','Format as currency':'통화 형식',
+        'Format as %':'백분율 형식','Format as percent':'백분율 형식',
+        'Format as percentage':'백분율 형식',
+        'Increase decimal places':'소수 자릿수 늘리기','Decrease decimal places':'소수 자릿수 줄이기',
         'Increase Decimal':'소수 자릿수 늘리기','Decrease Decimal':'소수 자릿수 줄이기',
+        'Format as date':'날짜 형식','Format as time':'시간 형식','Format as number':'숫자 형식',
+        'More formats':'더 많은 서식','More Formats':'더 많은 서식',
+        'font':'글꼴','font-size':'글자 크기',
         'Font':'글꼴','Font Size':'글자 크기','Bold':'굵게','Italic':'기울임꼴',
         'Strike Through':'취소선','Strikethrough':'취소선','Underline':'밑줄',
-        'Font Color':'글자 색','Background Color':'배경 색','Border':'테두리',
+        'Font Color':'글자 색','font color':'글자 색',
+        'Background Color':'배경 색','background color':'배경 색','Cell color':'배경 색',
+        'Border':'테두리','Borders':'테두리',
         'Merge Cells':'셀 병합','Horizontal Alignment':'가로 정렬','Vertical Alignment':'세로 정렬',
-        'Text Wrapping':'텍스트 줄바꿈','Freeze':'고정','Sort':'정렬','Filter':'필터',
-        'Link':'링크','Chart':'차트','Screenshot':'화면 캡처','Find and Replace':'찾기 및 바꾸기',
-        'Function':'함수','More Formats':'더 많은 서식',
+        'Text Wrapping':'텍스트 줄바꿈','text wrapping':'텍스트 줄바꿈',
+        'Freeze':'고정','Sort':'정렬','Filter':'필터',
+        'Link':'링크','Chart':'차트','Screenshot':'화면 캡처',
+        'Find and Replace':'찾기 및 바꾸기','find and replace':'찾기 및 바꾸기',
+        'Function':'함수','Insert function':'함수 삽입','insert function':'함수 삽입',
+        'conditional format':'조건부 서식','Conditional Format':'조건부 서식',
+        'Data Validation':'데이터 유효성 검사','data validation':'데이터 유효성 검사',
+        'Protection':'시트 보호','protection':'시트 보호',
         'Merge All':'전체 병합','Merge Horizontally':'가로 병합','Merge Vertically':'세로 병합','Unmerge':'병합 해제',
         'Left':'왼쪽','Center':'가운데','Right':'오른쪽',
         'Top':'위쪽','Middle':'가운데(세로)','Bottom':'아래쪽',
@@ -585,12 +794,212 @@ function applyKoreanLabels() {
         'OK':'확인','Cancel':'취소','Apply':'적용','Close':'닫기','Confirm':'확인','Reset':'초기화',
         'General':'일반','Number':'숫자','Accounting':'회계','Date':'날짜','Time':'시간',
         'Percentage':'백분율','Fraction':'분수','Scientific':'과학적 표기','Text':'텍스트',
+
+        // ── 함수 삽입 모달 UI ──
+        'Search function :':'함수 검색 :',
+        'Function name or brief description of function':'함수 이름 또는 설명 검색',
+        'Or select a category :':'카테고리 선택 :',
+        'Select a function :':'함수 선택 :',
+        'All':'전체','Financial':'재무','Date & Time':'날짜/시간','Math':'수학',
+        'Statistical':'통계','Lookup':'찾기/참조','Database':'데이터베이스',
+        'Text':'텍스트','Logical':'논리','Engineering':'공학','Information':'정보',
+        'Compatibility':'호환성',
+    };
+
+    // ── 함수 설명 한글화 맵 ──
+    const funcDescMap = {
+        // 수학
+        'SUM':'범위의 합계를 구합니다.',
+        'SUMIF':'조건에 맞는 셀들의 합계를 구합니다.',
+        'SUMIFS':'여러 조건에 맞는 셀들의 합계를 구합니다.',
+        'SUMPRODUCT':'배열들의 대응 원소를 곱한 후 합산합니다.',
+        'AVERAGE':'범위의 평균을 구합니다.',
+        'AVERAGEIF':'조건에 맞는 셀들의 평균을 구합니다.',
+        'AVERAGEIFS':'여러 조건에 맞는 셀들의 평균을 구합니다.',
+        'COUNT':'범위에서 숫자가 있는 셀 수를 셉니다.',
+        'COUNTA':'범위에서 비어있지 않은 셀 수를 셉니다.',
+        'COUNTIF':'조건에 맞는 셀의 수를 셉니다.',
+        'COUNTIFS':'여러 조건에 맞는 셀의 수를 셉니다.',
+        'MAX':'범위에서 가장 큰 값을 반환합니다.',
+        'MIN':'범위에서 가장 작은 값을 반환합니다.',
+        'ROUND':'지정한 자릿수로 반올림합니다.',
+        'ROUNDUP':'지정한 자릿수로 올림합니다.',
+        'ROUNDDOWN':'지정한 자릿수로 내림합니다.',
+        'INT':'소수점 이하를 버립니다.',
+        'ABS':'절댓값을 반환합니다.',
+        'MOD':'나눗셈의 나머지를 반환합니다.',
+        'POWER':'거듭제곱 값을 반환합니다.',
+        'SQRT':'양의 제곱근을 반환합니다.',
+        'CEILING':'지정한 배수의 가장 가까운 위쪽 값으로 올림합니다.',
+        'FLOOR':'지정한 배수의 가장 가까운 아래쪽 값으로 내림합니다.',
+        'TAN':'라디안 각도의 탄젠트 값을 반환합니다.',
+        'TANH':'임의의 실수의 쌍곡탄젠트 값을 반환합니다.',
+        'SIN':'라디안 각도의 사인 값을 반환합니다.',
+        'COS':'라디안 각도의 코사인 값을 반환합니다.',
+        'LOG':'지정한 밑수의 로그를 반환합니다.',
+        'LN':'자연로그 값을 반환합니다.',
+        'EXP':'e의 거듭제곱 값을 반환합니다.',
+        'RAND':'0 이상 1 미만의 난수를 반환합니다.',
+        'RANDBETWEEN':'두 수 사이의 정수 난수를 반환합니다.',
+        // 논리
+        'IF':'조건이 참이면 첫 번째 값, 거짓이면 두 번째 값을 반환합니다.',
+        'IFS':'여러 조건을 순서대로 검사하고 처음으로 참인 조건의 값을 반환합니다.',
+        'AND':'모든 조건이 참이면 TRUE를 반환합니다.',
+        'OR':'하나라도 조건이 참이면 TRUE를 반환합니다.',
+        'NOT':'논리값을 반전합니다.',
+        'IFERROR':'오류이면 지정한 값을, 아니면 원래 값을 반환합니다.',
+        'IFNA':'#N/A 오류이면 지정한 값을, 아니면 원래 값을 반환합니다.',
+        // 텍스트
+        'TEXT':'값을 지정한 형식의 텍스트로 변환합니다.',
+        'CONCATENATE':'여러 텍스트를 하나로 합칩니다.',
+        'CONCAT':'여러 텍스트를 하나로 합칩니다.',
+        'LEFT':'텍스트의 왼쪽부터 지정한 수의 문자를 반환합니다.',
+        'RIGHT':'텍스트의 오른쪽부터 지정한 수의 문자를 반환합니다.',
+        'MID':'텍스트의 지정 위치부터 지정한 수의 문자를 반환합니다.',
+        'LEN':'텍스트의 문자 수를 반환합니다.',
+        'TRIM':'텍스트의 앞뒤 공백을 제거합니다.',
+        'UPPER':'텍스트를 대문자로 변환합니다.',
+        'LOWER':'텍스트를 소문자로 변환합니다.',
+        'FIND':'텍스트에서 특정 문자의 위치를 반환합니다 (대소문자 구분).',
+        'SEARCH':'텍스트에서 특정 문자의 위치를 반환합니다 (대소문자 무시).',
+        'REPLACE':'텍스트의 일부를 다른 텍스트로 바꿉니다.',
+        'SUBSTITUTE':'텍스트에서 특정 문자를 다른 문자로 바꿉니다.',
+        'VALUE':'텍스트를 숫자로 변환합니다.',
+        // 찾기/참조
+        'VLOOKUP':'범위의 첫 열에서 값을 검색하여 같은 행의 지정 열 값을 반환합니다.',
+        'HLOOKUP':'범위의 첫 행에서 값을 검색하여 같은 열의 지정 행 값을 반환합니다.',
+        'INDEX':'범위에서 지정한 행/열 위치의 값을 반환합니다.',
+        'MATCH':'범위에서 값을 검색하여 상대적 위치를 반환합니다.',
+        'LOOKUP':'범위에서 값을 검색합니다.',
+        'OFFSET':'기준 셀에서 지정한 행/열만큼 이동한 셀 참조를 반환합니다.',
+        'INDIRECT':'텍스트로 지정된 셀 참조를 반환합니다.',
+        'ROW':'셀의 행 번호를 반환합니다.',
+        'COLUMN':'셀의 열 번호를 반환합니다.',
+        'ROWS':'범위의 행 수를 반환합니다.',
+        'COLUMNS':'범위의 열 수를 반환합니다.',
+        // 날짜/시간
+        'TODAY':'오늘 날짜를 반환합니다.',
+        'NOW':'현재 날짜와 시간을 반환합니다.',
+        'DATE':'연, 월, 일로 날짜를 만듭니다.',
+        'YEAR':'날짜에서 연도를 반환합니다.',
+        'MONTH':'날짜에서 월을 반환합니다.',
+        'DAY':'날짜에서 일을 반환합니다.',
+        'HOUR':'시간에서 시를 반환합니다.',
+        'MINUTE':'시간에서 분을 반환합니다.',
+        'SECOND':'시간에서 초를 반환합니다.',
+        'WEEKDAY':'날짜의 요일 번호를 반환합니다.',
+        'DATEDIF':'두 날짜 사이의 차이를 반환합니다.',
+        'NETWORKDAYS':'두 날짜 사이의 영업일 수를 반환합니다.',
+        // 정보
+        'ISBLANK':'셀이 비어있으면 TRUE를 반환합니다.',
+        'ISNUMBER':'값이 숫자이면 TRUE를 반환합니다.',
+        'ISTEXT':'값이 텍스트이면 TRUE를 반환합니다.',
+        'ISERROR':'값이 오류이면 TRUE를 반환합니다.',
+        'ISNA':'값이 #N/A이면 TRUE를 반환합니다.',
+    };
+
+    // Luckysheet 영문 함수 설명 원문 → 한글 직접 치환 맵
+    const engDescMap = {
+        'A conditional sum across a range.':'조건에 맞는 셀들의 합계를 구합니다.',
+        'Conditional sum based on multiple criteria.':'여러 조건에 맞는 셀들의 합계를 구합니다.',
+        'Sum of the products of corresponding elements in given arrays.':'배열들의 대응 원소를 곱한 후 합산합니다.',
+        'Sum of a series of numbers and/or cells.':'범위의 합계를 구합니다.',
+        'The average value in a dataset.':'범위의 평균을 구합니다.',
+        'Average of values depending on criteria.':'조건에 맞는 셀들의 평균을 구합니다.',
+        'Average value based on multiple criteria.':'여러 조건에 맞는 셀들의 평균을 구합니다.',
+        'The number of numeric values in a dataset.':'범위에서 숫자가 있는 셀 수를 셉니다.',
+        'The number of values in a dataset.':'범위에서 비어있지 않은 셀 수를 셉니다.',
+        'A conditional count across a range.':'조건에 맞는 셀의 수를 셉니다.',
+        'Conditional count based on multiple criteria.':'여러 조건에 맞는 셀의 수를 셉니다.',
+        'Maximum value in a numeric dataset.':'범위에서 가장 큰 값을 반환합니다.',
+        'Minimum value in a numeric dataset.':'범위에서 가장 작은 값을 반환합니다.',
+        'Rounds a number to a certain number of decimal places according to standard rules.':'지정한 자릿수로 반올림합니다.',
+        'Rounds a number to a certain number of decimal places, always rounding up.':'지정한 자릿수로 올림합니다.',
+        'Rounds a number to a certain number of decimal places, always rounding down.':'지정한 자릿수로 내림합니다.',
+        'Rounds a number down to the nearest integer.':'소수점 이하를 버립니다.',
+        'Absolute value of a number.':'절댓값을 반환합니다.',
+        'The result of the modulo operator.':'나눗셈의 나머지를 반환합니다.',
+        'A number raised to a power.':'거듭제곱 값을 반환합니다.',
+        'Positive square root of a positive number.':'양의 제곱근을 반환합니다.',
+        'Rounds a number up to the nearest integer multiple of specified significance.':'지정한 배수의 가장 가까운 위쪽 값으로 올림합니다.',
+        'Rounds number up to nearest multiple of a factor.':'지정한 배수의 가장 가까운 위쪽 값으로 올림합니다.',
+        'Rounds a number down to the nearest integer multiple of specified significance.':'지정한 배수의 가장 가까운 아래쪽 값으로 내림합니다.',
+        'Tangent of an angle provided in radians.':'라디안 각도의 탄젠트 값을 반환합니다.',
+        'Hyperbolic tangent of any real number.':'임의의 실수의 쌍곡탄젠트 값을 반환합니다.',
+        'Sine of an angle provided in radians.':'라디안 각도의 사인 값을 반환합니다.',
+        'Cosine of an angle provided in radians.':'라디안 각도의 코사인 값을 반환합니다.',
+        'The logarithm of a number with respect to a base.':'지정한 밑수의 로그를 반환합니다.',
+        'The logarithm of a number, base e (Euler\'s number).':'자연로그 값을 반환합니다.',
+        'Euler\'s number, e (~2.718) raised to a specified power.':'e의 거듭제곱 값을 반환합니다.',
+        'A random number between 0 inclusive and 1 exclusive.':'0 이상 1 미만의 난수를 반환합니다.',
+        'Returns a uniformly random integer between two values, inclusive.':'두 수 사이의 정수 난수를 반환합니다.',
+        // 논리
+        'Returns one value if a logical expression is true and another if it is false.':'조건이 참이면 첫 번째 값, 거짓이면 두 번째 값을 반환합니다.',
+        'Evaluates multiple conditions and returns a value that corresponds to the first true condition.':'여러 조건을 순서대로 검사하고 처음으로 참인 조건의 값을 반환합니다.',
+        'Returns true if all of the provided arguments are logically true.':'모든 조건이 참이면 TRUE를 반환합니다.',
+        'Returns true if any of the provided arguments are logically true.':'하나라도 조건이 참이면 TRUE를 반환합니다.',
+        'Returns the opposite of a logical value.':'논리값을 반전합니다.',
+        'Returns the first argument if not an error value, otherwise returns the second argument.':'오류이면 지정한 값을, 아니면 원래 값을 반환합니다.',
+        'Returns the first argument if it is not an #N/A error value, otherwise returns the second argument.':'#N/A 오류이면 지정한 값을, 아니면 원래 값을 반환합니다.',
+        // 텍스트
+        'Converts a number into text according to a specified format.':'값을 지정한 형식의 텍스트로 변환합니다.',
+        'Appends strings to one another.':'여러 텍스트를 하나로 합칩니다.',
+        'Returns a segment of a string.':'텍스트의 왼쪽부터 지정한 수의 문자를 반환합니다.',
+        'Returns a substring from the end of a string.':'텍스트의 오른쪽부터 지정한 수의 문자를 반환합니다.',
+        'Returns a segment of a string from the middle.':'텍스트의 지정 위치부터 지정한 수의 문자를 반환합니다.',
+        'The length of a string.':'텍스트의 문자 수를 반환합니다.',
+        'Removes leading and trailing whitespace from a string.':'텍스트의 앞뒤 공백을 제거합니다.',
+        'Converts a string to uppercase letters.':'텍스트를 대문자로 변환합니다.',
+        'Converts a string to lowercase letters.':'텍스트를 소문자로 변환합니다.',
+        'Returns the position at which a string is first found, case-sensitive.':'텍스트에서 특정 문자의 위치를 반환합니다 (대소문자 구분).',
+        'Returns the position at which a string is first found.':'텍스트에서 특정 문자의 위치를 반환합니다 (대소문자 무시).',
+        'Replaces part of a text string with a different text string.':'텍스트의 일부를 다른 텍스트로 바꿉니다.',
+        'Replaces existing text with new text in a string.':'텍스트에서 특정 문자를 다른 문자로 바꿉니다.',
+        'Converts a string in any of the date, time or number formats that Google Sheets understands into a number.':'텍스트를 숫자로 변환합니다.',
+        // 찾기/참조
+        'Vertical lookup. Searches down the first column of a range for a key.':'범위의 첫 열에서 값을 검색하여 같은 행의 지정 열 값을 반환합니다.',
+        'Horizontal lookup. Searches across the first row of a range for a key.':'범위의 첫 행에서 값을 검색하여 같은 열의 지정 행 값을 반환합니다.',
+        'Returns the content of a cell, specified by row and column offset.':'범위에서 지정한 행/열 위치의 값을 반환합니다.',
+        'Returns the relative position of an item in a range that matches a specified value.':'범위에서 값을 검색하여 상대적 위치를 반환합니다.',
+        'Looks through a row or column for a key and returns the value of the cell in a result range located in the same position as the search row or column.':'범위에서 값을 검색합니다.',
+        'Returns a range reference offset from a starting cell reference.':'기준 셀에서 지정한 행/열만큼 이동한 셀 참조를 반환합니다.',
+        'Returns a cell reference specified by a string.':'텍스트로 지정된 셀 참조를 반환합니다.',
+        'Returns the row number of a specified cell.':'셀의 행 번호를 반환합니다.',
+        'Returns the column number of a specified cell.':'셀의 열 번호를 반환합니다.',
+        'Returns the number of rows in a specified array or range.':'범위의 행 수를 반환합니다.',
+        'Returns the number of columns in a specified array or range.':'범위의 열 수를 반환합니다.',
+        // 날짜/시간
+        'Returns the current date as a date value.':'오늘 날짜를 반환합니다.',
+        'Returns the current date and time as a date value.':'현재 날짜와 시간을 반환합니다.',
+        'Converts a year, month, and day into a date.':'연, 월, 일로 날짜를 만듭니다.',
+        'Returns the year specified by a given date.':'날짜에서 연도를 반환합니다.',
+        'Returns the month of the year a specific date falls in.':'날짜에서 월을 반환합니다.',
+        'Returns the day of the month that a specific date falls on.':'날짜에서 일을 반환합니다.',
+        'Returns the hour component of a specific time.':'시간에서 시를 반환합니다.',
+        'Returns the minute component of a specific time.':'시간에서 분을 반환합니다.',
+        'Returns the second component of a specific time.':'시간에서 초를 반환합니다.',
+        'Returns a number representing the day of the week of the date provided.':'날짜의 요일 번호를 반환합니다.',
+        'Calculates the number of days, months, or years between two dates.':'두 날짜 사이의 차이를 반환합니다.',
+        'Returns the number of net working days between two provided days.':'두 날짜 사이의 영업일 수를 반환합니다.',
+        // 정보
+        'Checks whether the referenced cell is empty.':'셀이 비어있으면 TRUE를 반환합니다.',
+        'Checks whether a value is a number.':'값이 숫자이면 TRUE를 반환합니다.',
+        'Checks whether a value is text.':'값이 텍스트이면 TRUE를 반환합니다.',
+        'Checks whether a value is an error.':'값이 오류이면 TRUE를 반환합니다.',
+        'Checks whether a value is the error #N/A.':'값이 #N/A이면 TRUE를 반환합니다.',
     };
 
     function patchEl(el) {
-        ['title','data-tips','placeholder'].forEach(a => {
+        ['title','data-tips','placeholder','alt'].forEach(a => {
             const v = el.getAttribute(a);
-            if (v && map[v.trim()]) el.setAttribute(a, map[v.trim()]);
+            if (!v) return;
+            const t = v.trim();
+            if (map[t]) { el.setAttribute(a, map[t]); return; }
+            // 대소문자 무시 매칭
+            const tLow = t.toLowerCase();
+            for (const [k, kr] of Object.entries(map)) {
+                if (k.toLowerCase() === tLow) { el.setAttribute(a, kr); break; }
+            }
         });
         el.childNodes.forEach(n => {
             if (n.nodeType === 3) {
@@ -606,14 +1015,135 @@ function applyKoreanLabels() {
         root.childNodes.forEach(c => patchTree(c));
     }
 
+    // 함수 모달 내 영문 설명 → 한글 치환 (TreeWalker 기반)
+    function patchFuncModal(root) {
+        if (!root || root.nodeType !== 1) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while ((node = walker.nextNode())) {
+            const t = node.textContent.trim();
+            if (t && engDescMap[t]) {
+                node.textContent = node.textContent.replace(t, engDescMap[t]);
+            }
+        }
+    }
+
+    // li 요소에서 함수명으로 설명 직접 교체 (함수명 기반 보조)
+    function patchFuncListItems(root) {
+        if (!root || !root.querySelectorAll) return;
+        root.querySelectorAll('li').forEach(li => {
+            // 텍스트 노드들 추출
+            const textNodes = [];
+            li.childNodes.forEach(n => { if (n.nodeType === 3) textNodes.push(n); });
+            // 첫 번째 텍스트 노드 = 함수명, 이후 = 설명
+            let fname = '';
+            // 또는 첫 element에서 함수명 찾기
+            const firstEl = li.firstElementChild;
+            if (firstEl) fname = firstEl.textContent.trim().toUpperCase();
+            else if (textNodes[0]) fname = textNodes[0].textContent.trim().toUpperCase();
+
+            if (fname && funcDescMap[fname]) {
+                // 설명 텍스트 노드 교체
+                textNodes.forEach(n => {
+                    const t = n.textContent.trim();
+                    if (t && t !== fname && t.length > 3) {
+                        n.textContent = ' ' + funcDescMap[fname];
+                    }
+                });
+                // 설명 span/p 교체
+                if (firstEl) {
+                    const descEl = li.querySelector('p, span:nth-child(2), div');
+                    if (descEl) descEl.textContent = funcDescMap[fname];
+                }
+            }
+        });
+    }
+
+    function runFuncPatch(root) {
+        patchFuncModal(root);
+        patchFuncListItems(root);
+    }
+
     patchTree(document.body);
     new MutationObserver(ms => {
         ms.forEach(m => {
-            m.addedNodes.forEach(n => { if (n.nodeType === 1) patchTree(n); });
+            m.addedNodes.forEach(n => {
+                if (n.nodeType === 1) {
+                    patchTree(n);
+                    // 모달 또는 목록 관련 노드면 함수 설명도 패치
+                    const cls = String(n.className || '');
+                    if (cls.includes('luckysheet') || cls.includes('modal') || n.tagName === 'LI') {
+                        setTimeout(() => runFuncPatch(n), 30);
+                        setTimeout(() => runFuncPatch(n), 150);
+                    }
+                }
+            });
             if (m.type === 'attributes' && m.target) patchEl(m.target);
+            // 텍스트 변경 감지
+            if (m.type === 'characterData' && m.target) {
+                const t = m.target.textContent.trim();
+                if (t && engDescMap[t]) m.target.textContent = engDescMap[t];
+                if (t && map[t]) m.target.textContent = map[t];
+            }
         });
-    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['title','data-tips'] });
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true, attributeFilter: ['title','data-tips'] });
+
+    // 함수 목록 클릭/스크롤 시 재패치
+    document.addEventListener('click', () => {
+        setTimeout(() => runFuncPatch(document.body), 60);
+        setTimeout(() => runFuncPatch(document.body), 200);
+    }, true);
+    document.addEventListener('change', () => setTimeout(() => runFuncPatch(document.body), 100), true);
 }
+
+// ── Luckysheet 툴팁 스타일 강제 적용 ──────────
+// 실제 툴팁: #luckysheet-tooltip-up, 표시는 jfk-tooltip-hide 클래스 제거로 제어
+(function fixTooltip() {
+    const TIP_BG  = 'rgba(28,28,48,0.96)';
+    const TIP_COL = '#f0f0f0';
+
+    function applyStyle(el) {
+        el.style.setProperty('background', TIP_BG, 'important');
+        el.style.setProperty('color', TIP_COL, 'important');
+        el.style.setProperty('border', '1px solid rgba(120,120,180,0.3)', 'important');
+        el.style.setProperty('box-shadow', '0 3px 12px rgba(0,0,0,0.5)', 'important');
+        el.style.setProperty('border-radius', '6px', 'important');
+        el.style.setProperty('z-index', '9999', 'important');
+        // 내부 텍스트 색
+        el.querySelectorAll('*').forEach(c => c.style.setProperty('color', TIP_COL, 'important'));
+    }
+
+    function checkTooltip() {
+        const tip = document.getElementById('luckysheet-tooltip-up');
+        if (tip && !tip.classList.contains('jfk-tooltip-hide')) {
+            applyStyle(tip);
+        }
+    }
+
+    // 1) 툴팁이 최초 DOM에 추가될 때 (body에 append)
+    new MutationObserver(ms => {
+        ms.forEach(m => {
+            // 신규 추가
+            m.addedNodes.forEach(n => {
+                if (n.nodeType === 1 && n.id === 'luckysheet-tooltip-up') applyStyle(n);
+            });
+            // class 변경으로 show/hide 제어
+            if (m.type === 'attributes' && m.attributeName === 'class') {
+                const el = m.target;
+                if (el.id === 'luckysheet-tooltip-up' && !el.classList.contains('jfk-tooltip-hide')) {
+                    applyStyle(el);
+                }
+            }
+        });
+    }).observe(document.body, {
+        childList: true, subtree: true,
+        attributes: true, attributeFilter: ['class']
+    });
+
+    // 2) 이미 DOM에 있으면 즉시 적용 (초기화 시)
+    const existing = document.getElementById('luckysheet-tooltip-up');
+    if (existing) applyStyle(existing);
+})();
 
 // ── 시작 ──────────────────────────────────────
 initSheet();
